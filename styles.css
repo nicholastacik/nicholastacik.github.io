@@ -1,0 +1,15 @@
+/* Small tweaks on top of the cosmo/darkly themes. */
+
+.quarto-title-block .description {
+  font-size: 1.05rem;
+  opacity: 0.85;
+}
+
+/* Tighten the listing so entries read like a feed. */
+.quarto-listing {
+  margin-top: 1.5rem;
+}
+
+div.quarto-post .body {
+  margin-top: 0.25rem;
+}

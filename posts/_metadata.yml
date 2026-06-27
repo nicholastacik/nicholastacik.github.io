@@ -1,0 +1,8 @@
+# Shared settings applied to every post under posts/
+author: "Nick Tacik"
+toc: true
+title-block-banner: false
+
+# Cache executed code output so a post only re-runs when its source changes.
+# Commit the generated _freeze/ directory to make CI builds fast + reproducible.
+freeze: auto
