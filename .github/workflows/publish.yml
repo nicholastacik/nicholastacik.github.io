@@ -24,14 +24,16 @@ jobs:
       - name: Set up Quarto
         uses: quarto-dev/quarto-actions/setup@v2
 
-      # Entries with executable Python (```{python}) run at render time.
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - run: pip install jupyter matplotlib pandas
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
 
+      - name: Sync dependencies
+        run: uv sync --frozen
+
+      # Unchanged posts reuse committed _freeze/ output; changed/new posts with
+      # executable code re-run against the locked uv environment.
       - name: Render site
-        run: quarto render
+        run: uv run quarto render
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
