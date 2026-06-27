@@ -1,0 +1,12 @@
+---
+title: "About"
+---
+
+I'm Nick. This is where I keep short writeups of things I'm building — usually
+with AI in the loop — alongside loose thoughts and the occasional Kaggle
+competition log.
+
+Nothing here is polished. It's a working notebook: an entry exists because I
+wanted to remember how something worked, or why it didn't.
+
+- GitHub: [@nicholastacik](https://github.com/nicholastacik)

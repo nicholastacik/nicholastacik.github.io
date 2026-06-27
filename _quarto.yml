@@ -1,0 +1,28 @@
+project:
+  type: website
+  output-dir: _site
+
+website:
+  title: "Nicholas Tacik"
+  description: "Notes on building with AI, experiments, and the occasional Kaggle competition."
+  site-url: https://nicholastacik.github.io
+  navbar:
+    pinned: true
+    right:
+      - text: Home
+        href: index.qmd
+      - text: About
+        href: about.qmd
+      - icon: github
+        href: https://github.com/nicholastacik
+        aria-label: GitHub
+  page-footer:
+    center: "© 2026 Nicholas Tacik · Built with [Quarto](https://quarto.org)"
+
+format:
+  html:
+    theme:
+      light: cosmo
+      dark: darkly
+    css: styles.css
+    toc: true

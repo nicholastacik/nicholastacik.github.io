@@ -1,0 +1,19 @@
+---
+title: "Hello, world"
+description: "Why this site exists and what to expect."
+date: "2026-06-27"
+categories: [meta]
+---
+
+This is the first entry. The site is a working notebook — short writeups of
+things I'm building (often with AI in the loop), stray thoughts, and Kaggle
+logs.
+
+Each entry is its own folder under `posts/`, so it can carry its own images,
+data, and code. New entries show up on the home page automatically, newest
+first.
+
+## Adding a new entry
+
+Create `posts/<slug>/index.qmd` with a date and a category, write, then push.
+The GitHub Action renders and publishes the rest.
