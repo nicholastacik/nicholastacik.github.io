@@ -6,6 +6,9 @@ website:
   title: "Nicholas Tacik"
   description: "Notes on building with AI, experiments, and the occasional Kaggle competition."
   site-url: https://nicholastacik.github.io
+  # Drafts (draft: true) render and are reachable by URL, but stay out of
+  # listings, nav, and search until promoted.
+  draft-mode: unlinked
   navbar:
     pinned: true
     right:

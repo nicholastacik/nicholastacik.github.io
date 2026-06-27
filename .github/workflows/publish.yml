@@ -24,12 +24,11 @@ jobs:
       - name: Set up Quarto
         uses: quarto-dev/quarto-actions/setup@v2
 
-      # When an entry contains executable Python (```{python}), uncomment these
-      # so CI can run the code at render time:
-      # - uses: actions/setup-python@v5
-      #   with:
-      #     python-version: "3.12"
-      # - run: pip install jupyter matplotlib pandas
+      # Entries with executable Python (```{python}) run at render time.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install jupyter matplotlib pandas
 
       - name: Render site
         run: quarto render
