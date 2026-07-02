@@ -3,6 +3,7 @@
 .venv/
 __pycache__/
 .DS_Store
+.claude/settings.local.json
 
 # Note: /_freeze/ is intentionally committed — it caches executed code output.
 
