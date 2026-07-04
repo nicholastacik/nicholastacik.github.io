@@ -7,8 +7,18 @@ dependencies = [
     "jupyter",
     "matplotlib",
     "pandas",
+    "pyarrow>=24.0.0",
 ]
 
 [tool.uv]
 # Not a Python package — just an environment for rendering. Don't try to build it.
 package = false
+
+[dependency-groups]
+scraper = [
+    "beautifulsoup4>=4.15.0",
+    "click>=8.4.2",
+    "httpx>=0.28.1",
+    "lxml>=6.1.1",
+    "pytest>=9.1.1",
+]
