@@ -99,4 +99,26 @@ def _parse_order(cell):
 
 
 def _parse_final_clue(soup):
-    return []  # implemented in Task 4
+    fj_div = soup.find("div", id="final_jeopardy_round")
+    if fj_div is None:
+        return []
+    cat_td = fj_div.find("td", class_="category_name")
+    category = _html.unescape(cat_td.get_text(" ", strip=True)) if cat_td else None
+
+    clue_td = fj_div.find("td", id="clue_FJ")
+    clue_text = clue_td.get_text(" ", strip=True) if clue_td else None
+    if not clue_text:
+        return []
+
+    rtd = fj_div.find("td", id="clue_FJ_r")
+    answer = None
+    if rtd is not None:
+        em = rtd.find("em", class_="correct_response")
+        if em is not None:
+            answer = em.get_text(" ", strip=True)
+
+    return [{
+        "round": "Final", "row": None, "col": None, "category": category,
+        "value": None, "is_daily_double": False, "dd_wager": None,
+        "clue": clue_text, "answer": answer, "order_number": None,
+    }]
