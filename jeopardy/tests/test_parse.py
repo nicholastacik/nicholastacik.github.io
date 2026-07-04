@@ -58,3 +58,14 @@ def test_daily_double_has_wager_not_value():
     for c in dds:
         assert c["value"] is None
         assert isinstance(c["dd_wager"], int) and c["dd_wager"] > 0
+
+
+def test_final_jeopardy_clue():
+    game = parse_game(_modern())
+    finals = [c for c in game["clues"] if c["round"] == "Final"]
+    assert len(finals) == 1
+    fj = finals[0]
+    assert fj["category"] == "AUTHORS"
+    assert fj["row"] is None and fj["col"] is None and fj["value"] is None
+    assert fj["clue"]  # non-empty
+    assert fj["answer"]  # non-empty
