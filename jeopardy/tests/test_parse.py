@@ -8,6 +8,14 @@ def _modern():
     return (FIXTURES / "game_modern.html").read_text()
 
 
+def _tournament():
+    return (FIXTURES / "game_tournament.html").read_text()
+
+
+def _pre2001():
+    return (FIXTURES / "game_pre2001.html").read_text()
+
+
 def test_parse_game_metadata():
     game = parse_game(_modern())
     assert game is not None
@@ -58,6 +66,23 @@ def test_daily_double_has_wager_not_value():
     for c in dds:
         assert c["value"] is None
         assert isinstance(c["dd_wager"], int) and c["dd_wager"] > 0
+
+
+def test_parse_game_air_date_tournament_title_format():
+    # Tournament game pages use "<title>...game #N, aired DATE</title>" (no "Show #"
+    # prefix). air_date must still be extracted; show_number is legitimately None
+    # since there is no "Show #" on the page.
+    game = parse_game(_tournament())
+    assert game is not None
+    assert game["air_date"] == "2020-01-07"
+    assert game["show_number"] is None
+
+
+def test_parse_game_air_date_pre2001_title_format():
+    game = parse_game(_pre2001())
+    assert game is not None
+    assert game["air_date"] == "1984-09-10"
+    assert game["show_number"] == 1
 
 
 def test_final_jeopardy_clue():
