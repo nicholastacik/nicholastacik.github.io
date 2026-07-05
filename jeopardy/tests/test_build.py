@@ -1,4 +1,9 @@
+from pathlib import Path
+
 from jeopardy.build_parquet import board_value, classify_game_type, game_rows
+from jeopardy.parse import parse_game
+
+FIXTURES = Path(__file__).parent / "fixtures"
 
 
 def test_board_value_modern():
@@ -53,3 +58,18 @@ def test_game_rows_shape_and_derivation():
         "game_id", "air_date", "season", "game_type", "round", "category",
         "clue_value", "row", "column", "is_daily_double", "dd_wager", "clue", "answer",
     }
+
+
+def test_fixture_game_produces_valid_rows():
+    record = parse_game((FIXTURES / "game_modern.html").read_text())
+    record["game_id"] = 6699
+    record["season"] = "36"
+    rows = game_rows(record)
+    assert len(rows) == 61  # 60 board + 1 final
+    finals = [r for r in rows if r["round"] == "Final"]
+    assert len(finals) == 1 and finals[0]["clue_value"] is None
+    # every board row has a positive derived value and a category
+    for r in rows:
+        if r["round"] != "Final":
+            assert r["clue_value"] and r["clue_value"] > 0
+            assert r["category"]
