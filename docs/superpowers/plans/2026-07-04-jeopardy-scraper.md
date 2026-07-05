@@ -20,7 +20,7 @@
 - `clue_value` for daily doubles is the **board position value** (derived), not the wager; the wager goes in `dd_wager`.
 - Dollar-value doubling boundary: air dates `>= 2001-11-26` use the doubled ladder.
 - `season` is stored as a **string** (numeric ids like `"36"` and named ids like `"goattournament"` coexist).
-- Run commands from the **repo root** with `uv run` (e.g. `uv run python -m jeopardy crawl`, `uv run pytest jeopardy/tests -v`).
+- Run commands from the **repo root** with `uv run` (e.g. `uv run --group scraper python -m jeopardy crawl`, `uv run --group scraper pytest jeopardy/tests -v`).
 
 ---
 
@@ -215,7 +215,7 @@ def test_cli_exposes_commands():
 
 - [ ] **Step 9: Run the test**
 
-Run: `uv run pytest jeopardy/tests/test_cli.py -v`
+Run: `uv run --group scraper pytest jeopardy/tests/test_cli.py -v`
 Expected: PASS.
 
 - [ ] **Step 10: Commit**
@@ -264,7 +264,7 @@ def test_parse_game_missing_returns_none():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `uv run pytest jeopardy/tests/test_parse.py -v`
+Run: `uv run --group scraper pytest jeopardy/tests/test_parse.py -v`
 Expected: FAIL (`ModuleNotFoundError: jeopardy.parse`).
 
 - [ ] **Step 3: Implement metadata parsing**
@@ -318,7 +318,7 @@ def _parse_final_clue(soup):
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `uv run pytest jeopardy/tests/test_parse.py -v`
+Run: `uv run --group scraper pytest jeopardy/tests/test_parse.py -v`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
@@ -385,7 +385,7 @@ def test_daily_double_has_wager_not_value():
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `uv run pytest jeopardy/tests/test_parse.py -v`
+Run: `uv run --group scraper pytest jeopardy/tests/test_parse.py -v`
 Expected: FAIL (board list empty → count/`_clue_at` assertions fail).
 
 - [ ] **Step 3: Implement `_parse_board_clues`**
@@ -460,7 +460,7 @@ def _parse_order(cell):
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `uv run pytest jeopardy/tests/test_parse.py -v`
+Run: `uv run --group scraper pytest jeopardy/tests/test_parse.py -v`
 Expected: PASS (all parse tests).
 
 - [ ] **Step 5: Commit**
@@ -498,7 +498,7 @@ def test_final_jeopardy_clue():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `uv run pytest jeopardy/tests/test_parse.py::test_final_jeopardy_clue -v`
+Run: `uv run --group scraper pytest jeopardy/tests/test_parse.py::test_final_jeopardy_clue -v`
 Expected: FAIL (`len(finals) == 0`).
 
 - [ ] **Step 3: Implement `_parse_final_clue`**
@@ -533,7 +533,7 @@ def _parse_final_clue(soup):
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `uv run pytest jeopardy/tests/test_parse.py -v`
+Run: `uv run --group scraper pytest jeopardy/tests/test_parse.py -v`
 Expected: PASS (all parse tests).
 
 - [ ] **Step 5: Commit**
@@ -598,7 +598,7 @@ def test_cache_miss_fetches_and_writes(tmp_path, monkeypatch):
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `uv run pytest jeopardy/tests/test_fetch.py -v`
+Run: `uv run --group scraper pytest jeopardy/tests/test_fetch.py -v`
 Expected: FAIL (`ModuleNotFoundError: jeopardy.fetch`).
 
 - [ ] **Step 3: Implement `jeopardy/fetch.py`**
@@ -634,7 +634,7 @@ def fetch(url, cache_key):
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `uv run pytest jeopardy/tests/test_fetch.py -v`
+Run: `uv run --group scraper pytest jeopardy/tests/test_fetch.py -v`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
@@ -698,7 +698,7 @@ def test_existing_game_ids_missing_file(tmp_path):
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `uv run pytest jeopardy/tests/test_crawl.py -v`
+Run: `uv run --group scraper pytest jeopardy/tests/test_crawl.py -v`
 Expected: FAIL (`ModuleNotFoundError: jeopardy.crawl`).
 
 - [ ] **Step 3: Implement `jeopardy/crawl.py`**
@@ -784,7 +784,7 @@ def run_crawl():
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `uv run pytest jeopardy/tests/test_crawl.py -v`
+Run: `uv run --group scraper pytest jeopardy/tests/test_crawl.py -v`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
@@ -873,7 +873,7 @@ def test_game_rows_shape_and_derivation():
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `uv run pytest jeopardy/tests/test_build.py -v`
+Run: `uv run --group scraper pytest jeopardy/tests/test_build.py -v`
 Expected: FAIL (`ModuleNotFoundError: jeopardy.build_parquet`).
 
 - [ ] **Step 3: Implement `jeopardy/build_parquet.py`**
@@ -973,7 +973,7 @@ def run_build():
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `uv run pytest jeopardy/tests/test_build.py -v`
+Run: `uv run --group scraper pytest jeopardy/tests/test_build.py -v`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
@@ -1020,7 +1020,7 @@ def test_fixture_game_produces_valid_rows():
 
 - [ ] **Step 2: Run the full test suite**
 
-Run: `uv run pytest jeopardy/tests -v`
+Run: `uv run --group scraper pytest jeopardy/tests -v`
 Expected: PASS (all tests across parse/fetch/crawl/build/cli).
 
 - [ ] **Step 3: Real smoke crawl of one season, then build**
@@ -1046,7 +1046,7 @@ with config.JSONL_PATH.open('a') as out:
         out.write(json.dumps(rec, ensure_ascii=False) + '\n')
 print('slice crawled')
 "
-uv run python -m jeopardy build
+uv run --group scraper python -m jeopardy build
 ```
 Expected: a `clues.parquet` is written; the printed clue count is a few hundred.
 
@@ -1079,7 +1079,7 @@ git commit -m "test(jeopardy): end-to-end fixture validation"
 
 This is the real ~2.5–4 hour polite crawl. Not part of the automated plan; run it deliberately:
 ```bash
-uv run python -m jeopardy all
+uv run --group scraper python -m jeopardy all
 ```
 Then commit the real artifact:
 ```bash
