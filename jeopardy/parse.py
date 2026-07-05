@@ -3,7 +3,12 @@ import html as _html
 import re
 from bs4 import BeautifulSoup
 
-_TITLE_RE = re.compile(r"Show #(\d+),\s*aired\s*(\d{4}-\d{2}-\d{2})")
+# Regular-episode titles look like "Show #8235, aired 2020-06-12"; tournament
+# game pages (e.g. GOAT) instead use "...game #1, aired 2020-01-07" with no
+# "Show #" prefix. air_date must be extracted regardless of the prefix;
+# show_number is only present (and only meaningful) when "Show #" appears.
+_AIR_DATE_RE = re.compile(r"aired\s+(\d{4}-\d{2}-\d{2})")
+_SHOW_NUMBER_RE = re.compile(r"Show #(\d+)")
 _CID_RE = re.compile(r"clue_(J|DJ)_(\d+)_(\d+)$")
 _ROUND_DIVS = [("J", "jeopardy_round"), ("DJ", "double_jeopardy_round")]
 
@@ -18,10 +23,13 @@ def parse_game(page_html):
     air_date = None
     title = soup.find("title")
     if title:
-        m = _TITLE_RE.search(title.get_text())
+        title_text = title.get_text()
+        m = _AIR_DATE_RE.search(title_text)
+        if m:
+            air_date = m.group(1)
+        m = _SHOW_NUMBER_RE.search(title_text)
         if m:
             show_number = int(m.group(1))
-            air_date = m.group(2)
 
     comments_div = soup.find("div", id="game_comments")
     game_comments = comments_div.get_text(" ", strip=True) if comments_div else ""

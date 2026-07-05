@@ -60,6 +60,38 @@ def test_game_rows_shape_and_derivation():
     }
 
 
+def test_tournament_fixture_daily_double_gets_doubled_era_value():
+    # Regression: tournament title format ("...game #N, aired DATE") has no
+    # "Show #" prefix, so the old air_date regex returned None and board_value()
+    # fell back to the pre-2001 halved ladder. This DD is post-2001 (2020-01-07)
+    # so it must get the doubled Double Jeopardy value: 400 * row.
+    record = parse_game((FIXTURES / "game_tournament.html").read_text())
+    assert record["air_date"] == "2020-01-07"
+    record["game_id"] = 1
+    record["season"] = "goattournament"
+    rows = game_rows(record)
+    dd = next(
+        r for r in rows
+        if r["round"] == "Double Jeopardy" and r["is_daily_double"] and r["dd_wager"] == 8600
+    )
+    assert dd["row"] == 3
+    assert dd["clue_value"] == 1200  # 400 * row(3); would be 600 with the pre-2001 halved ladder
+
+
+def test_pre2001_fixture_daily_double_gets_halved_era_value():
+    record = parse_game((FIXTURES / "game_pre2001.html").read_text())
+    assert record["air_date"] == "1984-09-10"
+    record["game_id"] = 2
+    record["season"] = "1"
+    rows = game_rows(record)
+    dd = next(
+        r for r in rows
+        if r["round"] == "Jeopardy" and r["is_daily_double"] and r["dd_wager"] == 800
+    )
+    assert dd["row"] == 3
+    assert dd["clue_value"] == 300  # 100 * row(3), pre-2001 halved ladder
+
+
 def test_fixture_game_produces_valid_rows():
     record = parse_game((FIXTURES / "game_modern.html").read_text())
     record["game_id"] = 6699
