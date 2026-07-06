@@ -29,3 +29,24 @@ def test_word_boundary_and_dedup_counting():
     # returns each occurrence (dups kept) so callers can count
     out = extract_phrases("Napoleon met Napoleon again")
     assert out.count("Napoleon") == 2
+
+
+def test_year_not_glued_to_regnal_entity():
+    out = extract_phrases("In 1483 Richard III seized the throne of England")
+    assert "Richard III" in out
+    assert "England" in out
+    assert not any("1483" in phrase for phrase in out)
+
+
+def test_year_dropped_but_entity_kept():
+    out = extract_phrases("The 1980 Olympics were held in Moscow")
+    assert "Olympics" in out
+    assert "Moscow" in out
+    assert not any("1980" in phrase for phrase in out)
+
+
+def test_and_splits_separate_entities():
+    out = extract_phrases("World War II and World War I are conflicts")
+    assert "World War II" in out
+    assert "World War I" in out
+    assert "World War II and World War I" not in out
