@@ -22,6 +22,23 @@ def test_ctfidf_surfaces_distinctive_terms():
     assert any("pasta" in t or "penne" in t for t in terms[1])
 
 
+def test_ctfidf_suppresses_common_terms():
+    # "clue" appears in both docs (df=2 -> idf=1.0) with a HIGHER raw term
+    # frequency (4) than the cluster-unique terms (df=1 -> idf~1.4055, tf=3).
+    # tf*idf: clue = 4*1.0 = 4.0 vs president/pasta = 3*1.4055 ~= 4.22, so the
+    # unique terms outrank "clue" once IDF is applied, even though a plain
+    # term-frequency count would rank "clue" first in both clusters.
+    docs = [
+        "clue clue clue clue president president president inauguration inauguration inauguration",
+        "clue clue clue clue pasta pasta pasta penne penne penne",
+    ]
+    terms = ctfidf_terms(docs, n=2)
+    assert "clue" not in terms[0]
+    assert "president" in terms[0] and "inauguration" in terms[0]
+    assert "clue" not in terms[1]
+    assert "pasta" in terms[1] and "penne" in terms[1]
+
+
 def test_nearest_exemplars_returns_closest():
     emb = np.array([[0.0, 0.0], [1.0, 1.0], [0.1, 0.1]])
     centroid = np.array([0.0, 0.0])
