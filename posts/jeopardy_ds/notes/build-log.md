@@ -253,3 +253,44 @@ sports, art, religion, business, etc. as clean 1-3% clusters.
   the names distinguish them.
 - Cluster names authored in-session (free); optional OpenAI `name-clusters` path exists
   but wasn't used.
+
+---
+
+## 2026-07-06 — Most common tokens per category-type (Step 4)
+
+Built `jeopardy/analysis/tokens.py` + `tokens` CLI → committed
+`category_tokens.parquet` (1,250 rows: top-25 phrases for each of the 50 cluster-types,
++ an `n_qualifying_phrases` applicability signal).
+
+### Design
+- **Unit:** the 50 cluster-types (not raw category names — too sparse).
+- **Token = capitalized proper-noun phrase** mined from clue **and** answer text (answers
+  alone lose entities that live in the clue, e.g. "What year was Richard III born?"). A
+  transparent regex (no NER) keeps entities whole: "Richard III", "World War II",
+  "United States of America". Digits excluded (kills year-gluing); "and" excluded (splits
+  distinct entities); clue and answer extracted separately (avoids cross-boundary gluing).
+- **Ranking:** c-TF-IDF (`idf = log(n_clusters / doc_freq)`, no smoothing) with a
+  min-frequency floor (≥5), top-25 per cluster.
+
+### Noise-cleaning journey (three passes)
+1. **Un-smoothed idf.** The first cut was polluted with nationalities ("American",
+   "French") ranking top. Root cause: `+1.0` idf smoothing floored idf near 1, so
+   ubiquitous words scored ≈ raw count. Removing smoothing lets words in all 50 clusters
+   go to weight 0.
+2. **Drop titles.** "President/King/Mr/Dr/Lord" were leaking as tokens; now stripped like
+   stopwords (the name survives, the title vanishes).
+3. **Capitalization-dominance filter.** Residual single-word generic nouns ("Species",
+   "Scientists") remained. Filter: drop a single-word phrase if its lowercase form
+   dominates in the corpus (appears more lowercase than capitalized). This keeps homonym
+   entities ("China", "Turkey" — capitalized-dominant) while dropping generic nouns —
+   the key advantage over a naive dictionary/stoplist. Multi-word phrases always kept.
+   Known tradeoff: genuinely capitalized-dominant labels ("Republican", "Democrat")
+   survive — acceptable (they're real proper nouns, just not study entities).
+
+### Results (sample)
+- **Books & Authors:** Jane Eyre, Willa Cather, Thomas Hardy, Agatha Christie, Sinclair Lewis…
+- **World Geography & Waters:** Caspian Sea, Bay of Bengal, Black Sea, Indian Ocean, Volga, Greenland…
+- **U.S. Presidents:** Woodrow Wilson, Gerald Ford, Andrew Jackson, John Quincy Adams…
+- **Animals & Zoology:** Galapagos Islands, Manx, Gila, Stegosaurus, Komodo…
+- **Applicability ranking** (most studyable → entity-dense types like Books & Authors,
+  Movies, Pop Music; least → wordplay/generic types), via `n_qualifying_phrases`.
