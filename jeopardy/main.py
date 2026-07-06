@@ -53,3 +53,12 @@ def name_clusters():
     """Optional: name clusters via OpenAI -> cluster_labels.csv (needs OPENAI_API_KEY)."""
     from jeopardy.analysis.name_clusters import run_name_clusters
     run_name_clusters()
+
+
+@cli.command()
+@click.option("--min-freq", default=5, type=int, help="Min phrase count within a cluster to qualify.")
+@click.option("--top-n", default=25, type=int, help="Max ranked phrases kept per cluster.")
+def tokens(min_freq, top_n):
+    """Extract most-common proper-noun phrases per cluster -> category_tokens.parquet."""
+    from jeopardy.analysis.tokens import run_tokens
+    run_tokens(min_freq=min_freq, top_n=top_n)
