@@ -96,3 +96,21 @@ def test_all_clusters_represented_and_columns():
     df = cluster_top_phrases(_clusters(), _clues(), min_freq=5, top_n=25)
     assert set(df["cluster_id"]) == {0, 1}
     assert list(df.columns) == ["cluster_id", "rank", "phrase", "count", "tfidf_weight", "n_qualifying_phrases"]
+
+
+def test_pipeline_entity_beats_common_word():
+    # "Lincoln" distinctive to cluster 0; "President" common to both -> Lincoln ranks above
+    clusters = pd.DataFrame(
+        [{"game_id": i, "round": "Jeopardy", "category": "PRES", "cluster_id": 0} for i in range(6)]
+        + [{"game_id": i, "round": "Jeopardy", "category": "GOV", "cluster_id": 1} for i in range(6)]
+    )
+    clues = pd.DataFrame(
+        [{"game_id": i, "round": "Jeopardy", "category": "PRES",
+          "clue": "President Abraham Lincoln", "answer": "Abraham Lincoln"} for i in range(6)]
+        + [{"game_id": i, "round": "Jeopardy", "category": "GOV",
+            "clue": "President George Washington", "answer": "George Washington"} for i in range(6)]
+    )
+    df = cluster_top_phrases(clusters, clues, min_freq=5, top_n=25)
+    c0 = df[df["cluster_id"] == 0].set_index("phrase")
+    # "Abraham Lincoln" (distinctive) outranks "President" (in both clusters)
+    assert c0.loc["Abraham Lincoln", "rank"] < c0.loc["President", "rank"]

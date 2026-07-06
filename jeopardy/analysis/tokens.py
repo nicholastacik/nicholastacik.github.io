@@ -16,6 +16,17 @@ _STOPWORDS = {
     "Or", "If", "Then", "Both", "Each", "Some", "Many", "Most", "All", "No",
 }
 
+# Common capitalized titles/descriptors that regularly precede a proper name
+# (e.g. "President Abraham Lincoln"). Unlike _STOPWORDS these aren't dropped:
+# they're split off as their own phrase so a title shared across many
+# categories doesn't glue onto - and hide the frequency of - the distinctive
+# name that follows it.
+_TITLES = {
+    "President", "King", "Queen", "Prince", "Princess", "Emperor", "Empress",
+    "General", "Senator", "Governor", "Mayor", "Doctor", "Professor",
+    "Captain", "Colonel", "Judge", "Sir", "Lady", "Lord", "Pope", "Saint",
+}
+
 _WORD = r"[A-Z][a-z]+"
 # Roman numerals only (regnal/era names like "Richard III", "World War II",
 # "Louis XIV"). Bare digits are deliberately excluded: allowing `\d+` here
@@ -45,12 +56,22 @@ def _strip_leading_stopwords(phrase):
 
 
 def extract_phrases(text):
-    """All proper-noun phrases in `text` (dups kept), leading stopwords stripped."""
+    """All proper-noun phrases in `text` (dups kept), leading stopwords stripped.
+
+    A leading title word (e.g. "President") is split off as its own phrase
+    rather than glued onto the name that follows it.
+    """
     out = []
     for m in _PHRASE_RE.finditer(text or ""):
         phrase = _strip_leading_stopwords(m.group(0).strip())
-        if phrase:
+        while phrase:
+            tokens = phrase.split()
+            if len(tokens) > 1 and tokens[0] in _TITLES:
+                out.append(tokens[0])
+                phrase = _strip_leading_stopwords(" ".join(tokens[1:]))
+                continue
             out.append(phrase)
+            break
     return out
 
 
