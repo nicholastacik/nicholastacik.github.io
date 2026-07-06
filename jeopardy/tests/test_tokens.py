@@ -50,3 +50,49 @@ def test_and_splits_separate_entities():
     assert "World War II" in out
     assert "World War I" in out
     assert "World War II and World War I" not in out
+
+
+import pandas as pd
+from jeopardy.analysis.tokens import cluster_top_phrases
+
+
+def _clusters():
+    # cluster 0 = entity-heavy (Lincoln repeats), cluster 1 = wordplay (all distinct)
+    rows = []
+    for i in range(8):
+        rows.append({"game_id": i, "round": "Jeopardy", "category": "PRESIDENTS", "cluster_id": 0})
+        rows.append({"game_id": i, "round": "Jeopardy", "category": "4-LETTER WORDS", "cluster_id": 1})
+    return pd.DataFrame(rows)
+
+
+def _clues():
+    rows = []
+    for i in range(8):
+        rows.append({"game_id": i, "round": "Jeopardy", "category": "PRESIDENTS",
+                     "clue": "This president led during the Civil War", "answer": "Abraham Lincoln"})
+        rows.append({"game_id": i, "round": "Jeopardy", "category": "4-LETTER WORDS",
+                     "clue": f"a four letter word number {i}", "answer": f"wordx{i}"})
+    return pd.DataFrame(rows)
+
+
+def test_entity_cluster_ranks_repeated_entity():
+    df = cluster_top_phrases(_clusters(), _clues(), min_freq=5, top_n=25)
+    c0 = df[df["cluster_id"] == 0]
+    assert c0.iloc[0]["phrase"] == "Abraham Lincoln"
+    assert c0.iloc[0]["count"] == 8
+    assert c0.iloc[0]["rank"] == 1
+    assert (c0["n_qualifying_phrases"] > 0).all()
+
+
+def test_wordplay_cluster_has_no_qualifying_phrases():
+    df = cluster_top_phrases(_clusters(), _clues(), min_freq=5, top_n=25)
+    c1 = df[df["cluster_id"] == 1]
+    assert len(c1) == 1
+    assert c1.iloc[0]["n_qualifying_phrases"] == 0
+    assert pd.isna(c1.iloc[0]["phrase"])
+
+
+def test_all_clusters_represented_and_columns():
+    df = cluster_top_phrases(_clusters(), _clues(), min_freq=5, top_n=25)
+    assert set(df["cluster_id"]) == {0, 1}
+    assert list(df.columns) == ["cluster_id", "rank", "phrase", "count", "tfidf_weight", "n_qualifying_phrases"]
