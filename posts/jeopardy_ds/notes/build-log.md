@@ -215,3 +215,41 @@ clustering (fast, re-tunable) — the fetch/parse split, again. Committed:
 `category_clusters.parquet` (per-instance cluster_id + 2D coords) and
 `cluster_summary.parquet` (per-cluster fingerprints); embedding matrix cached +
 gitignored.
+
+---
+
+## 2026-07-06 — Step 3 RESULTS: what the clusters revealed
+
+Ran the full pipeline: **122,954 category instances** embedded (`bge-small-en-v1.5`),
+KMeans **k=50** (seed 42), UMAP 2D, three-part fingerprints, names hand-authored into
+`cluster_labels.csv`. Committed artifacts: `category_clusters.parquet` (per-instance
+cluster + 2D coords), `cluster_summary.parquet`, `cluster_naming_prompt.md`,
+`cluster_labels.csv`.
+
+### The clusters are clean, interpretable types
+Nearly every one of the 50 clusters is a recognizable category type — e.g. cluster 25 =
+Shakespeare (terms: shakespeare, macbeth, hamlet), 35 = U.S. Presidents, 46 = World
+Geography & Waters (river, island, sea, lake), 24 = Mythology (god, greek, zeus).
+
+### Headline finding: wordplay is the single largest meta-domain (~10-13%)
+Grouping the 50 clusters into broad domains (share of all categories):
+wordplay/language ~13% · history & politics ~11% · geography & travel ~11% · science &
+nature ~10% · literature & writing ~9% · screen (film/TV) ~9% · music ~5% · a ~5%
+genuine "potpourri/grab-bag" that correctly resists typing; the rest split into food,
+sports, art, religion, business, etc. as clean 1-3% clusters.
+
+### The k-sweep sharpened the study takeaway
+- **k=30** = executive-summary view (over-merges: science+astronomy+measures lump together).
+- **k=50** = the sweet spot (distinct, coherent types) — chosen as primary.
+- **k=80** = drill-down: *wordplay fractures into distinct prep tracks* — letter/anagram
+  **games** (a drill-it skill), vs **etymology/word-origins** and **idioms/proverbs**
+  (memorizable knowledge, Latin/French roots). So "practice wordplay" is really two
+  different study strategies. This reframing is exactly why we did Step 3 first.
+
+### Method notes / caveats
+- c-TF-IDF labels needed light stopword filtering ("it's", ordinal "th" from the
+  `\d` tokenizer boundary) for clean readouts — cosmetic.
+- A few near-duplicate clusters at k=50 (TV 15/31, movies 19/33, literature 0/26) — fine,
+  the names distinguish them.
+- Cluster names authored in-session (free); optional OpenAI `name-clusters` path exists
+  but wasn't used.
