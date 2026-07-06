@@ -56,6 +56,32 @@ def _strip_leading_stopwords(phrase):
     return " ".join(tokens)
 
 
+_SURFACE_WORD_RE = re.compile(r"[A-Za-z][A-Za-z'\-]+")
+
+
+def build_surface_counts(texts):
+    """Tally, across `texts`, how often each word (keyed lowercase) appears
+    Capitalized vs lowercase on the surface.
+
+    Used to tell real single-word entities that are homonyms of common
+    English words (e.g. "China", "Turkey", "Taft") - which appear
+    capitalized throughout the corpus - apart from generic common nouns that
+    only look like entities because they happen to start a sentence (e.g.
+    "Species", "Scientists"), which appear lowercase far more often than
+    capitalized.
+    """
+    cap_count = Counter()
+    lower_count = Counter()
+    for text in texts:
+        for tok in _SURFACE_WORD_RE.findall(text or ""):
+            if tok.islower():
+                lower_count[tok.lower()] += 1
+            elif tok[0].isupper() and not tok.isupper():
+                cap_count[tok.lower()] += 1
+            # else: ALL-CAPS token (e.g. acronym) - ignored, counts toward neither.
+    return cap_count, lower_count
+
+
 def extract_phrases(text):
     """All proper-noun phrases in `text` (dups kept), leading stopwords/titles stripped.
 
@@ -87,6 +113,19 @@ def cluster_top_phrases(clusters_df, clues_df, min_freq=5, top_n=25):
         counter.update(extract_phrases(clue))
         counter.update(extract_phrases(answer))
 
+    # Capitalization-dominance tally over the same clue+answer text, used to
+    # filter generic single-word common nouns (e.g. "Species", "Scientists")
+    # that only look like entities because they happen to be sentence-initial,
+    # while keeping real single-word entities that are homonyms of common
+    # words (e.g. "China", "Volga", "Taft").
+    cap_count, lower_count = build_surface_counts(clue_text + answer_text)
+
+    def _is_generic_single_word(phrase):
+        if " " in phrase:
+            return False
+        key = phrase.lower()
+        return lower_count[key] > cap_count[key]
+
     n_clusters = len(counts)
     doc_freq = Counter()  # phrase -> number of clusters containing it
     for counter in counts.values():
@@ -94,7 +133,10 @@ def cluster_top_phrases(clusters_df, clues_df, min_freq=5, top_n=25):
 
     rows = []
     for cid in sorted(counts):
-        qualifying = {p: n for p, n in counts[cid].items() if n >= min_freq}
+        qualifying = {
+            p: n for p, n in counts[cid].items()
+            if n >= min_freq and not _is_generic_single_word(p)
+        }
         n_qual = len(qualifying)
         if not qualifying:
             rows.append({"cluster_id": cid, "rank": 0, "phrase": None, "count": 0,
@@ -106,7 +148,7 @@ def cluster_top_phrases(clusters_df, clues_df, min_freq=5, top_n=25):
             weight = n * idf
             if weight > 0:
                 scored.append((phrase, n, weight))
-        scored.sort(key=lambda x: (-x[2], -x[1], x[0]))
+        scored.sort(key=lambda x: (-x[2], -len(x[0].split()), -x[1], x[0]))
         if not scored:
             # Every qualifying phrase is common to all clusters (weight <= 0):
             # no distinctive phrase to report, but the cluster still exists.
