@@ -139,3 +139,83 @@ def test_pipeline_entity_beats_common_word():
     # "Abraham Lincoln" (distinctive to cluster 0) outranks "Congress" (shared)
     assert c0.loc["Abraham Lincoln", "rank"] < c0.loc["Congress", "rank"]
     assert c0.loc["Congress", "tfidf_weight"] < c0.loc["Abraham Lincoln", "tfidf_weight"]
+
+
+from jeopardy.analysis.tokens import build_surface_counts
+
+
+def test_build_surface_counts_tracks_cap_vs_lower():
+    texts = (
+        ["species is a word"] * 5
+        + ["Species classification"]
+        + ["China is a country"]
+        + ["china tea set"] * 2
+    )
+    cap_count, lower_count = build_surface_counts(texts)
+    assert lower_count["species"] == 5
+    assert cap_count["species"] == 1
+    assert cap_count["china"] == 1
+    assert lower_count["china"] == 2
+
+
+def _animals_clusters_and_clues():
+    rows_clusters, rows_clues = [], []
+    # cluster 0: real animal-cluster clues where "Species" leaks in as a
+    # sentence-initial generic noun alongside real single-word entities
+    # "China" and "Taft" which are capitalized throughout the corpus.
+    for i in range(10):
+        rows_clusters.append({"game_id": i, "round": "Jeopardy", "category": "ANIMALS", "cluster_id": 0})
+        rows_clues.append({
+            "game_id": i, "round": "Jeopardy", "category": "ANIMALS",
+            "clue": "Species like this thrive near China and were named for Taft",
+            "answer": "China species",
+        })
+    # cluster 1: filler text that only ever uses "species" lowercase, to make
+    # "species" predominantly lowercase across the whole corpus.
+    for i in range(30):
+        rows_clusters.append({"game_id": 100 + i, "round": "Jeopardy", "category": "FILLER", "cluster_id": 1})
+        rows_clues.append({
+            "game_id": 100 + i, "round": "Jeopardy", "category": "FILLER",
+            "clue": "species require careful species study of species behavior",
+            "answer": "species report",
+        })
+    return pd.DataFrame(rows_clusters), pd.DataFrame(rows_clues)
+
+
+def test_generic_single_word_dropped_real_single_word_entities_kept():
+    clusters, clues = _animals_clusters_and_clues()
+    df = cluster_top_phrases(clusters, clues, min_freq=5, top_n=25)
+    c0 = df[df["cluster_id"] == 0]
+    phrases = set(c0["phrase"])
+    assert "Species" not in phrases
+    assert "China" in phrases
+    assert "Taft" in phrases
+    assert c0.iloc[0]["n_qualifying_phrases"] == 2
+
+
+def test_multiword_phrase_never_dropped_by_capitalization_filter():
+    # "united" and "kingdom" are individually overwhelmingly lowercase across
+    # the corpus, but the multi-word phrase "United Kingdom" must survive
+    # since the capitalization-dominance filter only applies to single words.
+    rows_clusters, rows_clues = [], []
+    for i in range(10):
+        rows_clusters.append({"game_id": i, "round": "Jeopardy", "category": "GEO", "cluster_id": 0})
+        rows_clues.append({
+            "game_id": i, "round": "Jeopardy", "category": "GEO",
+            "clue": "United Kingdom is a united kingdom of nations",
+            "answer": "United Kingdom",
+        })
+    # a second, unrelated cluster so "United Kingdom" has a nonzero idf
+    # (distinctive to cluster 0) instead of appearing in every cluster.
+    for i in range(10):
+        rows_clusters.append({"game_id": 100 + i, "round": "Jeopardy", "category": "MISC", "cluster_id": 1})
+        rows_clues.append({
+            "game_id": 100 + i, "round": "Jeopardy", "category": "MISC",
+            "clue": "no proper nouns appear in this clue at all",
+            "answer": "nothing notable",
+        })
+    clusters = pd.DataFrame(rows_clusters)
+    clues = pd.DataFrame(rows_clues)
+    df = cluster_top_phrases(clusters, clues, min_freq=5, top_n=25)
+    c0 = df[df["cluster_id"] == 0]
+    assert "United Kingdom" in set(c0["phrase"])
