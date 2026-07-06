@@ -18,7 +18,7 @@ def build_documents(clues_df):
     grouped = clues_df.groupby(["game_id", "round", "category"], sort=True)
     for instance_id, ((game_id, round_, category), group) in enumerate(grouped):
         pairs = [
-            (str(c) if c is not None else "", str(a) if a is not None else "")
+            (str(c) if not pd.isna(c) else "", str(a) if not pd.isna(a) else "")
             for c, a in zip(group["clue"], group["answer"])
         ]
         pairs.sort()  # deterministic input order before the seeded shuffle
