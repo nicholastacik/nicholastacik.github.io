@@ -38,3 +38,21 @@ def test_make_document_shuffle_is_seed_reproducible():
     d2 = make_document("X", pairs, np.random.default_rng(7))
     assert d1 == d2
     assert d1.startswith("X.")
+
+
+def test_build_documents_independent_of_row_order():
+    df = _clues()
+    forward = build_documents(df)
+    reversed_ = build_documents(df.iloc[::-1])
+    pd.testing.assert_frame_equal(forward, reversed_)
+
+
+def test_build_documents_nan_clue_and_answer_become_empty_string():
+    df = pd.DataFrame([
+        {"game_id": 1, "round": "Jeopardy", "category": "PASTA",
+         "clue": "a tube shape", "answer": "penne"},
+        {"game_id": 1, "round": "Jeopardy", "category": "PASTA",
+         "clue": float("nan"), "answer": float("nan")},
+    ])
+    doc = build_documents(df)["document"].iloc[0]
+    assert "nan" not in doc
