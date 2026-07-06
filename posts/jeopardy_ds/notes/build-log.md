@@ -162,3 +162,56 @@ is_daily_double, dd_wager, clue, answer`.
   `clue` = the displayed statement, `answer` = the correct response.
 - Contestant-level data (who rang in, scores) deliberately **out of scope** —
   none of the planned analyses need it and it ~doubles parser complexity.
+
+---
+
+## 2026-07-05 — Sub-project B, Phase 1: category clustering (Step 3)
+
+The scraper produced the full dataset (**563,266 clues**, 9,485 games, seasons
+1984–2026, one 29 MB committed `clues.parquet`). Sanity checks were clean: 0 null
+categories/clues/answers; the 112 null air-dates are exactly the never-aired Trebek
+pilots; `game_type` classification landed sensibly (regular 474k, then ToC, teen,
+college, teachers, celebrity, masters, GOAT, …).
+
+**We reordered B to do Step 3 (clustering) first** — it's the exploratory piece, and
+what the embeddings reveal about the data's semantic structure will inform Steps 4–5 and
+the eventual post.
+
+### Goal
+
+Discover the most common **types** of categories, to guide what to study.
+
+### Decisions
+
+- **Unit = category instance.** One document per `(game_id, round, category)` — name +
+  its clues/answers. Cluster **all ~123k** instances (not deduped by name) so that a
+  perennial type recurs and cluster *size* reads directly as "how common this type is."
+- **Embedding: local sentence-transformer, `BAAI/bge-small-en-v1.5`.** Semantic (unlike
+  TF-IDF), free/offline (no API cost, unlike an embeddings API), 512-token window (fits
+  full category docs — `all-MiniLM-L6-v2`'s 256 would truncate), compact 384-dim.
+- **Document construction:** `CATEGORY NAME.` first (anchor), then the clue→answer pairs
+  **shuffled** per document via a *seeded* RNG — non-systematic order across the corpus
+  (kills positional bias) but reproducible. 512 tokens makes truncation a non-issue, so
+  no front-loading needed.
+- **Clustering: KMeans (seeded) + UMAP for 2D viz only.** KMeans assigns *every* instance
+  (no noise bucket), partitions cleanly, and ranks by size — the study signal. Chosen
+  over UMAP→HDBSCAN (big awkward noise bucket, harder to rank) and hierarchical
+  (memory-prohibitive at 123k). `k`≈50, over-segment and lean on labels.
+- **Cluster labels = three-part deterministic fingerprint:** top actual category names +
+  centroid exemplars + c-TF-IDF distinctive terms. Free, deterministic, human-readable.
+- **Optional LLM naming as an enrichment layer.** The pipeline emits a paste-ready
+  `cluster_naming_prompt.md`; an optional `name-clusters` command calls the OpenAI API
+  (one batched call, ~$0.01–0.30 one-time — pennies) to write a **committed, curated**
+  `cluster_labels.csv`. Kept *outside* the deterministic pipeline (re-running may rename);
+  can also be filled by hand via the ChatGPT web app for $0. The summary/post read the
+  labels if present, else fall back to the fingerprint.
+
+### Architecture
+
+Same reproducibility boundary as the scraper: heavy compute (`torch`/`umap`/`sklearn`,
+in an offline `analysis` uv group) runs on the machine and commits small artifacts;
+CI/the post read them with pandas only. Embedding (slow) is cached and split from
+clustering (fast, re-tunable) — the fetch/parse split, again. Committed:
+`category_clusters.parquet` (per-instance cluster_id + 2D coords) and
+`cluster_summary.parquet` (per-cluster fingerprints); embedding matrix cached +
+gitignored.
