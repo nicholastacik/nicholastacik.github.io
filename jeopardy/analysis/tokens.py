@@ -17,14 +17,15 @@ _STOPWORDS = {
 }
 
 # Common capitalized titles/descriptors that regularly precede a proper name
-# (e.g. "President Abraham Lincoln"). Unlike _STOPWORDS these aren't dropped:
-# they're split off as their own phrase so a title shared across many
-# categories doesn't glue onto - and hide the frequency of - the distinctive
-# name that follows it.
+# (e.g. "President Abraham Lincoln"). These are dropped like stopwords so a
+# title shared across many categories doesn't rank high in its own right -
+# it's noise, not an entity - while the distinctive name after it survives.
 _TITLES = {
-    "President", "King", "Queen", "Prince", "Princess", "Emperor", "Empress",
-    "General", "Senator", "Governor", "Mayor", "Doctor", "Professor",
-    "Captain", "Colonel", "Judge", "Sir", "Lady", "Lord", "Pope", "Saint",
+    "President", "King", "Queen", "Prince", "Princess", "Sir", "Saint", "St",
+    "Lord", "Lady", "General", "Admiral", "Captain", "Colonel", "Major",
+    "Sergeant", "Doctor", "Dr", "Mr", "Mrs", "Ms", "Miss", "Professor",
+    "Pope", "Emperor", "Empress", "Duke", "Duchess", "Earl", "Baron",
+    "Governor", "Senator", "Judge", "Justice", "Sultan", "Czar", "Tsar",
 }
 
 _WORD = r"[A-Z][a-z]+"
@@ -47,31 +48,26 @@ _PHRASE_RE = re.compile(
 
 def _strip_leading_stopwords(phrase):
     tokens = phrase.split()
-    # Drop leading stopwords. With bare digits excluded from continuations
-    # above, a phrase can never start with (or contain) a bare number, so
-    # there's no need to additionally strip leading numeric tokens.
-    while tokens and tokens[0] in _STOPWORDS:
+    # Drop leading stopwords and titles. With bare digits excluded from
+    # continuations above, a phrase can never start with (or contain) a bare
+    # number, so there's no need to additionally strip leading numeric tokens.
+    while tokens and (tokens[0] in _STOPWORDS or tokens[0] in _TITLES):
         tokens.pop(0)
     return " ".join(tokens)
 
 
 def extract_phrases(text):
-    """All proper-noun phrases in `text` (dups kept), leading stopwords stripped.
+    """All proper-noun phrases in `text` (dups kept), leading stopwords/titles stripped.
 
-    A leading title word (e.g. "President") is split off as its own phrase
-    rather than glued onto the name that follows it.
+    A leading title word (e.g. "President") is dropped entirely, like a
+    stopword, rather than emitted as its own phrase - it's noise, not an
+    entity, and the distinctive name that follows it survives.
     """
     out = []
     for m in _PHRASE_RE.finditer(text or ""):
         phrase = _strip_leading_stopwords(m.group(0).strip())
-        while phrase:
-            tokens = phrase.split()
-            if len(tokens) > 1 and tokens[0] in _TITLES:
-                out.append(tokens[0])
-                phrase = _strip_leading_stopwords(" ".join(tokens[1:]))
-                continue
+        if phrase:
             out.append(phrase)
-            break
     return out
 
 
@@ -106,9 +102,17 @@ def cluster_top_phrases(clusters_df, clues_df, min_freq=5, top_n=25):
             continue
         scored = []
         for phrase, n in qualifying.items():
-            idf = math.log(n_clusters / (1 + doc_freq[phrase])) + 1.0
-            scored.append((phrase, n, n * idf))
+            idf = math.log(n_clusters / doc_freq[phrase])
+            weight = n * idf
+            if weight > 0:
+                scored.append((phrase, n, weight))
         scored.sort(key=lambda x: (-x[2], -x[1], x[0]))
+        if not scored:
+            # Every qualifying phrase is common to all clusters (weight <= 0):
+            # no distinctive phrase to report, but the cluster still exists.
+            rows.append({"cluster_id": cid, "rank": 0, "phrase": None, "count": 0,
+                         "tfidf_weight": 0.0, "n_qualifying_phrases": n_qual})
+            continue
         for rank, (phrase, n, weight) in enumerate(scored[:top_n], start=1):
             rows.append({"cluster_id": cid, "rank": rank, "phrase": phrase, "count": n,
                          "tfidf_weight": weight, "n_qualifying_phrases": n_qual})
