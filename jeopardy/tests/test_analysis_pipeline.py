@@ -28,6 +28,11 @@ def test_pipeline_composes():
     summary = build_cluster_summary(instances, emb, labels, centers)
     assert summary["size"].sum() == 12
     assert set(summary.columns) == {"cluster_id", "size", "top_category_names", "top_terms", "exemplars"}
-    # each cluster is a pure category type
-    joined = " ".join(summary.iloc[0]["top_category_names"] + summary.iloc[1]["top_category_names"])
-    assert "PASTA" in joined and "OPERA" in joined
+    # each cluster is a pure category type: grouping the true categories by
+    # assigned label must yield exactly one category per cluster, and the
+    # two clusters together must cover both categories. This fails if any
+    # PASTA and OPERA instances are mixed into the same cluster.
+    categories_by_label = pd.Series(instances["category"].to_numpy()).groupby(labels)
+    per_cluster_categories = categories_by_label.unique()
+    assert all(len(cats) == 1 for cats in per_cluster_categories)
+    assert {cats[0] for cats in per_cluster_categories} == {"PASTA", "OPERA"}
