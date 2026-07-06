@@ -19,12 +19,23 @@ entries by number/length, never by their letters.
 Usage:
   python build.py --puzzle puzzle.json --out /path/to/index.html
 """
-import sys, json, argparse, os
+import sys, json, argparse, os, hashlib
 
 PLACE = {
     "__TITLE__": None, "__N__": None, "__BLACK__": None,
     "__SOLUTION__": None, "__ACROSS__": None, "__DOWN__": None, "__HINTS__": None,
+    "__SAVEKEY__": None,
 }
+
+
+def save_key(p):
+    # Unique per puzzle so each crossword gets its own localStorage bucket (no
+    # answers bleeding between puzzles), yet deterministic — a rebuild of the same
+    # puzzle keeps the same key, so in-progress answers survive.
+    h = hashlib.sha1(json.dumps(
+        [p.get('title', ''), p['black'], p['solution']],
+        ensure_ascii=False, sort_keys=True).encode('utf-8')).hexdigest()[:10]
+    return 'cryptic-' + h
 
 
 def blk(black, r, c, n):
@@ -130,6 +141,7 @@ def main():
         "__ACROSS__": json.dumps(p['across'], ensure_ascii=False),
         "__DOWN__": json.dumps(p['down'], ensure_ascii=False),
         "__HINTS__": json.dumps(p.get('hints', {"across": {}, "down": {}}), ensure_ascii=False),
+        "__SAVEKEY__": save_key(p),
     }
     for k, v in subs.items():
         tpl = tpl.replace(k, v)
