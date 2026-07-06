@@ -52,6 +52,23 @@ def test_and_splits_separate_entities():
     assert "World War II and World War I" not in out
 
 
+def test_leading_title_dropped_not_emitted():
+    # a leading title is dropped like a stopword, not emitted as its own token
+    assert extract_phrases("President Abraham Lincoln") == ["Abraham Lincoln"]
+
+
+def test_leading_title_dropped_name_and_place_survive():
+    out = extract_phrases("King Henry VIII of England")
+    assert any("Henry VIII" in phrase for phrase in out)
+    assert any("England" in phrase for phrase in out)
+    assert not any(phrase == "King" for phrase in out)
+
+
+def test_stopword_then_title_yields_nothing():
+    # "The" (stopword) and "President" (title) both strip, leaving nothing
+    assert extract_phrases("The President spoke") == []
+
+
 import pandas as pd
 from jeopardy.analysis.tokens import cluster_top_phrases
 
@@ -99,18 +116,26 @@ def test_all_clusters_represented_and_columns():
 
 
 def test_pipeline_entity_beats_common_word():
-    # "Lincoln" distinctive to cluster 0; "President" common to both -> Lincoln ranks above
+    # "Congress" is a common capitalized (non-title) word shared by clusters 0
+    # and 1; a third, unrelated cluster keeps it from being in *every*
+    # cluster (which would zero out its idf entirely and exclude it). Its
+    # idf is still small relative to the names distinctive to a single
+    # cluster, so "Abraham Lincoln" outranks it within cluster 0.
     clusters = pd.DataFrame(
         [{"game_id": i, "round": "Jeopardy", "category": "PRES", "cluster_id": 0} for i in range(6)]
         + [{"game_id": i, "round": "Jeopardy", "category": "GOV", "cluster_id": 1} for i in range(6)]
+        + [{"game_id": i, "round": "Jeopardy", "category": "MISC", "cluster_id": 2} for i in range(6)]
     )
     clues = pd.DataFrame(
         [{"game_id": i, "round": "Jeopardy", "category": "PRES",
-          "clue": "President Abraham Lincoln", "answer": "Abraham Lincoln"} for i in range(6)]
+          "clue": "Congress honored Abraham Lincoln", "answer": "Abraham Lincoln"} for i in range(6)]
         + [{"game_id": i, "round": "Jeopardy", "category": "GOV",
-            "clue": "President George Washington", "answer": "George Washington"} for i in range(6)]
+            "clue": "Congress honored George Washington", "answer": "George Washington"} for i in range(6)]
+        + [{"game_id": i, "round": "Jeopardy", "category": "MISC",
+            "clue": "no proper nouns appear in this clue at all", "answer": "nothing notable"} for i in range(6)]
     )
     df = cluster_top_phrases(clusters, clues, min_freq=5, top_n=25)
     c0 = df[df["cluster_id"] == 0].set_index("phrase")
-    # "Abraham Lincoln" (distinctive) outranks "President" (in both clusters)
-    assert c0.loc["Abraham Lincoln", "rank"] < c0.loc["President", "rank"]
+    # "Abraham Lincoln" (distinctive to cluster 0) outranks "Congress" (shared)
+    assert c0.loc["Abraham Lincoln", "rank"] < c0.loc["Congress", "rank"]
+    assert c0.loc["Congress", "tfidf_weight"] < c0.loc["Abraham Lincoln", "tfidf_weight"]
