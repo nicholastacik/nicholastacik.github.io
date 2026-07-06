@@ -5,5 +5,5 @@ from jeopardy.main import cli
 def test_cli_exposes_commands():
     result = CliRunner().invoke(cli, ["--help"])
     assert result.exit_code == 0
-    for cmd in ("crawl", "build", "all"):
+    for cmd in ("crawl", "build", "all", "embed", "cluster", "name-clusters"):
         assert cmd in result.output
