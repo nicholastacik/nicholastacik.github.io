@@ -193,3 +193,25 @@ from IPython.display import display
 for name in ["U.S. Presidents", "World Geography & Waters", "Books & Authors"]:
     display(top_entities(name))
 ```
+
+## A study tool
+
+The natural next step is a lookup tool: pick a category type, see its most common entities,
+and jump straight to Wikipedia for each. That interactive research page is being built next
+— it will live at [`research/`](research/).
+
+```{python}
+#| label: thumbnail
+#| include: false
+# Static PNG of the cluster map for the listing thumbnail.
+frac = min(1.0, 12000 / len(clusters))
+s = clusters.groupby("cluster_id", group_keys=False)[clusters.columns.tolist()].apply(
+    lambda g: g.sample(frac=frac, random_state=42)
+)
+plt.figure(figsize=(6, 6))
+plt.scatter(s["umap_x"], s["umap_y"], c=s["cluster_id"], cmap="tab20", s=3, alpha=0.5)
+plt.axis("off")
+plt.tight_layout()
+plt.savefig("thumbnail.png", dpi=120, bbox_inches="tight")
+plt.close()
+```
