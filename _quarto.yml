@@ -1,6 +1,13 @@
 project:
   type: website
   output-dir: _site
+  # Render every .qmd page; exclude committed data/notes artifacts that live
+  # under posts/ but must not become web pages.
+  render:
+    - "*.qmd"
+    - "posts/**/*.qmd"
+    - "!posts/jeopardy_ds/cluster_naming_prompt.md"
+    - "!posts/jeopardy_ds/notes/"
 
 website:
   title: "Nicholas Tacik"
