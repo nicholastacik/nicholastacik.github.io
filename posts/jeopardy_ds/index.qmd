@@ -30,3 +30,36 @@ tokens = pd.read_parquet("category_tokens.parquet")
 
 plt.rcParams["figure.dpi"] = 110
 ```
+
+## Scraping J-Archive
+
+There's no API, so the data comes from a polite, cached crawl of
+[J-Archive](https://j-archive.com): a `fetch` stage (one request/second, every page cached
+to disk), a `parse` stage that reads each game's board out of the HTML, and a resumable
+`crawl` that walks every season and game. The raw crawl stays on my machine; what ships is
+a single compact `clues.parquet` — one row per clue — so anyone (including the CI that
+builds this site) starts from identical data without re-scraping.
+
+The result is **563,266 clues** across **9,485 games**, spanning 1984 to 2026.
+
+```{python}
+#| label: fig-overview
+#| fig-cap: "The corpus: clues per year, game types, and rounds."
+fig, axes = plt.subplots(1, 3, figsize=(13, 4))
+
+per_year = clues["air_date"].dt.year.value_counts().sort_index()
+axes[0].bar(per_year.index, per_year.values, color="#4C72B0")
+axes[0].set_title("Clues per year")
+
+gt = clues["game_type"].value_counts().head(6)[::-1]
+axes[1].barh(gt.index, gt.values, color="#55A868")
+axes[1].set_title("Clues by game type (top 6)")
+
+rounds = clues["round"].value_counts()
+axes[2].bar(rounds.index, rounds.values, color="#C44E52")
+axes[2].set_title("Clues by round")
+axes[2].tick_params(axis="x", rotation=20)
+
+plt.tight_layout()
+plt.show()
+```
