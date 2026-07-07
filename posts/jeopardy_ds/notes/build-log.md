@@ -1,3 +1,6 @@
+---
+draft: true
+---
 # Build log — Jeopardy data science
 
 A running dev journal. Each phase drops a short dated entry with the decisions
