@@ -129,3 +129,67 @@ plt.xlabel("category instances")
 plt.tight_layout()
 plt.show()
 ```
+
+## Naming the 50 types
+
+Each cluster is labelled automatically with a three-part "fingerprint": its most frequent
+real category names, the instances closest to its centre, and its most distinctive words
+(via class-based TF-IDF). Reading those fingerprints, the 50 types name themselves:
+
+```{python}
+#| label: tbl-types
+#| echo: false
+t = summary.copy()
+t["Type"] = t["cluster_id"].map(labels)
+top2 = (tokens[tokens["rank"].between(1, 2)]
+        .groupby("cluster_id")["phrase"].apply(lambda s: ", ".join(map(str, s))))
+t["Example entities"] = t["cluster_id"].map(top2).fillna("—")
+t = t.sort_values("size", ascending=False)[["Type", "size", "Example entities"]]
+t.columns = ["Type", "Categories", "Example entities"]
+t.reset_index(drop=True)
+```
+
+## What the data says to study
+
+Two findings stand out. First, **wordplay is the single biggest meta-domain** — homophones,
+anagrams, rhymes, hidden words, "___-letter words." Grouped together, roughly one category
+in ten rewards a *skill* you drill rather than facts you memorize. Push the clustering finer
+and wordplay even splits into two prep tracks: pure letter/anagram games (drill) versus
+etymology and idioms (genuinely studyable).
+
+Second, the types differ enormously in whether "study the common answers" even *works*. We
+can measure it: how many distinct entities recur ≥5 times in a type. Entity-dense types
+(authors, geography, presidents) are eminently studyable; wordplay and grab-bag types are
+not:
+
+```{python}
+#| label: fig-applicability
+#| fig-cap: "How studyable each type is: distinct entities recurring 5+ times."
+ap = (tokens.groupby("cluster_id")["n_qualifying_phrases"].first().reset_index())
+ap["type"] = ap["cluster_id"].map(labels)
+ap = ap.sort_values("n_qualifying_phrases")
+top = ap.tail(12); bottom = ap.head(8)
+show = pd.concat([bottom, top])
+plt.figure(figsize=(8, 9))
+colors = ["#C44E52"] * len(bottom) + ["#55A868"] * len(top)
+plt.barh(show["type"], show["n_qualifying_phrases"], color=colors)
+plt.xlabel("distinct recurring entities (count >= 5)")
+plt.tight_layout()
+plt.show()
+```
+
+And for the studyable types, here are the entities that actually recur — the stuff worth
+knowing:
+
+```{python}
+#| label: tbl-entities
+#| echo: false
+def top_entities(name, n=10):
+    cid = next(c for c, nm in labels.items() if nm == name)
+    d = tokens[(tokens["cluster_id"] == cid) & (tokens["phrase"].notna())].head(n)
+    return pd.DataFrame({name: d["phrase"].values, "count": d["count"].values})
+
+from IPython.display import display
+for name in ["U.S. Presidents", "World Geography & Waters", "Books & Authors"]:
+    display(top_entities(name))
+```
