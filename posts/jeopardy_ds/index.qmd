@@ -63,3 +63,69 @@ axes[2].tick_params(axis="x", rotation=20)
 plt.tight_layout()
 plt.show()
 ```
+
+## From categories to documents
+
+To compare categories, each one becomes a short text "document": its title followed by its
+clue → answer pairs (in a shuffled order, so no clue position carries special weight). For
+example, one category instance reads:
+
+```{python}
+#| label: sample-doc
+#| echo: false
+inst = clusters.merge(
+    clues, on=["game_id", "round", "category"]
+).groupby(["game_id", "round", "category"]).first().reset_index()
+row = clues[clues["category"] == "FISH, BIRD OR MAMMAL"].head(4)
+print("FISH, BIRD OR MAMMAL. " + "; ".join(f"{c} -> {a}" for c, a in zip(row["clue"], row["answer"])))
+```
+
+Each document is embedded into a 384-dimensional vector with a local sentence-transformer
+(`bge-small-en-v1.5`) — a step heavy enough (a GPU-less few minutes over 123k documents)
+that it runs offline and commits its *output*, never re-running when the post builds.
+
+## Clustering into "types"
+
+Running K-means (k = 50) over those vectors groups the ~123k category instances into
+recognizable *types*. Projected to 2D with UMAP, the map looks like this — hover any point
+to see its type, an example category, and that type's most common entity:
+
+```{python}
+#| label: fig-clusters
+#| fig-cap: "123k category instances, grouped into 50 types (hover to explore; ~10k-point sample)."
+frac = min(1.0, 10000 / len(clusters))
+samp = clusters.groupby("cluster_id", group_keys=False)[clusters.columns.tolist()].apply(
+    lambda g: g.sample(frac=frac, random_state=42)
+)
+samp["type"] = samp["cluster_id"].map(labels)
+top1 = tokens[tokens["rank"] == 1].set_index("cluster_id")["phrase"].to_dict()
+samp["top_entity"] = samp["cluster_id"].map(top1).fillna("—")
+
+fig = px.scatter(
+    samp, x="umap_x", y="umap_y", color="type",
+    hover_name="type",
+    hover_data={"category": True, "top_entity": True,
+                "umap_x": False, "umap_y": False, "type": False, "cluster_id": False},
+    render_mode="webgl", opacity=0.55,
+)
+fig.update_traces(marker={"size": 4})
+fig.update_layout(showlegend=False, height=620,
+                  margin={"l": 0, "r": 0, "t": 10, "b": 0},
+                  xaxis_title=None, yaxis_title=None)
+fig.show()
+```
+
+The 50 types are far from equal in size:
+
+```{python}
+#| label: fig-sizes
+#| fig-cap: "How common each category type is."
+sz = summary.copy()
+sz["type"] = sz["cluster_id"].map(labels)
+sz = sz.sort_values("size").tail(25)
+plt.figure(figsize=(8, 9))
+plt.barh(sz["type"], sz["size"], color="#4C72B0")
+plt.xlabel("category instances")
+plt.tight_layout()
+plt.show()
+```
