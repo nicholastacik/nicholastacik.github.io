@@ -1,0 +1,32 @@
+---
+title: "What should I study to get better at Jeopardy?"
+description: "Scraping 40 years of J-Archive, then clustering 123k categories to find what to learn."
+date: "2026-07-06"
+categories: [data science, nlp, jeopardy]
+image: thumbnail.png
+draft: true
+---
+
+I like Jeopardy, and I wanted a data-driven answer to a simple question: of everything the
+show could ask me, *what is actually worth studying?* This post walks through how I scraped
+40 years of the show, turned every category into something a computer can compare, grouped
+the categories into "types," named them, and used the result to find where studying pays off.
+
+Every figure below is generated from a committed dataset — no live scraping — so the whole
+post re-renders from scratch.
+
+```{python}
+#| label: setup
+#| include: false
+import pandas as pd
+import matplotlib.pyplot as plt
+import plotly.express as px
+
+clues = pd.read_parquet("clues.parquet")
+clusters = pd.read_parquet("category_clusters.parquet")
+summary = pd.read_parquet("cluster_summary.parquet")
+labels = pd.read_csv("cluster_labels.csv").set_index("cluster_id")["name"].to_dict()
+tokens = pd.read_parquet("category_tokens.parquet")
+
+plt.rcParams["figure.dpi"] = 110
+```
