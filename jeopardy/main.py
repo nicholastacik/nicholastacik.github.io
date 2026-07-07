@@ -62,3 +62,10 @@ def tokens(min_freq, top_n):
     """Extract most-common proper-noun phrases per cluster -> category_tokens.parquet."""
     from jeopardy.analysis.tokens import run_tokens
     run_tokens(min_freq=min_freq, top_n=top_n)
+
+
+@cli.command()
+def research():
+    """Generate the interactive research tool -> posts/jeopardy_ds/research/index.html."""
+    from jeopardy.analysis.research import run_research
+    run_research()
