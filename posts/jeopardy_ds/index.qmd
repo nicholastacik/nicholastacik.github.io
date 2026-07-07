@@ -73,9 +73,6 @@ example, one category instance reads:
 ```{python}
 #| label: sample-doc
 #| echo: false
-inst = clusters.merge(
-    clues, on=["game_id", "round", "category"]
-).groupby(["game_id", "round", "category"]).first().reset_index()
 row = clues[clues["category"] == "FISH, BIRD OR MAMMAL"].head(4)
 print("FISH, BIRD OR MAMMAL. " + "; ".join(f"{c} -> {a}" for c, a in zip(row["clue"], row["answer"])))
 ```
@@ -185,7 +182,9 @@ knowing:
 #| label: tbl-entities
 #| echo: false
 def top_entities(name, n=10):
-    cid = next(c for c, nm in labels.items() if nm == name)
+    cid = next((c for c, nm in labels.items() if nm == name), None)
+    if cid is None:
+        return pd.DataFrame({name: [], "count": []})
     d = tokens[(tokens["cluster_id"] == cid) & (tokens["phrase"].notna())].head(n)
     return pd.DataFrame({name: d["phrase"].values, "count": d["count"].values})
 
@@ -198,7 +197,7 @@ for name in ["U.S. Presidents", "World Geography & Waters", "Books & Authors"]:
 
 The natural next step is a lookup tool: pick a category type, see its most common entities,
 and jump straight to Wikipedia for each. That interactive research page is being built next
-— it will live at [`research/`](research/).
+— it will live at `research/` (built next).
 
 ```{python}
 #| label: thumbnail
