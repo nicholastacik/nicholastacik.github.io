@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Board &mdash; A Jeopardy! Category Field Guide</title>
+<style>
+  :root {
+    --ink: #0b1640;
+    --panel: #121f52;
+    --panel-2: #1a2c68;
+    --gold: #e8b923;
+    --gold-dim: #a9821f;
+    --paper: #f4f1e6;
+    --ash: #8a93be;
+    --brick: #d6614a;
+    --line: #263572;
+    --radius: 3px;
+    --display: Haettenschweiler, "Arial Narrow Bold", "Franklin Gothic Bold", Impact, sans-serif;
+    --body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--body);
+    min-height: 100%;
+  }
+
+  a { color: var(--gold); }
+  a:hover { color: var(--paper); }
+
+  button {
+    font: inherit;
+    color: inherit;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+  }
+
+  .topbar {
+    padding: 28px clamp(16px, 4vw, 48px) 22px;
+    border-bottom: 1px solid var(--line);
+    background: linear-gradient(180deg, #0d1a4c, var(--ink));
+  }
+
+  .topbar .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin: 0 0 8px;
+  }
+
+  .topbar h1 {
+    font-family: var(--display);
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: clamp(30px, 5vw, 46px);
+    margin: 0 0 10px;
+    line-height: 1;
+  }
+
+  .topbar p {
+    max-width: 62ch;
+    margin: 0;
+    color: var(--ash);
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 280px 1fr 380px;
+    grid-template-areas: "side main detail";
+    min-height: calc(100vh - 220px);
+  }
+
+  .side {
+    grid-area: side;
+    border-right: 1px solid var(--line);
+    background: #0e1a4a;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .side-head {
+    padding: 14px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  #filter-input {
+    width: 100%;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    color: var(--paper);
+    padding: 9px 10px;
+    font-family: var(--body);
+    font-size: 13px;
+  }
+
+  #filter-input::placeholder { color: var(--ash); }
+
+  .side-list {
+    overflow-y: auto;
+    padding: 6px;
+  }
+
+  .side-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: none;
+    border-left: 3px solid transparent;
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    margin-bottom: 2px;
+    cursor: pointer;
+  }
+
+  .side-item:hover { background: var(--panel); }
+
+  .side-item.active {
+    background: var(--panel-2);
+    border-left-color: var(--gold);
+  }
+
+  .side-item .name {
+    font-family: var(--display);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    font-size: 15px;
+    display: block;
+  }
+
+  .side-item .meta {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ash);
+    display: block;
+    margin-top: 3px;
+  }
+
+  .side-item.dim { opacity: 0.45; }
+  .side-item.dim .meta { color: var(--brick); }
+
+  .side-empty {
+    padding: 16px 14px;
+    color: var(--ash);
+    font-size: 13px;
+  }
+
+  .main {
+    grid-area: main;
+    padding: clamp(16px, 3vw, 32px);
+    overflow-y: auto;
+    border-right: 1px solid var(--line);
+    min-height: 0;
+  }
+
+  .placeholder {
+    color: var(--ash);
+    font-size: 14px;
+    max-width: 46ch;
+    line-height: 1.6;
+    margin-top: 40px;
+  }
+
+  .main-head h2 {
+    font-family: var(--display);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    font-size: clamp(24px, 3vw, 32px);
+    margin: 0 0 6px;
+  }
+
+  .main-head .sub {
+    color: var(--ash);
+    font-size: 13px;
+    font-family: var(--mono);
+    margin: 0 0 20px;
+  }
+
+  .tag-brick {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--brick);
+    border: 1px solid var(--brick);
+    border-radius: var(--radius);
+    padding: 2px 7px;
+    margin-bottom: 16px;
+  }
+
+  .entity-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .entity-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-left: 3px solid transparent;
+    border-radius: var(--radius);
+    padding: 11px 14px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .entity-row:hover { background: var(--panel-2); }
+
+  .entity-row.active {
+    border-left-color: var(--gold);
+    background: var(--panel-2);
+  }
+
+  .entity-row .rank {
+    font-family: var(--mono);
+    color: var(--ash);
+    font-size: 12px;
+    width: 2.2em;
+    flex: none;
+  }
+
+  .entity-row .phrase {
+    flex: 1;
+    font-size: 15px;
+  }
+
+  .entity-row .count {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink);
+    background: var(--gold);
+    border-radius: var(--radius);
+    padding: 3px 8px;
+    flex: none;
+  }
+
+  .detail {
+    grid-area: detail;
+    padding: clamp(16px, 3vw, 28px);
+    overflow-y: auto;
+    min-height: 0;
+  }
+
+  .detail .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin: 0 0 12px;
+  }
+
+  .detail h3 {
+    font-size: 20px;
+    margin: 0 0 12px;
+    line-height: 1.3;
+  }
+
+  .detail img {
+    max-width: 100%;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    margin-bottom: 14px;
+    display: block;
+  }
+
+  .detail .extract {
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--paper);
+    margin: 0 0 16px;
+  }
+
+  .detail .fallback {
+    color: var(--ash);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .pulse {
+    color: var(--ash);
+    font-size: 14px;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .pulse { animation: pulse 1.2s ease-in-out infinite; }
+    .detail.flash { animation: flash 0.5s ease-out; }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+  }
+
+  @keyframes flash {
+    0% { box-shadow: inset 0 0 0 2px var(--gold); }
+    100% { box-shadow: inset 0 0 0 0 transparent; }
+  }
+
+  .footer {
+    padding: 16px clamp(16px, 4vw, 48px) 26px;
+    border-top: 1px solid var(--line);
+    color: var(--ash);
+    font-family: var(--mono);
+    font-size: 11.5px;
+    line-height: 1.6;
+    max-width: 90ch;
+  }
+
+  @media (max-width: 980px) {
+    .layout {
+      grid-template-columns: 1fr;
+      grid-template-areas: "side" "main" "detail";
+    }
+    .side {
+      border-right: none;
+      border-bottom: 1px solid var(--line);
+      max-height: 260px;
+    }
+    .main { border-right: none; }
+  }
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <p class="eyebrow">Field notes for trivia prep</p>
+    <h1>The Board</h1>
+    <p>50 Jeopardy! category clusters, ranked by how deep you can actually study them.
+       Pick one, drill into its most recurring answers, and pull live facts from Wikipedia.</p>
+  </header>
+  <div class="layout">
+    <aside class="side" aria-label="Categories">
+      <div class="side-head">
+        <input id="filter-input" type="search" placeholder="Filter categories&hellip;" aria-label="Filter categories">
+      </div>
+      <div id="side-list" class="side-list" role="list"></div>
+    </aside>
+    <main id="main-panel" class="main" aria-label="Ranked entities"></main>
+    <section id="detail-panel" class="detail" aria-label="Wikipedia facts"></section>
+  </div>
+  <footer class="footer">
+    Categories mined from j-archive.com box scores; ranked entities are the phrases that keep
+    reappearing as answers within a cluster. Wikipedia facts are fetched live in your browser on
+    each click &mdash; nothing here is cached, curated, or fact-checked.
+  </footer>
+  <script>
+    const DATA = [{"cluster_id": 19, "name": "Movies", "applicability": 2627, "entities": [{"phrase": "Best Picture", "count": 90}, {"phrase": "Jack Nicholson", "count": 84}, {"phrase": "Best Actor", "count": 50}, {"phrase": "Johnny Depp", "count": 52}, {"phrase": "Clint Eastwood", "count": 79}, {"phrase": "Harrison Ford", "count": 59}, {"phrase": "Mel Gibson", "count": 59}, {"phrase": "Jodie Foster", "count": 52}, {"phrase": "Best Actress", "count": 44}, {"phrase": "Julia Roberts", "count": 52}, {"phrase": "Dustin Hoffman", "count": 68}, {"phrase": "Cary Grant", "count": 57}, {"phrase": "Barbra Streisand", "count": 56}, {"phrase": "Robert Duvall", "count": 30}, {"phrase": "Meryl Streep", "count": 81}, {"phrase": "Spencer Tracy", "count": 44}, {"phrase": "Oscar", "count": 1009}, {"phrase": "Nicolas Cage", "count": 46}, {"phrase": "Kevin Costner", "count": 48}, {"phrase": "Warren Beatty", "count": 56}, {"phrase": "Tom Cruise", "count": 65}, {"phrase": "Gene Kelly", "count": 37}, {"phrase": "Jack Lemmon", "count": 38}, {"phrase": "Psycho", "count": 50}, {"phrase": "John Travolta", "count": 42}]}, {"cluster_id": 26, "name": "Books & Authors", "applicability": 2586, "entities": [{"phrase": "Jane Eyre", "count": 63}, {"phrase": "Willa Cather", "count": 70}, {"phrase": "Thomas Hardy", "count": 81}, {"phrase": "Agatha Christie", "count": 111}, {"phrase": "Sinclair Lewis", "count": 88}, {"phrase": "Red Badge of Courage", "count": 49}, {"phrase": "Toni Morrison", "count": 65}, {"phrase": "Edith Wharton", "count": 48}, {"phrase": "Madame Bovary", "count": 46}, {"phrase": "Stephen Crane", "count": 52}, {"phrase": "Theodore Dreiser", "count": 45}, {"phrase": "Sister Carrie", "count": 42}, {"phrase": "William Styron", "count": 36}, {"phrase": "Robert Louis Stevenson", "count": 70}, {"phrase": "Little Women", "count": 79}, {"phrase": "Hemingway", "count": 148}, {"phrase": "Norman Mailer", "count": 62}, {"phrase": "Faulkner", "count": 69}, {"phrase": "Forster", "count": 49}, {"phrase": "George Eliot", "count": 54}, {"phrase": "Wuthering Heights", "count": 47}, {"phrase": "Jane Austen", "count": 86}, {"phrase": "Tolstoy", "count": 81}, {"phrase": "Scarlet Letter", "count": 58}, {"phrase": "Dickens", "count": 169}]}, {"cluster_id": 47, "name": "Pop Music & Songs", "applicability": 2130, "entities": [{"phrase": "Grammy", "count": 217}, {"phrase": "Elton John", "count": 131}, {"phrase": "Billboard", "count": 107}, {"phrase": "Van Halen", "count": 64}, {"phrase": "Supremes", "count": 60}, {"phrase": "Whitney Houston", "count": 70}, {"phrase": "Gaga", "count": 61}, {"phrase": "Grammys", "count": 95}, {"phrase": "Song of the Year", "count": 32}, {"phrase": "Adele", "count": 59}, {"phrase": "Bruce Springsteen", "count": 91}, {"phrase": "Aerosmith", "count": 58}, {"phrase": "Mariah Carey", "count": 61}, {"phrase": "Taylor Swift", "count": 80}, {"phrase": "Led Zeppelin", "count": 65}, {"phrase": "Roy Orbison", "count": 39}, {"phrase": "Maroon", "count": 32}, {"phrase": "Tina Turner", "count": 47}, {"phrase": "Coldplay", "count": 35}, {"phrase": "Fleetwood Mac", "count": 53}, {"phrase": "Beyonc", "count": 59}, {"phrase": "Ed Sheeran", "count": 28}, {"phrase": "Bee Gees", "count": 55}, {"phrase": "Rihanna", "count": 54}, {"phrase": "Beastie Boys", "count": 43}]}, {"cluster_id": 15, "name": "Television", "applicability": 1914, "entities": [{"phrase": "Emmy", "count": 249}, {"phrase": "Emmys", "count": 102}, {"phrase": "Saturday Night Live", "count": 80}, {"phrase": "Mary Tyler Moore Show", "count": 44}, {"phrase": "Murphy Brown", "count": 41}, {"phrase": "Tonight Show", "count": 65}, {"phrase": "Frasier", "count": 42}, {"phrase": "Netflix", "count": 77}, {"phrase": "Dick Van Dyke Show", "count": 30}, {"phrase": "Melrose Place", "count": 32}, {"phrase": "Bewitched", "count": 34}, {"phrase": "My Children", "count": 36}, {"phrase": "Wonder Years", "count": 21}, {"phrase": "Seinfeld", "count": 59}, {"phrase": "Designing Women", "count": 18}, {"phrase": "Roseanne", "count": 29}, {"phrase": "Andy Griffith Show", "count": 27}, {"phrase": "Happy Days", "count": 45}, {"phrase": "Mad About You", "count": 28}, {"phrase": "Full House", "count": 19}, {"phrase": "Family Ties", "count": 31}, {"phrase": "Ally Mc", "count": 26}, {"phrase": "Betty White", "count": 24}, {"phrase": "Simpsons", "count": 50}, {"phrase": "Modern Family", "count": 16}]}, {"cluster_id": 40, "name": "Notable People & Awards", "applicability": 1788, "entities": [{"phrase": "Thurgood Marshall", "count": 32}, {"phrase": "Chief Justice", "count": 47}, {"phrase": "Martin Luther King", "count": 74}, {"phrase": "Nobel Peace Prize", "count": 76}, {"phrase": "Democrat", "count": 44}, {"phrase": "Eisenhower", "count": 78}, {"phrase": "Jimmy Carter", "count": 63}, {"phrase": "Colin Powell", "count": 27}, {"phrase": "Ralph Bunche", "count": 17}, {"phrase": "Pulitzer", "count": 78}, {"phrase": "Nixon", "count": 93}, {"phrase": "Peace Prize", "count": 14}, {"phrase": "Rosa Parks", "count": 24}, {"phrase": "Truman", "count": 76}, {"phrase": "Senate", "count": 154}, {"phrase": "Jesse Jackson", "count": 22}, {"phrase": "Joint Chiefs of Staff", "count": 15}, {"phrase": "Malcolm X", "count": 33}, {"phrase": "Man of the Year", "count": 19}, {"phrase": "Frederick Douglass", "count": 25}, {"phrase": "Brandeis", "count": 11}, {"phrase": "John Glenn", "count": 36}, {"phrase": "George Wallace", "count": 16}, {"phrase": "Ralph Nader", "count": 16}, {"phrase": "Watergate", "count": 37}]}, {"cluster_id": 46, "name": "World Geography & Waters", "applicability": 1437, "entities": [{"phrase": "Caspian Sea", "count": 76}, {"phrase": "Lake Nicaragua", "count": 24}, {"phrase": "Bay of Bengal", "count": 62}, {"phrase": "Black Sea", "count": 106}, {"phrase": "Indian Ocean", "count": 126}, {"phrase": "Bay of Biscay", "count": 41}, {"phrase": "Volga", "count": 61}, {"phrase": "Great Lake", "count": 79}, {"phrase": "Lake Baikal", "count": 43}, {"phrase": "Persian Gulf", "count": 81}, {"phrase": "Lake Titicaca", "count": 33}, {"phrase": "Arctic Ocean", "count": 53}, {"phrase": "Greenland", "count": 130}, {"phrase": "Coral Sea", "count": 35}, {"phrase": "Bering Sea", "count": 43}, {"phrase": "Caribbean Sea", "count": 48}, {"phrase": "Atlas Mountains", "count": 42}, {"phrase": "Gulf of Mexico", "count": 81}, {"phrase": "North Sea", "count": 75}, {"phrase": "Lake Huron", "count": 32}, {"phrase": "Lake Victoria", "count": 50}, {"phrase": "Tierra", "count": 41}, {"phrase": "Ganges", "count": 60}, {"phrase": "Mount Aconcagua", "count": 16}, {"phrase": "Arabian Sea", "count": 34}]}, {"cluster_id": 33, "name": "Oscars & Movie Quotes", "applicability": 1339, "entities": [{"phrase": "Best Picture", "count": 71}, {"phrase": "Leonard Maltin", "count": 35}, {"phrase": "Clint Eastwood", "count": 60}, {"phrase": "Rain Man", "count": 23}, {"phrase": "Forrest Gump", "count": 33}, {"phrase": "Dustin Hoffman", "count": 48}, {"phrase": "Shawshank Redemption", "count": 20}, {"phrase": "Saving Private Ryan", "count": 18}, {"phrase": "Cary Grant", "count": 39}, {"phrase": "Ben Affleck", "count": 31}, {"phrase": "Will Smith", "count": 31}, {"phrase": "Strangelove", "count": 31}, {"phrase": "Kevin Costner", "count": 34}, {"phrase": "Tom Cruise", "count": 47}, {"phrase": "Javier Bardem", "count": 17}, {"phrase": "Blade Runner", "count": 23}, {"phrase": "Harrison Ford", "count": 35}, {"phrase": "Leonardo Di", "count": 31}, {"phrase": "Matt Damon", "count": 29}, {"phrase": "Julia Roberts", "count": 31}, {"phrase": "Terminator", "count": 26}, {"phrase": "Eddie Murphy", "count": 29}, {"phrase": "Daniel Day", "count": 24}, {"phrase": "Denzel Washington", "count": 27}, {"phrase": "Psycho", "count": 33}]}, {"cluster_id": 4, "name": "Museums, Landmarks & Travel", "applicability": 1293, "entities": [{"phrase": "Space Needle", "count": 33}, {"phrase": "Space Museum", "count": 31}, {"phrase": "Gateway Arch", "count": 25}, {"phrase": "Pei", "count": 37}, {"phrase": "Rijksmuseum", "count": 19}, {"phrase": "Chrysler Building", "count": 26}, {"phrase": "Washington Monument", "count": 36}, {"phrase": "Frank Lloyd Wright", "count": 59}, {"phrase": "Taj Mahal", "count": 40}, {"phrase": "Museum", "count": 63}, {"phrase": "Dome of the Rock", "count": 16}, {"phrase": "Newseum", "count": 17}, {"phrase": "Prado", "count": 22}, {"phrase": "Monticello", "count": 36}, {"phrase": "Louvre", "count": 53}, {"phrase": "Fifth Avenue", "count": 26}, {"phrase": "James Renwick", "count": 8}, {"phrase": "Guggenheim", "count": 18}, {"phrase": "Eiffel Tower", "count": 52}, {"phrase": "Salt Lake City", "count": 39}, {"phrase": "Williamsburg", "count": 25}, {"phrase": "Mount Rushmore", "count": 41}, {"phrase": "Petronas Towers", "count": 10}, {"phrase": "Air Museum", "count": 7}, {"phrase": "Field Museum", "count": 17}]}, {"cluster_id": 21, "name": "Royalty & European History", "applicability": 1285, "entities": [{"phrase": "William the Conqueror", "count": 77}, {"phrase": "Isabella", "count": 96}, {"phrase": "of Scots", "count": 62}, {"phrase": "Holy Roman Emperor", "count": 43}, {"phrase": "Franks", "count": 45}, {"phrase": "Peter the Great", "count": 73}, {"phrase": "Charlemagne", "count": 111}, {"phrase": "Genghis Khan", "count": 60}, {"phrase": "Henry II", "count": 36}, {"phrase": "George I", "count": 29}, {"phrase": "Maria Theresa", "count": 30}, {"phrase": "Ivan the Terrible", "count": 49}, {"phrase": "Catherine of Aragon", "count": 35}, {"phrase": "Hapsburgs", "count": 35}, {"phrase": "Juan Carlos", "count": 33}, {"phrase": "Suleiman", "count": 27}, {"phrase": "Mary I", "count": 20}, {"phrase": "Moors", "count": 45}, {"phrase": "Crusades", "count": 42}, {"phrase": "Prussia", "count": 58}, {"phrase": "Castile", "count": 39}, {"phrase": "Henry VII", "count": 36}, {"phrase": "Byzantine Empire", "count": 38}, {"phrase": "Hussein", "count": 32}, {"phrase": "Tudor", "count": 62}]}, {"cluster_id": 38, "name": "American History", "applicability": 1280, "entities": [{"phrase": "Fort Sumter", "count": 60}, {"phrase": "Jefferson Davis", "count": 68}, {"phrase": "Antietam", "count": 40}, {"phrase": "Stamp Act", "count": 37}, {"phrase": "Confederacy", "count": 85}, {"phrase": "Bull Run", "count": 33}, {"phrase": "Union", "count": 316}, {"phrase": "Continental Congress", "count": 54}, {"phrase": "Treaty of Paris", "count": 29}, {"phrase": "Louisiana Purchase", "count": 37}, {"phrase": "Cornwallis", "count": 41}, {"phrase": "Cemetery Ridge", "count": 14}, {"phrase": "Gettysburg", "count": 94}, {"phrase": "Patrick Henry", "count": 51}, {"phrase": "Confederate", "count": 173}, {"phrase": "Vicksburg", "count": 28}, {"phrase": "Articles of Confederation", "count": 34}, {"phrase": "Yorktown", "count": 50}, {"phrase": "Benedict Arnold", "count": 55}, {"phrase": "House of Burgesses", "count": 27}, {"phrase": "John Paul Jones", "count": 45}, {"phrase": "Santa Anna", "count": 36}, {"phrase": "Andrew Jackson", "count": 62}, {"phrase": "Indian War", "count": 42}, {"phrase": "Confederates", "count": 28}]}, {"cluster_id": 0, "name": "Literature & Fictional Characters", "applicability": 1260, "entities": [{"phrase": "Jane Eyre", "count": 36}, {"phrase": "of the Flies", "count": 43}, {"phrase": "Tale of Two Cities", "count": 44}, {"phrase": "Grapes of Wrath", "count": 47}, {"phrase": "Moby", "count": 44}, {"phrase": "Great Expectations", "count": 37}, {"phrase": "Oliver Twist", "count": 45}, {"phrase": "Stephen King", "count": 81}, {"phrase": "Faulkner", "count": 42}, {"phrase": "Wuthering Heights", "count": 30}, {"phrase": "Anna Karenina", "count": 35}, {"phrase": "Forster", "count": 29}, {"phrase": "Thomas Hardy", "count": 36}, {"phrase": "Dickens", "count": 105}, {"phrase": "Heart of Darkness", "count": 31}, {"phrase": "David Copperfield", "count": 42}, {"phrase": "Garp", "count": 21}, {"phrase": "Edith Wharton", "count": 22}, {"phrase": "Madame Bovary", "count": 22}, {"phrase": "Scott Fitzgerald", "count": 43}, {"phrase": "Animal Farm", "count": 29}, {"phrase": "Don Quixote", "count": 42}, {"phrase": "Chatterley", "count": 29}, {"phrase": "John Irving", "count": 23}, {"phrase": "Time Machine", "count": 23}]}, {"cluster_id": 1, "name": "World History & Leaders", "applicability": 1219, "entities": [{"phrase": "Pol Pot", "count": 24}, {"phrase": "Helmut Kohl", "count": 17}, {"phrase": "Yugoslavia", "count": 57}, {"phrase": "League of Nations", "count": 49}, {"phrase": "Serbia", "count": 36}, {"phrase": "Putin", "count": 25}, {"phrase": "Chiang Kai", "count": 28}, {"phrase": "Bolsheviks", "count": 28}, {"phrase": "Shah of Iran", "count": 16}, {"phrase": "Pinochet", "count": 21}, {"phrase": "Communist Party", "count": 39}, {"phrase": "Treaty of Versailles", "count": 25}, {"phrase": "Saddam Hussein", "count": 31}, {"phrase": "Idi Amin", "count": 29}, {"phrase": "Libya", "count": 52}, {"phrase": "Stalin", "count": 76}, {"phrase": "Fidel Castro", "count": 39}, {"phrase": "South Vietnam", "count": 21}, {"phrase": "Ho Chi Minh", "count": 28}, {"phrase": "Nobel Peace Prize", "count": 65}, {"phrase": "Indira Gandhi", "count": 29}, {"phrase": "Lenin", "count": 59}, {"phrase": "Assad", "count": 15}, {"phrase": "Khmer Rouge", "count": 17}, {"phrase": "Kuwait", "count": 34}]}, {"cluster_id": 18, "name": "U.S. Geography", "applicability": 1163, "entities": [{"phrase": "Carson City", "count": 46}, {"phrase": "Juneau", "count": 51}, {"phrase": "Idaho", "count": 192}, {"phrase": "North Dakota", "count": 111}, {"phrase": "Frankfort", "count": 30}, {"phrase": "Baton Rouge", "count": 50}, {"phrase": "Annapolis", "count": 50}, {"phrase": "Lansing", "count": 25}, {"phrase": "Tallahassee", "count": 43}, {"phrase": "Harrisburg", "count": 38}, {"phrase": "West Virginia", "count": 121}, {"phrase": "Wyoming", "count": 225}, {"phrase": "Jefferson City", "count": 31}, {"phrase": "Montpelier", "count": 38}, {"phrase": "Great Lake", "count": 47}, {"phrase": "Missouri River", "count": 29}, {"phrase": "Nevada", "count": 204}, {"phrase": "Ohio River", "count": 30}, {"phrase": "Augusta", "count": 54}, {"phrase": "Snake River", "count": 29}, {"phrase": "Sacramento", "count": 59}, {"phrase": "Connecticut River", "count": 13}, {"phrase": "Cheyenne", "count": 43}, {"phrase": "Salt Lake City", "count": 56}, {"phrase": "Rio Grande", "count": 50}]}, {"cluster_id": 5, "name": "Sports", "applicability": 1135, "entities": [{"phrase": "World Series", "count": 243}, {"phrase": "National League", "count": 69}, {"phrase": "Wayne Gretzky", "count": 59}, {"phrase": "Super Bowl", "count": 195}, {"phrase": "Pittsburgh Steelers", "count": 28}, {"phrase": "Lakers", "count": 79}, {"phrase": "Heisman Trophy", "count": 44}, {"phrase": "Rickey Henderson", "count": 25}, {"phrase": "Joe Montana", "count": 43}, {"phrase": "Grand Slam", "count": 69}, {"phrase": "Stanley Cup", "count": 55}, {"phrase": "Packers", "count": 32}, {"phrase": "Super Bowls", "count": 37}, {"phrase": "New York Yankees", "count": 42}, {"phrase": "Red Sox", "count": 64}, {"phrase": "Hakeem Olajuwon", "count": 21}, {"phrase": "Star Game", "count": 34}, {"phrase": "Dodgers", "count": 81}, {"phrase": "American League", "count": 58}, {"phrase": "Heisman", "count": 36}, {"phrase": "Hall of Fame", "count": 89}, {"phrase": "Martina Navratilova", "count": 38}, {"phrase": "Tiger Woods", "count": 48}, {"phrase": "Mets", "count": 47}, {"phrase": "Jack Nicklaus", "count": 39}]}, {"cluster_id": 10, "name": "Explorers & Ships", "applicability": 1062, "entities": [{"phrase": "Francis Drake", "count": 38}, {"phrase": "Gama", "count": 43}, {"phrase": "Vasco", "count": 40}, {"phrase": "Balboa", "count": 28}, {"phrase": "Northwest Passage", "count": 37}, {"phrase": "James Cook", "count": 33}, {"phrase": "Vitus Bering", "count": 16}, {"phrase": "Amundsen", "count": 26}, {"phrase": "Ponce de Leon", "count": 32}, {"phrase": "John Cabot", "count": 16}, {"phrase": "Tasman", "count": 13}, {"phrase": "Henry Hudson", "count": 30}, {"phrase": "Cape Horn", "count": 20}, {"phrase": "Pitcairn Island", "count": 21}, {"phrase": "Golden Hind", "count": 17}, {"phrase": "Bartolomeu Dias", "count": 11}, {"phrase": "Lusitania", "count": 25}, {"phrase": "La Salle", "count": 14}, {"phrase": "Independence Seaport Museum", "count": 9}, {"phrase": "Panama", "count": 53}, {"phrase": "Magellan", "count": 44}, {"phrase": "Roanoke", "count": 19}, {"phrase": "Livingstone", "count": 35}, {"phrase": "Newfoundland", "count": 43}, {"phrase": "Ponce de Le", "count": 14}]}, {"cluster_id": 3, "name": "Names & Nicknames", "applicability": 1033, "entities": [{"phrase": "Benjamin Siegel", "count": 6}, {"phrase": "of Humbugs", "count": 7}, {"phrase": "Kelvin Harrison Jr", "count": 5}, {"phrase": "Little Sure Shot", "count": 6}, {"phrase": "George Clinton", "count": 9}, {"phrase": "Malcolm X", "count": 21}, {"phrase": "James Earl Ray", "count": 8}, {"phrase": "New York Yankees", "count": 9}, {"phrase": "Man of the Year", "count": 11}, {"phrase": "Tiger Woods", "count": 11}, {"phrase": "John Wilkes Booth", "count": 20}, {"phrase": "Bugsy", "count": 9}, {"phrase": "John Birks Gillespie", "count": 5}, {"phrase": "Fenimore", "count": 5}, {"phrase": "Dizzy", "count": 11}, {"phrase": "Jesse James", "count": 16}, {"phrase": "Chief Justice", "count": 15}, {"phrase": "Ansel Adams", "count": 12}, {"phrase": "Franklin Pierce", "count": 9}, {"phrase": "Bill Moyers", "count": 7}, {"phrase": "Tokyo Rose", "count": 7}, {"phrase": "Frank Zappa", "count": 6}, {"phrase": "Sheryl Lee Ralph", "count": 5}, {"phrase": "Rockefeller", "count": 17}, {"phrase": "Charles Lindbergh", "count": 18}]}, {"cluster_id": 11, "name": "World Capitals & Cities", "applicability": 1003, "entities": [{"phrase": "Brasilia", "count": 26}, {"phrase": "Jakarta", "count": 40}, {"phrase": "Addis Ababa", "count": 34}, {"phrase": "La Paz", "count": 31}, {"phrase": "Riyadh", "count": 29}, {"phrase": "Quito", "count": 30}, {"phrase": "Ottawa", "count": 59}, {"phrase": "New Delhi", "count": 43}, {"phrase": "Canberra", "count": 38}, {"phrase": "Caracas", "count": 42}, {"phrase": "Lisbon", "count": 69}, {"phrase": "Lagos", "count": 28}, {"phrase": "Danube", "count": 49}, {"phrase": "Phnom Penh", "count": 26}, {"phrase": "Ankara", "count": 36}, {"phrase": "Rabat", "count": 23}, {"phrase": "Kathmandu", "count": 26}, {"phrase": "Bogota", "count": 27}, {"phrase": "Rio de Janeiro", "count": 48}, {"phrase": "Barcelona", "count": 60}, {"phrase": "Budapest", "count": 60}, {"phrase": "Hanoi", "count": 34}, {"phrase": "Cairo", "count": 93}, {"phrase": "Minsk", "count": 18}, {"phrase": "Ho Chi Minh City", "count": 22}]}, {"cluster_id": 17, "name": "Theatre & Broadway", "applicability": 897, "entities": [{"phrase": "Tony", "count": 222}, {"phrase": "Tonys", "count": 54}, {"phrase": "Neil Simon", "count": 94}, {"phrase": "Broadway", "count": 675}, {"phrase": "Man of La Mancha", "count": 33}, {"phrase": "Chorus Line", "count": 49}, {"phrase": "Phantom of the Opera", "count": 59}, {"phrase": "Tennessee Williams", "count": 102}, {"phrase": "Thornton Wilder", "count": 41}, {"phrase": "Our Town", "count": 51}, {"phrase": "Cabaret", "count": 51}, {"phrase": "Best Musical", "count": 26}, {"phrase": "Damn Yankees", "count": 28}, {"phrase": "Streetcar Named Desire", "count": 46}, {"phrase": "Ibsen", "count": 56}, {"phrase": "Fiddler", "count": 59}, {"phrase": "Chekhov", "count": 54}, {"phrase": "Edward Albee", "count": 47}, {"phrase": "Lerner", "count": 34}, {"phrase": "West Side Story", "count": 50}, {"phrase": "August Wilson", "count": 28}, {"phrase": "Hammerstein", "count": 58}, {"phrase": "Neill", "count": 113}, {"phrase": "Act I", "count": 31}, {"phrase": "Wicked", "count": 41}]}, {"cluster_id": 2, "name": "Potpourri / Grab-Bag", "applicability": 887, "entities": [{"phrase": "Old Sturbridge Village", "count": 7}, {"phrase": "Bake Oven", "count": 7}, {"phrase": "Chicago History Museum", "count": 5}, {"phrase": "National Geographic Museum", "count": 5}, {"phrase": "Crayola Museum", "count": 5}, {"phrase": "Mercer Museum", "count": 5}, {"phrase": "Slinky", "count": 11}, {"phrase": "Lesedi Cultural Village", "count": 6}, {"phrase": "Holmes", "count": 18}, {"phrase": "National World War II Memorial", "count": 5}, {"phrase": "Cullinan Mine", "count": 5}, {"phrase": "Seeing Eye", "count": 6}, {"phrase": "Lego", "count": 12}, {"phrase": "Franklin Fountain", "count": 5}, {"phrase": "Prue", "count": 5}, {"phrase": "Gathering of Nations", "count": 6}, {"phrase": "Purple Heart", "count": 15}, {"phrase": "Crayola", "count": 13}, {"phrase": "Wham", "count": 18}, {"phrase": "Liberty Bell", "count": 19}, {"phrase": "Stetson", "count": 9}, {"phrase": "Taipei", "count": 9}, {"phrase": "Parker Brothers", "count": 7}, {"phrase": "Cherry Garcia", "count": 5}, {"phrase": "Penny Black", "count": 5}]}, {"cluster_id": 31, "name": "TV Sitcoms & Families", "applicability": 881, "entities": [{"phrase": "Frasier", "count": 47}, {"phrase": "Modern Family", "count": 22}, {"phrase": "Mary Tyler Moore Show", "count": 29}, {"phrase": "Breaking Bad", "count": 31}, {"phrase": "Met Your Mother", "count": 20}, {"phrase": "Bewitched", "count": 28}, {"phrase": "Buffy the Vampire Slayer", "count": 29}, {"phrase": "Mad Men", "count": 27}, {"phrase": "Seinfeld", "count": 47}, {"phrase": "Emmy", "count": 66}, {"phrase": "Good Wife", "count": 14}, {"phrase": "Showtime", "count": 27}, {"phrase": "Netflix", "count": 44}, {"phrase": "Family Guy", "count": 18}, {"phrase": "Barney Miller", "count": 19}, {"phrase": "Simpsons", "count": 45}, {"phrase": "Hawaii Five", "count": 20}, {"phrase": "Sons of Anarchy", "count": 11}, {"phrase": "Home Improvement", "count": 18}, {"phrase": "Love Lucy", "count": 26}, {"phrase": "Mork", "count": 23}, {"phrase": "Andy Griffith Show", "count": 18}, {"phrase": "Mindy", "count": 18}, {"phrase": "Recreation", "count": 18}, {"phrase": "Smallville", "count": 18}]}, {"cluster_id": 42, "name": "Countries & Languages", "applicability": 851, "entities": [{"phrase": "Suriname", "count": 54}, {"phrase": "Liechtenstein", "count": 73}, {"phrase": "Andorra", "count": 66}, {"phrase": "Kazakhstan", "count": 50}, {"phrase": "Lesotho", "count": 38}, {"phrase": "Bhutan", "count": 48}, {"phrase": "San Marino", "count": 44}, {"phrase": "Saudi Arabia", "count": 90}, {"phrase": "Mongolia", "count": 56}, {"phrase": "Albania", "count": 52}, {"phrase": "Pakistan", "count": 121}, {"phrase": "Mali", "count": 44}, {"phrase": "Eritrea", "count": 29}, {"phrase": "Algeria", "count": 91}, {"phrase": "Angola", "count": 41}, {"phrase": "Chad", "count": 48}, {"phrase": "Brunei", "count": 30}, {"phrase": "Belize", "count": 65}, {"phrase": "Malaysia", "count": 42}, {"phrase": "Honduras", "count": 46}, {"phrase": "Laos", "count": 51}, {"phrase": "Rwanda", "count": 51}, {"phrase": "Colombia", "count": 99}, {"phrase": "Paraguay", "count": 42}, {"phrase": "Turkmenistan", "count": 25}]}, {"cluster_id": 23, "name": "Opera & Classical Music", "applicability": 843, "entities": [{"phrase": "Verdi", "count": 144}, {"phrase": "Puccini", "count": 112}, {"phrase": "Bach", "count": 184}, {"phrase": "Rossini", "count": 110}, {"phrase": "Tchaikovsky", "count": 157}, {"phrase": "Richard Strauss", "count": 51}, {"phrase": "Stravinsky", "count": 93}, {"phrase": "Handel", "count": 147}, {"phrase": "Mendelssohn", "count": 54}, {"phrase": "Haydn", "count": 85}, {"phrase": "Mozart", "count": 309}, {"phrase": "Wagner", "count": 172}, {"phrase": "Beethoven", "count": 277}, {"phrase": "Donizetti", "count": 39}, {"phrase": "Rigoletto", "count": 48}, {"phrase": "Liszt", "count": 72}, {"phrase": "Pagliacci", "count": 53}, {"phrase": "Johann Sebastian Bach", "count": 46}, {"phrase": "Brahms", "count": 73}, {"phrase": "Schumann", "count": 33}, {"phrase": "Amahl", "count": 27}, {"phrase": "Rimsky", "count": 62}, {"phrase": "Cio", "count": 32}, {"phrase": "Bizet", "count": 64}, {"phrase": "Prokofiev", "count": 51}]}, {"cluster_id": 35, "name": "U.S. Presidents", "applicability": 828, "entities": [{"phrase": "Woodrow Wilson", "count": 113}, {"phrase": "Republican", "count": 160}, {"phrase": "Gerald Ford", "count": 119}, {"phrase": "Martin Van Buren", "count": 65}, {"phrase": "Andrew Jackson", "count": 119}, {"phrase": "Grover Cleveland", "count": 80}, {"phrase": "John Quincy Adams", "count": 99}, {"phrase": "Taft", "count": 94}, {"phrase": "Andrew Johnson", "count": 88}, {"phrase": "John Adams", "count": 127}, {"phrase": "Democrat", "count": 84}, {"phrase": "Jimmy Carter", "count": 124}, {"phrase": "Spiro Agnew", "count": 44}, {"phrase": "Herbert Hoover", "count": 73}, {"phrase": "Harry Truman", "count": 94}, {"phrase": "Attorney General", "count": 56}, {"phrase": "Theodore Roosevelt", "count": 107}, {"phrase": "Speaker of the House", "count": 64}, {"phrase": "Benjamin Harrison", "count": 54}, {"phrase": "Senate", "count": 366}, {"phrase": "William Howard Taft", "count": 53}, {"phrase": "Eisenhower", "count": 128}, {"phrase": "John Tyler", "count": 40}, {"phrase": "Democratic", "count": 86}, {"phrase": "Nixon", "count": 179}]}, {"cluster_id": 13, "name": "Famous Women & First Ladies", "applicability": 775, "entities": [{"phrase": "Abigail Adams", "count": 45}, {"phrase": "First Lady", "count": 111}, {"phrase": "Bird Johnson", "count": 43}, {"phrase": "Eleanor Roosevelt", "count": 65}, {"phrase": "Mary Todd Lincoln", "count": 44}, {"phrase": "Rosalynn Carter", "count": 32}, {"phrase": "Bess Truman", "count": 23}, {"phrase": "Lucy Hayes", "count": 21}, {"phrase": "Martha Washington", "count": 40}, {"phrase": "Betty Ford", "count": 32}, {"phrase": "Dolley Madison", "count": 42}, {"phrase": "Nancy Reagan", "count": 41}, {"phrase": "Barbara Bush", "count": 32}, {"phrase": "Pat Nixon", "count": 19}, {"phrase": "Mamie Eisenhower", "count": 24}, {"phrase": "Mother Teresa", "count": 34}, {"phrase": "Clara Barton", "count": 24}, {"phrase": "Elizabeth Dole", "count": 20}, {"phrase": "Jacqueline Kennedy", "count": 20}, {"phrase": "Marie Curie", "count": 30}, {"phrase": "Margaret Sanger", "count": 20}, {"phrase": "Coretta Scott King", "count": 12}, {"phrase": "Sandra Day", "count": 22}, {"phrase": "Harriet Tubman", "count": 23}, {"phrase": "Elizabeth Cady Stanton", "count": 17}]}, {"cluster_id": 28, "name": "Children's Literature", "applicability": 737, "entities": [{"phrase": "Little Bo Peep", "count": 16}, {"phrase": "Pinocchio", "count": 51}, {"phrase": "Bambi", "count": 32}, {"phrase": "Jungle Book", "count": 29}, {"phrase": "Little Boy Blue", "count": 18}, {"phrase": "Thumper", "count": 14}, {"phrase": "Hagar the Horrible", "count": 9}, {"phrase": "Horton", "count": 19}, {"phrase": "Mowgli", "count": 20}, {"phrase": "March Hare", "count": 16}, {"phrase": "Rapunzel", "count": 23}, {"phrase": "Cheshire Cat", "count": 20}, {"phrase": "Green Eggs", "count": 16}, {"phrase": "Snoopy", "count": 37}, {"phrase": "Scooby", "count": 21}, {"phrase": "Beatrix Potter", "count": 29}, {"phrase": "Pooh", "count": 36}, {"phrase": "Snow White", "count": 47}, {"phrase": "Bugs Bunny", "count": 33}, {"phrase": "Wonderland", "count": 52}, {"phrase": "Tweety", "count": 10}, {"phrase": "Little Mermaid", "count": 26}, {"phrase": "Tigger", "count": 11}, {"phrase": "Foghorn Leghorn", "count": 12}, {"phrase": "Johnny Gruelle", "count": 7}]}, {"cluster_id": 29, "name": "Art & Artists", "applicability": 723, "entities": [{"phrase": "Lautrec", "count": 74}, {"phrase": "Gauguin", "count": 88}, {"phrase": "Titian", "count": 62}, {"phrase": "Michelangelo", "count": 196}, {"phrase": "Monet", "count": 103}, {"phrase": "Manet", "count": 62}, {"phrase": "El Greco", "count": 63}, {"phrase": "Gogh", "count": 70}, {"phrase": "Picasso", "count": 187}, {"phrase": "Raphael", "count": 71}, {"phrase": "Van Gogh", "count": 74}, {"phrase": "Degas", "count": 56}, {"phrase": "Rembrandt", "count": 179}, {"phrase": "Night Watch", "count": 35}, {"phrase": "Rodin", "count": 84}, {"phrase": "Impressionist", "count": 48}, {"phrase": "Blue Period", "count": 18}, {"phrase": "Mary Cassatt", "count": 33}, {"phrase": "Botticelli", "count": 68}, {"phrase": "Blue Boy", "count": 37}, {"phrase": "Marc Chagall", "count": 37}, {"phrase": "Andrew Wyeth", "count": 36}, {"phrase": "Peter Paul Rubens", "count": 31}, {"phrase": "Cubist", "count": 31}, {"phrase": "Whistler", "count": 64}]}, {"cluster_id": 22, "name": "Food & Drink", "applicability": 713, "entities": [{"phrase": "Joy of Cooking", "count": 56}, {"phrase": "Parmesan", "count": 32}, {"phrase": "Scotch", "count": 49}, {"phrase": "Drambuie", "count": 15}, {"phrase": "Kraft", "count": 32}, {"phrase": "Baked Alaska", "count": 16}, {"phrase": "Edam", "count": 24}, {"phrase": "Heloise", "count": 49}, {"phrase": "Gouda", "count": 26}, {"phrase": "Limburger", "count": 16}, {"phrase": "Hollandaise", "count": 19}, {"phrase": "Grand Marnier", "count": 14}, {"phrase": "Kahlua", "count": 17}, {"phrase": "Creole", "count": 25}, {"phrase": "Suzette", "count": 11}, {"phrase": "Eggs Benedict", "count": 14}, {"phrase": "Eataly", "count": 9}, {"phrase": "Tabasco", "count": 29}, {"phrase": "Emeril", "count": 16}, {"phrase": "Cajun", "count": 30}, {"phrase": "Montmorency", "count": 8}, {"phrase": "Nestle", "count": 23}, {"phrase": "Gruyere", "count": 11}, {"phrase": "Angostura", "count": 12}, {"phrase": "Nabisco", "count": 25}]}, {"cluster_id": 6, "name": "Religion & The Bible", "applicability": 679, "entities": [{"phrase": "Isaiah", "count": 71}, {"phrase": "Saul", "count": 104}, {"phrase": "Philistines", "count": 72}, {"phrase": "John the Baptist", "count": 101}, {"phrase": "Revelation", "count": 100}, {"phrase": "Israelites", "count": 75}, {"phrase": "Jonah", "count": 79}, {"phrase": "Proverbs", "count": 47}, {"phrase": "Leviticus", "count": 58}, {"phrase": "Jacob", "count": 152}, {"phrase": "Jericho", "count": 55}, {"phrase": "Sodom", "count": 69}, {"phrase": "Ark of the Covenant", "count": 41}, {"phrase": "Abraham", "count": 140}, {"phrase": "Lazarus", "count": 43}, {"phrase": "Seth", "count": 27}, {"phrase": "Cain", "count": 81}, {"phrase": "Joshua", "count": 90}, {"phrase": "Judaism", "count": 80}, {"phrase": "Psalms", "count": 54}, {"phrase": "Nazareth", "count": 30}, {"phrase": "Samson", "count": 114}, {"phrase": "Esau", "count": 38}, {"phrase": "Elijah", "count": 53}, {"phrase": "the Lord", "count": 23}]}, {"cluster_id": 12, "name": "Poetry", "applicability": 666, "entities": [{"phrase": "Emily Dickinson", "count": 76}, {"phrase": "Robert Frost", "count": 109}, {"phrase": "Elizabeth Barrett Browning", "count": 70}, {"phrase": "Keats", "count": 103}, {"phrase": "Wordsworth", "count": 77}, {"phrase": "John Donne", "count": 52}, {"phrase": "Tennyson", "count": 115}, {"phrase": "William Blake", "count": 43}, {"phrase": "Walt Whitman", "count": 77}, {"phrase": "Frost", "count": 45}, {"phrase": "Ode", "count": 61}, {"phrase": "Leaves of Grass", "count": 39}, {"phrase": "Grecian Urn", "count": 19}, {"phrase": "Mending Wall", "count": 19}, {"phrase": "Ezra Pound", "count": 37}, {"phrase": "Whitman", "count": 46}, {"phrase": "Edna St", "count": 31}, {"phrase": "Joyce Kilmer", "count": 31}, {"phrase": "William Wordsworth", "count": 29}, {"phrase": "Tyger", "count": 25}, {"phrase": "Ogden Nash", "count": 32}, {"phrase": "Vincent Millay", "count": 32}, {"phrase": "Song of Myself", "count": 21}, {"phrase": "Shelley", "count": 83}, {"phrase": "Robert Burns", "count": 58}]}, {"cluster_id": 24, "name": "Mythology & The Ancient World", "applicability": 663, "entities": [{"phrase": "Athena", "count": 105}, {"phrase": "Odysseus", "count": 112}, {"phrase": "Zeus", "count": 242}, {"phrase": "Loki", "count": 48}, {"phrase": "Hera", "count": 63}, {"phrase": "Poseidon", "count": 71}, {"phrase": "Medusa", "count": 65}, {"phrase": "Ares", "count": 38}, {"phrase": "Hermes", "count": 67}, {"phrase": "Aphrodite", "count": 83}, {"phrase": "Norse", "count": 147}, {"phrase": "Minotaur", "count": 45}, {"phrase": "Balder", "count": 24}, {"phrase": "Hades", "count": 77}, {"phrase": "Artemis", "count": 52}, {"phrase": "Isis", "count": 49}, {"phrase": "Osiris", "count": 41}, {"phrase": "Odin", "count": 87}, {"phrase": "Hephaestus", "count": 33}, {"phrase": "Cronus", "count": 28}, {"phrase": "Amazons", "count": 31}, {"phrase": "Cerberus", "count": 35}, {"phrase": "Dionysus", "count": 41}, {"phrase": "Horus", "count": 28}, {"phrase": "Sparta", "count": 53}]}, {"cluster_id": 9, "name": "Business & Brands", "applicability": 647, "entities": [{"phrase": "Berkshire Hathaway", "count": 26}, {"phrase": "Procter", "count": 40}, {"phrase": "Anheuser", "count": 31}, {"phrase": "Gamble", "count": 45}, {"phrase": "Motors", "count": 43}, {"phrase": "Costco", "count": 17}, {"phrase": "Busch", "count": 33}, {"phrase": "Bank of America", "count": 19}, {"phrase": "Burger King", "count": 28}, {"phrase": "Exxon Mobil", "count": 11}, {"phrase": "Walmart", "count": 22}, {"phrase": "Sears", "count": 43}, {"phrase": "Kresge", "count": 9}, {"phrase": "Kraft", "count": 24}, {"phrase": "Wal", "count": 24}, {"phrase": "Pfizer", "count": 16}, {"phrase": "Chicago Board of Trade", "count": 12}, {"phrase": "Gannett", "count": 12}, {"phrase": "American Express", "count": 31}, {"phrase": "Time Warner", "count": 17}, {"phrase": "Coca", "count": 67}, {"phrase": "Hewlett", "count": 18}, {"phrase": "Verizon", "count": 18}, {"phrase": "Merrill Lynch", "count": 12}, {"phrase": "Walgreens", "count": 9}]}, {"cluster_id": 39, "name": "Puzzle & Grab-Bag Categories", "applicability": 599, "entities": [{"phrase": "Disaster City", "count": 6}, {"phrase": "Sony", "count": 26}, {"phrase": "David Remnick", "count": 7}, {"phrase": "Ari Shapiro", "count": 5}, {"phrase": "Dominic Sandbrook", "count": 5}, {"phrase": "Ncuti Gatwa", "count": 5}, {"phrase": "Shankar Vedantam", "count": 5}, {"phrase": "Fuhgettaboudit", "count": 5}, {"phrase": "Bert", "count": 15}, {"phrase": "Joyce Brothers", "count": 13}, {"phrase": "Gulfstream", "count": 7}, {"phrase": "George Stephanopoulos", "count": 10}, {"phrase": "Robert Siegel", "count": 6}, {"phrase": "Consumer Reports", "count": 9}, {"phrase": "Gordon Ramsay", "count": 9}, {"phrase": "Cole Escola", "count": 5}, {"phrase": "Tamera Mowry", "count": 5}, {"phrase": "Katie Couric", "count": 11}, {"phrase": "Rocko", "count": 6}, {"phrase": "Ernie", "count": 14}, {"phrase": "Yahoo", "count": 14}, {"phrase": "Grandma", "count": 16}, {"phrase": "Visa", "count": 8}, {"phrase": "Anthony Mackie", "count": 5}, {"phrase": "Golden Princess", "count": 5}]}, {"cluster_id": 16, "name": "Word Origins & Foreign Words", "applicability": 536, "entities": [{"phrase": "Yiddish", "count": 62}, {"phrase": "the Greek", "count": 83}, {"phrase": "Swahili", "count": 38}, {"phrase": "Esperanto", "count": 25}, {"phrase": "Pig Latin", "count": 15}, {"phrase": "Gaelic", "count": 31}, {"phrase": "Old French", "count": 41}, {"phrase": "Old English", "count": 48}, {"phrase": "Hindi", "count": 36}, {"phrase": "the French", "count": 58}, {"phrase": "Je", "count": 12}, {"phrase": "Urdu", "count": 12}, {"phrase": "Mandarin", "count": 18}, {"phrase": "the Arabic", "count": 12}, {"phrase": "Middle French", "count": 9}, {"phrase": "Sanskrit", "count": 45}, {"phrase": "Arabic", "count": 115}, {"phrase": "Manx", "count": 9}, {"phrase": "Tagalog", "count": 9}, {"phrase": "Random House Dictionary", "count": 7}, {"phrase": "Semitic", "count": 8}, {"phrase": "Indo", "count": 13}, {"phrase": "Quechua", "count": 12}, {"phrase": "Ich", "count": 10}, {"phrase": "Veni", "count": 7}]}, {"cluster_id": 37, "name": "Inventors & Scientists", "applicability": 512, "entities": [{"phrase": "Edison", "count": 85}, {"phrase": "Pasteur", "count": 39}, {"phrase": "Kelvin", "count": 24}, {"phrase": "Marconi", "count": 40}, {"phrase": "Peace Prize", "count": 17}, {"phrase": "Niels Bohr", "count": 20}, {"phrase": "Menlo Park", "count": 21}, {"phrase": "Christiaan Huygens", "count": 11}, {"phrase": "Wilhelm Roentgen", "count": 11}, {"phrase": "Mendel", "count": 24}, {"phrase": "Bohr", "count": 16}, {"phrase": "Eli Whitney", "count": 23}, {"phrase": "Pavlov", "count": 23}, {"phrase": "Edwin Land", "count": 13}, {"phrase": "Elias Howe", "count": 15}, {"phrase": "Galileo", "count": 71}, {"phrase": "Nobel", "count": 56}, {"phrase": "Marie Curie", "count": 27}, {"phrase": "Goddard", "count": 15}, {"phrase": "Niels", "count": 13}, {"phrase": "Inventors Hall of Fame", "count": 9}, {"phrase": "Hans Lippershey", "count": 9}, {"phrase": "Einstein", "count": 61}, {"phrase": "Roentgen", "count": 11}, {"phrase": "Isaac Newton", "count": 40}]}, {"cluster_id": 49, "name": "Animals & Zoology", "applicability": 471, "entities": [{"phrase": "Madikwe Game Reserve", "count": 14}, {"phrase": "Galapagos Islands", "count": 32}, {"phrase": "Manx", "count": 24}, {"phrase": "Galapagos", "count": 27}, {"phrase": "Gila", "count": 25}, {"phrase": "Ursus", "count": 22}, {"phrase": "Stegosaurus", "count": 19}, {"phrase": "Sumatran", "count": 18}, {"phrase": "Proboscidea", "count": 9}, {"phrase": "Komodo", "count": 25}, {"phrase": "Pekingese", "count": 17}, {"phrase": "Triceratops", "count": 18}, {"phrase": "Panthera", "count": 14}, {"phrase": "Chiroptera", "count": 10}, {"phrase": "Bactrian", "count": 19}, {"phrase": "Madagascar", "count": 38}, {"phrase": "Canis", "count": 17}, {"phrase": "Brachiosaurus", "count": 10}, {"phrase": "Adelie", "count": 11}, {"phrase": "Siamese", "count": 45}, {"phrase": "Steller", "count": 12}, {"phrase": "Airedale", "count": 13}, {"phrase": "Sargasso Sea", "count": 14}, {"phrase": "Maui Ocean Center", "count": 7}, {"phrase": "Felis", "count": 7}]}, {"cluster_id": 43, "name": "Quotes & Proverbs", "applicability": 465, "entities": [{"phrase": "Nietzsche", "count": 38}, {"phrase": "Kierkegaard", "count": 29}, {"phrase": "Descartes", "count": 30}, {"phrase": "John Locke", "count": 19}, {"phrase": "Kant", "count": 18}, {"phrase": "Social Contract", "count": 12}, {"phrase": "Paine", "count": 16}, {"phrase": "David Hume", "count": 11}, {"phrase": "Hegel", "count": 10}, {"phrase": "Beyond Good", "count": 7}, {"phrase": "Young Tradesman", "count": 7}, {"phrase": "Plato", "count": 61}, {"phrase": "Socrates", "count": 41}, {"phrase": "Spinoza", "count": 11}, {"phrase": "Civil Disobedience", "count": 10}, {"phrase": "Bernard Baruch", "count": 5}, {"phrase": "Adam Smith", "count": 19}, {"phrase": "Karl Marx", "count": 28}, {"phrase": "Proverbs", "count": 12}, {"phrase": "Francis Bacon", "count": 15}, {"phrase": "Patrick Henry", "count": 17}, {"phrase": "Alexander Pope", "count": 20}, {"phrase": "Immanuel Kant", "count": 9}, {"phrase": "Jeremy Bentham", "count": 9}, {"phrase": "Thomas Paine", "count": 21}]}, {"cluster_id": 32, "name": "Rhymes, Anagrams & Common Bonds", "applicability": 454, "entities": [{"phrase": "Alabama Institute", "count": 7}, {"phrase": "Is For", "count": 5}, {"phrase": "Peter Piper", "count": 7}, {"phrase": "Grumpy", "count": 7}, {"phrase": "Jabberwocky", "count": 8}, {"phrase": "Jack", "count": 44}, {"phrase": "Mindy", "count": 7}, {"phrase": "Jill", "count": 15}, {"phrase": "Idiomatically", "count": 8}, {"phrase": "Jack Sprat", "count": 7}, {"phrase": "Proverbially", "count": 41}, {"phrase": "Little Jack Horner", "count": 6}, {"phrase": "Subtract", "count": 6}, {"phrase": "Simple Simon", "count": 7}, {"phrase": "Lewis Carroll", "count": 15}, {"phrase": "Merriam", "count": 10}, {"phrase": "Scotch", "count": 10}, {"phrase": "Humpty Dumpty", "count": 8}, {"phrase": "Little Boy Blue", "count": 5}, {"phrase": "Charmin", "count": 5}, {"phrase": "Dora", "count": 6}, {"phrase": "Gouda", "count": 6}, {"phrase": "Cockney", "count": 8}, {"phrase": "Yiddish", "count": 13}, {"phrase": "Kleenex", "count": 5}]}, {"cluster_id": 36, "name": "Colleges & Universities", "applicability": 447, "entities": [{"phrase": "University of Pennsylvania", "count": 29}, {"phrase": "Ivy League", "count": 91}, {"phrase": "University of California", "count": 20}, {"phrase": "Georgetown", "count": 40}, {"phrase": "University", "count": 93}, {"phrase": "University of Florida", "count": 18}, {"phrase": "Bryn Mawr", "count": 21}, {"phrase": "Vassar", "count": 28}, {"phrase": "Dartmouth", "count": 40}, {"phrase": "Massachusetts Institute of Technology", "count": 13}, {"phrase": "Tulane", "count": 20}, {"phrase": "University of North Carolina", "count": 14}, {"phrase": "Poughkeepsie", "count": 18}, {"phrase": "Penn State", "count": 21}, {"phrase": "Bulldogs", "count": 12}, {"phrase": "University of Georgia", "count": 14}, {"phrase": "Georgia Tech", "count": 14}, {"phrase": "Baylor", "count": 13}, {"phrase": "Notre Dame", "count": 50}, {"phrase": "Florida State", "count": 11}, {"phrase": "University of Michigan", "count": 21}, {"phrase": "University of Nevada", "count": 10}, {"phrase": "Cornell", "count": 36}, {"phrase": "Princeton", "count": 73}, {"phrase": "Purdue", "count": 22}]}, {"cluster_id": 41, "name": "Transportation & Cars", "applicability": 447, "entities": [{"phrase": "Honda", "count": 51}, {"phrase": "Toyota", "count": 74}, {"phrase": "Nissan", "count": 32}, {"phrase": "Chevrolet", "count": 34}, {"phrase": "Volkswagen", "count": 52}, {"phrase": "Chevy", "count": 49}, {"phrase": "Hyundai", "count": 23}, {"phrase": "Chrysler", "count": 54}, {"phrase": "Mustang", "count": 29}, {"phrase": "Porsche", "count": 30}, {"phrase": "Audi", "count": 17}, {"phrase": "Pontiac", "count": 29}, {"phrase": "Mazda", "count": 18}, {"phrase": "Subaru", "count": 18}, {"phrase": "Spruce Goose", "count": 19}, {"phrase": "Boeing", "count": 49}, {"phrase": "Cadillac", "count": 38}, {"phrase": "Mitsubishi", "count": 17}, {"phrase": "Qantas", "count": 23}, {"phrase": "Jetta", "count": 11}, {"phrase": "Benz", "count": 24}, {"phrase": "Concorde", "count": 29}, {"phrase": "Mercedes", "count": 34}, {"phrase": "Museum of Flight", "count": 15}, {"phrase": "Dodge", "count": 33}]}, {"cluster_id": 7, "name": "Holidays & The Calendar", "applicability": 407, "entities": [{"phrase": "Columbus Day", "count": 45}, {"phrase": "Veterans Day", "count": 42}, {"phrase": "Flag Day", "count": 42}, {"phrase": "Arbor Day", "count": 26}, {"phrase": "Labor Day", "count": 61}, {"phrase": "Boxing Day", "count": 19}, {"phrase": "Memorial Day", "count": 52}, {"phrase": "Hanukkah", "count": 46}, {"phrase": "Ash Wednesday", "count": 28}, {"phrase": "Earth Day", "count": 35}, {"phrase": "Bastille Day", "count": 27}, {"phrase": "Kwanzaa", "count": 22}, {"phrase": "Monday", "count": 100}, {"phrase": "Diwali", "count": 13}, {"phrase": "May Day", "count": 26}, {"phrase": "Remembrance Day", "count": 8}, {"phrase": "Cinco de Mayo", "count": 20}, {"phrase": "Armistice Day", "count": 13}, {"phrase": "Ramadan", "count": 23}, {"phrase": "Yom Kippur", "count": 24}, {"phrase": "Groundhog Day", "count": 19}, {"phrase": "Halloween", "count": 74}, {"phrase": "Easter", "count": 93}, {"phrase": "Thanksgiving", "count": 72}, {"phrase": "International Day", "count": 7}]}, {"cluster_id": 30, "name": "Law, Economics & Abbreviations", "applicability": 348, "entities": [{"phrase": "Hatchett", "count": 12}, {"phrase": "Amendment", "count": 82}, {"phrase": "Treasury", "count": 35}, {"phrase": "Bureau of Engraving", "count": 17}, {"phrase": "Treasury Department", "count": 16}, {"phrase": "Federal Reserve", "count": 20}, {"phrase": "National Constitution Center", "count": 9}, {"phrase": "Accounting Office", "count": 9}, {"phrase": "Article I", "count": 10}, {"phrase": "Constitution", "count": 92}, {"phrase": "Homeland Security", "count": 16}, {"phrase": "Health Administration", "count": 9}, {"phrase": "Department of Labor", "count": 11}, {"phrase": "Bill of Rights", "count": 20}, {"phrase": "First Amendment", "count": 17}, {"phrase": "Occupational Safety", "count": 8}, {"phrase": "Department of Commerce", "count": 11}, {"phrase": "Faber Report", "count": 5}, {"phrase": "Border Protection", "count": 6}, {"phrase": "Marshals Service", "count": 6}, {"phrase": "Naturalization Service", "count": 7}, {"phrase": "Department of the Interior", "count": 12}, {"phrase": "Commerce", "count": 13}, {"phrase": "Department of Homeland Security", "count": 9}, {"phrase": "Secret Service", "count": 19}]}, {"cluster_id": 44, "name": "Astronomy & Space", "applicability": 306, "entities": [{"phrase": "Saturn", "count": 175}, {"phrase": "Pluto", "count": 137}, {"phrase": "Uranus", "count": 106}, {"phrase": "Milky Way", "count": 72}, {"phrase": "Orion", "count": 68}, {"phrase": "Neptune", "count": 129}, {"phrase": "Scorpio", "count": 41}, {"phrase": "Cassini", "count": 26}, {"phrase": "Phobos", "count": 28}, {"phrase": "Betelgeuse", "count": 22}, {"phrase": "Sagittarius", "count": 46}, {"phrase": "Great Red Spot", "count": 23}, {"phrase": "Polaris", "count": 30}, {"phrase": "Jupiter", "count": 213}, {"phrase": "Virgo", "count": 35}, {"phrase": "Aquarius", "count": 42}, {"phrase": "Gemini", "count": 69}, {"phrase": "Olympus Mons", "count": 14}, {"phrase": "Libra", "count": 41}, {"phrase": "Sirius", "count": 50}, {"phrase": "Mercury", "count": 148}, {"phrase": "Crab Nebula", "count": 16}, {"phrase": "Aries", "count": 31}, {"phrase": "Solar System", "count": 14}, {"phrase": "Cara Santa Maria", "count": 10}]}, {"cluster_id": 8, "name": "Fashion & Furnishings", "applicability": 290, "entities": [{"phrase": "Dior", "count": 26}, {"phrase": "Ralph Lauren", "count": 25}, {"phrase": "Yves Saint Laurent", "count": 26}, {"phrase": "Chippendale", "count": 16}, {"phrase": "Velcro", "count": 14}, {"phrase": "Burberry", "count": 9}, {"phrase": "Good Housekeeping Institute", "count": 5}, {"phrase": "Emilio Pucci", "count": 5}, {"phrase": "Heloise", "count": 22}, {"phrase": "Lycra", "count": 7}, {"phrase": "Calvin Klein", "count": 13}, {"phrase": "Christian Dior", "count": 13}, {"phrase": "Coco Chanel", "count": 10}, {"phrase": "Stetson", "count": 12}, {"phrase": "Tommy Hilfiger", "count": 8}, {"phrase": "Fair Isle", "count": 5}, {"phrase": "Guerlain", "count": 5}, {"phrase": "Mary Quant", "count": 8}, {"phrase": "New Look", "count": 8}, {"phrase": "Levi", "count": 17}, {"phrase": "Balenciaga", "count": 7}, {"phrase": "Adirondack", "count": 8}, {"phrase": "Louis XV", "count": 12}, {"phrase": "Birkenstocks", "count": 5}, {"phrase": "Betelgeuse", "count": 6}]}, {"cluster_id": 25, "name": "Shakespeare", "applicability": 286, "entities": [{"phrase": "Othello", "count": 178}, {"phrase": "Macbeth", "count": 241}, {"phrase": "Petruchio", "count": 54}, {"phrase": "Lear", "count": 135}, {"phrase": "Merchant of Venice", "count": 86}, {"phrase": "Taming of the Shrew", "count": 71}, {"phrase": "Iago", "count": 69}, {"phrase": "Midsummer Night", "count": 114}, {"phrase": "Desdemona", "count": 56}, {"phrase": "Portia", "count": 39}, {"phrase": "Tempest", "count": 106}, {"phrase": "Troilus", "count": 60}, {"phrase": "Cressida", "count": 61}, {"phrase": "Cordelia", "count": 46}, {"phrase": "Hamlet", "count": 297}, {"phrase": "Falstaff", "count": 54}, {"phrase": "Mercutio", "count": 34}, {"phrase": "Merry Wives of Windsor", "count": 42}, {"phrase": "Romeo", "count": 199}, {"phrase": "Tybalt", "count": 28}, {"phrase": "Juliet", "count": 198}, {"phrase": "Titus Andronicus", "count": 32}, {"phrase": "Prospero", "count": 52}, {"phrase": "Two Gentlemen of Verona", "count": 26}, {"phrase": "Verona", "count": 44}]}, {"cluster_id": 14, "name": "Plants & Botany", "applicability": 259, "entities": [{"phrase": "Dionaea", "count": 8}, {"phrase": "Acer", "count": 9}, {"phrase": "Helianthus", "count": 9}, {"phrase": "Prunus", "count": 7}, {"phrase": "Luther Burbank", "count": 13}, {"phrase": "Singapore Botanic Gardens", "count": 5}, {"phrase": "Bowery Farms", "count": 5}, {"phrase": "Enology Dept", "count": 5}, {"phrase": "Kearny", "count": 5}, {"phrase": "Papaver", "count": 5}, {"phrase": "Taraxacum", "count": 5}, {"phrase": "Anjou", "count": 9}, {"phrase": "Crayola", "count": 17}, {"phrase": "Salix", "count": 7}, {"phrase": "Ficus", "count": 10}, {"phrase": "Saintpaulia", "count": 5}, {"phrase": "Mentha", "count": 6}, {"phrase": "Viticulture", "count": 6}, {"phrase": "Zea", "count": 6}, {"phrase": "Mendel", "count": 10}, {"phrase": "Shasta", "count": 8}, {"phrase": "Bosc", "count": 5}, {"phrase": "Botanically", "count": 5}, {"phrase": "American Beauty", "count": 8}, {"phrase": "Ponderosa", "count": 7}]}, {"cluster_id": 34, "name": "Chemistry & Earth Science", "applicability": 257, "entities": [{"phrase": "Hg", "count": 19}, {"phrase": "Mohs", "count": 22}, {"phrase": "Celsius", "count": 34}, {"phrase": "Fe", "count": 27}, {"phrase": "Pb", "count": 12}, {"phrase": "Haber", "count": 8}, {"phrase": "Bunsen", "count": 15}, {"phrase": "Kr", "count": 7}, {"phrase": "Cu", "count": 16}, {"phrase": "Cenozoic", "count": 11}, {"phrase": "Kelvin", "count": 16}, {"phrase": "Humphry Davy", "count": 14}, {"phrase": "Na", "count": 26}, {"phrase": "Ag", "count": 13}, {"phrase": "Fm", "count": 6}, {"phrase": "Martin Klaproth", "count": 7}, {"phrase": "Sn", "count": 10}, {"phrase": "Fahrenheit", "count": 46}, {"phrase": "Ir", "count": 7}, {"phrase": "New Mexico Institute of Mining", "count": 5}, {"phrase": "Argonne National Lab", "count": 5}, {"phrase": "Beldin Brick Factory", "count": 5}, {"phrase": "Aurum", "count": 5}, {"phrase": "Sanford Underground Research Facility", "count": 6}, {"phrase": "Mn", "count": 6}]}, {"cluster_id": 20, "name": "Wordplay & Vocabulary", "applicability": 249, "entities": [{"phrase": "Idiomatically", "count": 18}, {"phrase": "the Greek", "count": 65}, {"phrase": "Grammatically", "count": 7}, {"phrase": "the Middle English", "count": 8}, {"phrase": "the Old Norse", "count": 5}, {"phrase": "the French", "count": 35}, {"phrase": "Yiddish", "count": 16}, {"phrase": "Freudian", "count": 9}, {"phrase": "the German", "count": 9}, {"phrase": "Proverbially", "count": 38}, {"phrase": "the Latin", "count": 228}, {"phrase": "Old English", "count": 20}, {"phrase": "Glenn Close", "count": 7}, {"phrase": "the Old French", "count": 5}, {"phrase": "Curiosity", "count": 5}, {"phrase": "Merriam", "count": 8}, {"phrase": "Boy Scout", "count": 11}, {"phrase": "Middle English", "count": 11}, {"phrase": "Freud", "count": 18}, {"phrase": "the Dutch", "count": 5}, {"phrase": "Justin", "count": 5}, {"phrase": "Old French", "count": 12}, {"phrase": "Scrabble", "count": 10}, {"phrase": "Emily Post", "count": 6}, {"phrase": "Internet", "count": 28}]}, {"cluster_id": 27, "name": "Games & Play", "applicability": 193, "entities": [{"phrase": "Scrabble", "count": 49}, {"phrase": "Clue", "count": 34}, {"phrase": "Monopoly", "count": 82}, {"phrase": "Yahtzee", "count": 13}, {"phrase": "Luxury Tax", "count": 9}, {"phrase": "Water Works", "count": 7}, {"phrase": "Park City", "count": 14}, {"phrase": "Trivial Pursuit", "count": 14}, {"phrase": "Pong", "count": 13}, {"phrase": "Charlie White", "count": 5}, {"phrase": "Coach Dixon", "count": 5}, {"phrase": "Hana Ali", "count": 5}, {"phrase": "Meryl Davis", "count": 5}, {"phrase": "Connect Four", "count": 6}, {"phrase": "Milton Bradley", "count": 13}, {"phrase": "Twister", "count": 16}, {"phrase": "Jenga", "count": 8}, {"phrase": "Parcheesi", "count": 8}, {"phrase": "Texas Hold", "count": 6}, {"phrase": "Hoyle", "count": 11}, {"phrase": "Community Chest", "count": 7}, {"phrase": "Jennifer Shahade", "count": 5}, {"phrase": "Zee James", "count": 5}, {"phrase": "Boggle", "count": 5}, {"phrase": "Catan", "count": 5}]}, {"cluster_id": 45, "name": "Medicine & The Body", "applicability": 177, "entities": [{"phrase": "Langerhans", "count": 18}, {"phrase": "Eustachian", "count": 15}, {"phrase": "Lyme", "count": 17}, {"phrase": "Fallopian", "count": 14}, {"phrase": "Reye", "count": 9}, {"phrase": "Otitis", "count": 8}, {"phrase": "Graves", "count": 13}, {"phrase": "Barr", "count": 12}, {"phrase": "Epstein", "count": 10}, {"phrase": "Broca", "count": 8}, {"phrase": "Hodgkin", "count": 8}, {"phrase": "Lipitor", "count": 7}, {"phrase": "Heimlich", "count": 13}, {"phrase": "Babcock Hall Dairy", "count": 5}, {"phrase": "Paleontologist Dan Fisher", "count": 5}, {"phrase": "Sleep Research Center", "count": 5}, {"phrase": "Drew Pinsky", "count": 5}, {"phrase": "Equine Health", "count": 5}, {"phrase": "Travis Stork", "count": 5}, {"phrase": "Veterinary Hospital", "count": 5}, {"phrase": "Creutzfeldt", "count": 5}, {"phrase": "Advil", "count": 8}, {"phrase": "Tylenol", "count": 10}, {"phrase": "Oz", "count": 55}, {"phrase": "the Greek", "count": 54}]}, {"cluster_id": 48, "name": "Math & Measurement", "applicability": 78, "entities": [{"phrase": "Celsius", "count": 36}, {"phrase": "Venn", "count": 11}, {"phrase": "Cartesian", "count": 10}, {"phrase": "Joy Buolamwini", "count": 5}, {"phrase": "Mathematicians", "count": 5}, {"phrase": "Pythagoras", "count": 10}, {"phrase": "Euclid", "count": 23}, {"phrase": "Pythagorean", "count": 6}, {"phrase": "Fahrenheit", "count": 26}, {"phrase": "Fibonacci", "count": 6}, {"phrase": "Dewar", "count": 5}, {"phrase": "Kelvin", "count": 7}, {"phrase": "Descartes", "count": 9}, {"phrase": "Mercator", "count": 5}, {"phrase": "Dewey", "count": 5}, {"phrase": "Newton", "count": 12}, {"phrase": "the Greek", "count": 10}, {"phrase": "Old French", "count": 5}, {"phrase": "Old English", "count": 6}, {"phrase": "Four", "count": 5}, {"phrase": "Jon of the Clue Crew", "count": 17}, {"phrase": "Constitution", "count": 7}, {"phrase": "Friday", "count": 6}, {"phrase": "Arabic", "count": 9}, {"phrase": "Noah", "count": 7}]}];
+
+    (function () {
+      const sideList = document.getElementById('side-list');
+      const filterInput = document.getElementById('filter-input');
+      const mainPanel = document.getElementById('main-panel');
+      const detailPanel = document.getElementById('detail-panel');
+      const wikiCache = new Map();
+
+      let selectedType = null;
+      let selectedEntity = null;
+
+      function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, c => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[c]));
+      }
+
+      async function fetchWiki(phrase) {
+        const REST = t => `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(t)}?redirect=true`;
+        try {
+          let r = await fetch(REST(phrase));
+          if (r.ok) {
+            const j = await r.json();
+            if (j.type !== 'disambiguation' && j.extract) return j;
+          }
+          const s = await fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(phrase)}&format=json&origin=*`);
+          if (s.ok) {
+            const hit = (await s.json())?.query?.search?.[0];
+            if (hit) {
+              const r2 = await fetch(REST(hit.title));
+              if (r2.ok) { const j2 = await r2.json(); if (j2.extract) return j2; }
+            }
+          }
+        } catch (e) { /* fall through to null */ }
+        return null;
+      }
+
+      function renderSide(filterText) {
+        const q = (filterText || '').trim().toLowerCase();
+        sideList.innerHTML = '';
+        const filtered = DATA.filter(d => d.name.toLowerCase().includes(q));
+        if (!filtered.length) {
+          const empty = document.createElement('div');
+          empty.className = 'side-empty';
+          empty.textContent = 'No categories match that filter.';
+          sideList.appendChild(empty);
+          return;
+        }
+        for (const d of filtered) {
+          const studyable = d.entities.length > 0;
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'side-item' + (!studyable ? ' dim' : '') +
+            (selectedType && selectedType.cluster_id === d.cluster_id ? ' active' : '');
+          btn.setAttribute('role', 'listitem');
+          btn.innerHTML = `<span class="name">${escapeHtml(d.name)}</span>` +
+            `<span class="meta">${studyable ? d.entities.length + ' answers' : 'not really studyable'}</span>`;
+          btn.addEventListener('click', () => selectType(d));
+          sideList.appendChild(btn);
+        }
+      }
+
+      function selectType(d) {
+        selectedType = d;
+        selectedEntity = null;
+        renderSide(filterInput.value);
+        renderMain();
+        renderDetailEmpty();
+      }
+
+      function renderMain() {
+        if (!selectedType) {
+          mainPanel.innerHTML = '<p class="placeholder">Select a category from the left to see its most recurring answers.</p>';
+          return;
+        }
+        const d = selectedType;
+        let html = `<div class="main-head"><h2>${escapeHtml(d.name)}</h2>` +
+          `<p class="sub">applicability score ${d.applicability} &middot; ${d.entities.length} ranked answers</p></div>`;
+        if (!d.entities.length) {
+          html += '<span class="tag-brick">Not really studyable</span>' +
+            '<p class="placeholder">This cluster didn\'t turn up enough repeating answers to study directly ' +
+            '&mdash; treat it as a grab-bag and review its categories individually.</p>';
+          mainPanel.innerHTML = html;
+          return;
+        }
+        html += '<ul class="entity-list">';
+        d.entities.forEach((e, i) => {
+          const active = selectedEntity === e ? ' active' : '';
+          html += `<li><button type="button" class="entity-row${active}" data-idx="${i}">` +
+            `<span class="rank">${i + 1}</span>` +
+            `<span class="phrase">${escapeHtml(e.phrase)}</span>` +
+            `<span class="count">${e.count}&times;</span>` +
+            `</button></li>`;
+        });
+        html += '</ul>';
+        mainPanel.innerHTML = html;
+        mainPanel.querySelectorAll('.entity-row').forEach(row => {
+          row.addEventListener('click', () => selectEntity(d.entities[Number(row.dataset.idx)]));
+        });
+      }
+
+      function renderDetailEmpty() {
+        detailPanel.classList.remove('flash');
+        detailPanel.innerHTML = '<p class="eyebrow">The answer</p>' +
+          '<p class="placeholder">Click an answer to pull its Wikipedia summary &mdash; fetched live, right now, from your browser.</p>';
+      }
+
+      function renderDetailLoading(entity) {
+        detailPanel.classList.remove('flash');
+        detailPanel.innerHTML = '<p class="eyebrow">The answer</p>' +
+          `<h3>${escapeHtml(entity.phrase)}</h3>` +
+          `<p class="pulse">Asking Wikipedia about &ldquo;${escapeHtml(entity.phrase)}&rdquo;&hellip;</p>`;
+      }
+
+      function renderDetail(entity, summary) {
+        let html = '<p class="eyebrow">The answer</p>' + `<h3>${escapeHtml(entity.phrase)}</h3>`;
+        if (summary && summary.extract) {
+          const thumb = summary.thumbnail && summary.thumbnail.source;
+          const url = summary.content_urls && summary.content_urls.desktop && summary.content_urls.desktop.page;
+          if (thumb) html += `<img src="${escapeHtml(thumb)}" alt="${escapeHtml(entity.phrase)}">`;
+          html += `<p class="extract">${escapeHtml(summary.extract)}</p>`;
+          if (url) html += `<a href="${escapeHtml(url)}" target="_blank" rel="noopener">Read the full article on Wikipedia &#8599;</a>`;
+        } else {
+          const searchUrl = 'https://en.wikipedia.org/w/index.php?search=' + encodeURIComponent(entity.phrase);
+          html += `<p class="fallback">No summary came back for &ldquo;${escapeHtml(entity.phrase)}&rdquo;. ` +
+            `<a href="${escapeHtml(searchUrl)}" target="_blank" rel="noopener">Search Wikipedia directly &#8599;</a></p>`;
+        }
+        detailPanel.innerHTML = html;
+        detailPanel.classList.remove('flash');
+        void detailPanel.offsetWidth;
+        detailPanel.classList.add('flash');
+      }
+
+      async function selectEntity(entity) {
+        selectedEntity = entity;
+        renderMain();
+        renderDetailLoading(entity);
+        let summary;
+        if (wikiCache.has(entity.phrase)) {
+          summary = wikiCache.get(entity.phrase);
+        } else {
+          summary = await fetchWiki(entity.phrase);
+          wikiCache.set(entity.phrase, summary);
+        }
+        if (selectedEntity !== entity) return;
+        renderDetail(entity, summary);
+      }
+
+      filterInput.addEventListener('input', () => renderSide(filterInput.value));
+
+      renderSide('');
+      renderMain();
+      renderDetailEmpty();
+    })();
+  </script>
+</body>
+</html>
