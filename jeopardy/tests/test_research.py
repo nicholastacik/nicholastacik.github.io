@@ -1,5 +1,5 @@
 import pandas as pd
-from jeopardy.analysis.research import build_research_data
+from jeopardy.analysis.research import build_research_data, render_html
 
 
 def _tokens():
@@ -38,3 +38,24 @@ def test_all_types_present():
     data = build_research_data(_tokens(), _labels())
     assert {d["cluster_id"] for d in data} == {1, 2}
     assert all(set(d) == {"cluster_id", "name", "applicability", "entities"} for d in data)
+
+
+def test_render_html_is_self_contained_and_embeds_data():
+    data = build_research_data(_tokens(), _labels())
+    html = render_html(data)
+    assert html.strip().lower().startswith("<!doctype html")
+    assert "const DATA" in html
+    # data embedded as JSON and parseable back
+    assert "Agatha Christie" in html and "Books &amp; Authors" in html or "Books & Authors" in html
+    # no external asset references
+    assert "cdn." not in html and "<script src=" not in html and "<link " not in html
+    # the live-fetch endpoint + fallback are present
+    assert "api/rest_v1/page/summary" in html
+    assert "list=search" in html
+
+
+def test_render_html_marks_non_studyable():
+    data = build_research_data(_tokens(), _labels())
+    html = render_html(data)
+    # both type names appear (studyable + non-studyable)
+    assert "Wordplay &amp; Vocabulary" in html or "Wordplay & Vocabulary" in html
