@@ -1,6 +1,10 @@
 project:
   type: website
   output-dir: _site
+  # The research tool is a standalone static page (not a .qmd); copy it verbatim
+  # into the site so the post's link to research/ resolves.
+  resources:
+    - "posts/jeopardy_ds/research/**"
   # Render every .qmd page; exclude committed data/notes artifacts that live
   # under posts/ but must not become web pages.
   render:
