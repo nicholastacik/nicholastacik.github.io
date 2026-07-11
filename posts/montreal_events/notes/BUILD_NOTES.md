@@ -12,3 +12,11 @@ Build phases append decisions/surprises; each skill run appends a changelog.
 - Calendar sync via Google Calendar MCP; sync state kept out of the served dir.
 
 ## Run log
+
+### 2026-07-11 — skill run (first real run)
+- Added: 63 events extracted from the doc (first run — everything is new): 8 festivals, 6 music, 18 museums, 12 sports, 4 board-games, 5 trivia leads, 5 escape rooms, 5 hikes/nature, plus markets/other.
+- Removed: none (first run; no date-specific event in the doc has ended before today).
+- Changed: n/a (first run).
+- Dead links: 6 — larecreation.ca, sauvequipeut.ca/en/, ezkapaz.com/en/, and all three sepaq.com park pages. The SEPAQ trio failing together suggests bot-blocking of both HEAD and GET rather than genuinely dead pages; worth eyeballing in a browser.
+- Calendar: not yet enabled.
+- Observation for the blog post: extraction judgment calls — Otakuthon and Cirque du Soleil got category "other"; "until X" exhibits get null start_date; long-running exhibits kept status date-specific since they have real end dates.
