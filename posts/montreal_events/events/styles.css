@@ -1,0 +1,100 @@
+:root {
+  --bg: #ffffff;
+  --fg: #1f2430;
+  --muted: #5c6470;
+  --card: #f5f6f8;
+  --border: #d9dde3;
+  --accent: #2b6cb0;
+  --warn-bg: #fff3cd;
+  --warn-fg: #7a5b00;
+  --danger: #b23b3b;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #16181d;
+    --fg: #e6e8ec;
+    --muted: #9aa2ad;
+    --card: #1f2229;
+    --border: #343a44;
+    --accent: #6ea8dc;
+    --warn-bg: #4a3d10;
+    --warn-fg: #ffd970;
+    --danger: #e08585;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0 auto;
+  max-width: 46rem;
+  padding: 1.5rem 1rem 3rem;
+  font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+h1 { margin: 0 0 .25rem; font-size: 1.7rem; }
+.subtitle { margin: 0 0 .75rem; color: var(--muted); }
+a { color: var(--accent); }
+
+#freshness {
+  margin: 0 0 .5rem;
+  font-size: .85rem;
+  color: var(--muted);
+}
+#freshness.stale {
+  padding: .5rem .75rem;
+  border-radius: .4rem;
+  background: var(--warn-bg);
+  color: var(--warn-fg);
+}
+
+nav { margin: 1rem 0; display: flex; flex-direction: column; gap: .6rem; }
+#views, #chips { display: flex; flex-wrap: wrap; gap: .4rem; }
+
+button, .chip {
+  padding: .3rem .7rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--fg);
+  font-size: .85rem;
+  cursor: pointer;
+}
+button.active, .chip.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.card {
+  padding: .85rem 1rem;
+  margin: 0 0 .75rem;
+  border: 1px solid var(--border);
+  border-radius: .55rem;
+  background: var(--card);
+}
+.card h2 { margin: 0 0 .2rem; font-size: 1.05rem; }
+.card .meta { font-size: .82rem; color: var(--muted); margin: 0 0 .35rem; }
+.card p { margin: .35rem 0 0; font-size: .92rem; }
+.card .links { margin-top: .45rem; font-size: .85rem; }
+.card .links a { margin-right: .9rem; }
+
+.badge {
+  display: inline-block;
+  padding: .08rem .5rem;
+  margin-left: .4rem;
+  border-radius: 999px;
+  font-size: .72rem;
+  vertical-align: middle;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+.badge-closing { background: var(--warn-bg); color: var(--warn-fg); border-color: transparent; }
+.badge-lead { color: var(--danger); border-color: var(--danger); }
+.dead-link { color: var(--danger); font-size: .8rem; }
+
+.error { color: var(--danger); }
+footer { margin-top: 2.5rem; font-size: .82rem; color: var(--muted); }
