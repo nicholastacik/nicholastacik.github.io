@@ -40,7 +40,7 @@ function inView(ev, win) {
   if (ev.status === "recurring") return true;
   const start = parseDate(ev.start_date), end = parseDate(ev.end_date);
   if (!start && !end) return false; // evergreen/leads only in "All"
-  return (start ?? end) <= win[1] && (end ?? start) >= win[0];
+  return (start ?? new Date(0)) <= win[1] && (end ?? start) >= win[0];
 }
 
 function fmtRange(ev) {
