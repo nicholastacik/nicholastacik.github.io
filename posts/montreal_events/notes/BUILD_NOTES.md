@@ -11,6 +11,10 @@ Build phases append decisions/surprises; each skill run appends a changelog.
 - LLM extraction gated by a jsonschema validator; deterministic steps in Python.
 - Calendar sync via Google Calendar MCP; sync state kept out of the served dir.
 
+### 2026-07-11 — app.js (page logic)
+- Weekend window: getDay()===0 (Sunday) maps to Friday 2 days prior; Mon–Sat compute offset via (5-dow). Evergreen/lead events only shown in "All" view.
+- Cards render title + 2-3 badges (closing-soon, status), metadata (category · date range · location), description, and optional notes + website/map links.
+
 ## Run log
 
 ### 2026-07-11 — skill run (first real run)
