@@ -26,6 +26,15 @@ def test_head_rejected_falls_back_to_get():
     assert check_url(_client(handler), "https://example.com/") is True
 
 
+def test_head_403_falls_back_to_get():
+    def handler(request):
+        if request.method == "HEAD":
+            return httpx.Response(403)
+        return httpx.Response(200)
+
+    assert check_url(_client(handler), "https://example.com/") is True
+
+
 def test_network_error_returns_none():
     def handler(request):
         raise httpx.ConnectTimeout("boom")
