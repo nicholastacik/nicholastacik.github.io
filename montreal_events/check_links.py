@@ -13,8 +13,8 @@ HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; nicholastacik.github.io link 
 def check_url(client: httpx.Client, url: str) -> bool | None:
     try:
         response = client.head(url, follow_redirects=True, timeout=TIMEOUT)
-        if response.status_code == 405:
-            # many sites reject HEAD (405); retry with GET
+        if response.status_code >= 400 and response.status_code != 404:
+            # many sites reject HEAD (405) or bot-block it (403); retry with GET. 404 is trusted.
             response = client.get(url, follow_redirects=True, timeout=TIMEOUT)
         return response.status_code < 400
     except httpx.HTTPError:
