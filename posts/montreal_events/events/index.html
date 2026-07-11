@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Montréal Events Guide</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>Montréal Events Guide</h1>
+    <p class="subtitle">
+      A living guide to festivals, museums, sports, and nights out —
+      refreshed weekly from a curated doc.
+      <a href="https://calendar.google.com/calendar/embed?src=6c17201ccbff261d301195c10de875890b7935fb87a63484cbf0a831ff8f25cc%40group.calendar.google.com&amp;ctz=America%2FToronto">
+        View as a calendar →</a>
+    </p>
+    <p id="freshness" hidden></p>
+  </header>
+
+  <nav>
+    <div id="views" role="group" aria-label="Time window">
+      <button data-view="all" class="active">All</button>
+      <button data-view="weekend">This weekend</button>
+      <button data-view="month">Next 30 days</button>
+    </div>
+    <div id="chips" role="group" aria-label="Categories"></div>
+  </nav>
+
+  <main id="list" aria-live="polite"></main>
+
+  <footer>
+    <p>Built with a Google Doc, a Claude Code skill, and a static page —
+      <a href="../">read how</a>.</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
