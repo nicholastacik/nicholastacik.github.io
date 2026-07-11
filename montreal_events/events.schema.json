@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Montreal events data",
+  "type": "object",
+  "required": ["last_updated", "source_doc", "events"],
+  "additionalProperties": false,
+  "properties": {
+    "last_updated": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+    "source_doc": { "type": "string", "minLength": 1 },
+    "events": { "type": "array", "items": { "$ref": "#/$defs/event" } }
+  },
+  "$defs": {
+    "event": {
+      "type": "object",
+      "required": [
+        "id", "title", "category", "status", "start_date", "end_date",
+        "location", "url", "url_ok", "description"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+        "title": { "type": "string", "minLength": 1 },
+        "category": {
+          "enum": ["festival", "music", "museum", "sports", "board-games",
+                   "trivia", "escape-room", "hike", "market", "other"]
+        },
+        "status": { "enum": ["date-specific", "recurring", "evergreen", "lead"] },
+        "start_date": { "type": ["string", "null"], "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "end_date": { "type": ["string", "null"], "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "location": { "type": ["string", "null"] },
+        "url": { "type": ["string", "null"], "pattern": "^https?://" },
+        "url_ok": { "type": ["boolean", "null"] },
+        "description": { "type": "string", "minLength": 1 },
+        "notes": { "type": ["string", "null"] }
+      }
+    }
+  }
+}
