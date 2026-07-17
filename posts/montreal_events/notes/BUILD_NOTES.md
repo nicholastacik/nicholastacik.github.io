@@ -24,3 +24,12 @@ Build phases append decisions/surprises; each skill run appends a changelog.
 - Dead links: 6 — larecreation.ca, sauvequipeut.ca/en/, ezkapaz.com/en/, and all three sepaq.com park pages. The SEPAQ trio failing together suggests bot-blocking of both HEAD and GET rather than genuinely dead pages; worth eyeballing in a browser.
 - Calendar: not yet enabled.
 - Observation for the blog post: extraction judgment calls — Otakuthon and Cirque du Soleil got category "other"; "until X" exhibits get null start_date; long-running exhibits kept status date-specific since they have real end dates.
+
+### 2026-07-16 — skill run (doc V2 migration)
+- The doc was restructured to "V2" today: entry cards with canonical IDs (EVT-003, MUS-007...), pipe-delimited fields (Type/Status/Cost/English/Tags/Confidence), a CALENDAR index, ARCHIVE and WISHLIST sections. Extraction rules in SKILL.md updated to match; the doc's IDs (lowercased) are now our event ids and the calendar-sync key — switching cost nothing since calendar_map was still empty.
+- Added: 5 Ottawa weekend-trip entries (trp-001..005 — Bluesfest, Capital Pride, Animation Festival, CityFolk, Chamberfest).
+- Removed: Montréal Complètement Cirque (ended July 12, doc archived it); Immersia merged into puz-004 with Sauve Qui Peut (doc treats them as one card).
+- Net: 63 → 66 events. All ids migrated to doc-canonical form.
+- Dead links: same 6 as last run (larecreation, sauvequipeut, ezkapaz, 3× sepaq — still suspect bot-blocking for SEPAQ).
+- Calendar: skipped — Google Calendar MCP still needs re-authorization.
+- Blog observation: the V2 restructure is the LLM-extraction bet paying off — the format changed completely and the pipeline needed only prompt-rule edits in SKILL.md, zero code changes. A deterministic parser would have been a rewrite.
