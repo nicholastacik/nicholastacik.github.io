@@ -119,10 +119,10 @@ the MCP then has full access by calendar id. No design change needed.
 The first real sync created 27 all-day events (11 festivals/events, 14 exhibits, 2
 Ottawa day trips) and populated `calendar_map.json` with all 27 id mappings. The one
 convention I had to invent along the way was for open-ended exhibits: a doc entry like
-"until September 14" has no real start date, and putting a month-long bar on the
-calendar for every one of those would wallpaper it. Instead those become a single-day
-"closing marker" — an all-day event titled `(ends 2026-09-14)` with a "Last day: ..."
-description — so the calendar shows a deadline, not a smear.
+"until X" has no real start date, and putting a month-long bar on the calendar for every
+one of those would wallpaper it. Instead those become a single-day "closing marker" — an
+all-day event titled `(ends <date>)` with a "Last day: ..." description — so the
+calendar shows a deadline, not a smear.
 
 ## The page
 
