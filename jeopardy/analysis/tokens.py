@@ -6,6 +6,9 @@ from collections import Counter
 import pandas as pd
 
 from jeopardy import config
+from jeopardy.analysis.dedup import canonicalize
+
+DEDUP_CANDIDATE_K = 150  # dedup the top-K by count per (era, cluster) before selecting top_n
 
 # Single-token capitalized words that are sentence-initial/pronominal, not entities.
 _STOPWORDS = {
@@ -97,78 +100,121 @@ def extract_phrases(text):
     return out
 
 
-def cluster_top_phrases(clusters_df, clues_df, min_freq=5, top_n=25):
-    keys = ["game_id", "round", "category"]
-    merged = clues_df.merge(clusters_df[keys + ["cluster_id"]], on=keys, how="inner")
-    clue_text = merged["clue"].fillna("").tolist()
-    answer_text = merged["answer"].fillna("").tolist()
-    cids = merged["cluster_id"].tolist()
+def _is_generic_single_word(phrase, cap_count, lower_count):
+    """True for a single-word phrase that appears lowercase more often than
+    capitalized across the corpus (e.g. "Species", "Scientists") - i.e. it
+    only looks like an entity because it happened to be sentence-initial.
+    Real single-word entities that are homonyms of common words (e.g.
+    "China", "Volga", "Taft") are capitalized throughout the corpus and so
+    are kept. Multi-word phrases are never considered generic here.
+    """
+    if " " in phrase:
+        return False
+    key = phrase.lower()
+    return lower_count[key] > cap_count[key]
 
-    counts = {}  # cluster_id -> Counter(phrase -> count)
-    for cid, clue, answer in zip(cids, clue_text, answer_text):
+
+def _cluster_phrase_counts(sub, surface):
+    """sub: rows (clue/answer) for one (era, cluster). Returns
+    Counter(phrase -> count) after the cap-dominance filter.
+    """
+    cap_count, lower_count = surface
+    c = Counter()
+    for clue, ans in zip(sub["clue"].fillna(""), sub["answer"].fillna("")):
         # Extract from clue/answer separately (not concatenated) so a
         # trailing entity in the clue can't glue onto a leading entity in
         # the answer (e.g. "...Civil War" + "Abraham Lincoln").
-        counter = counts.setdefault(cid, Counter())
-        counter.update(extract_phrases(clue))
-        counter.update(extract_phrases(answer))
+        c.update(extract_phrases(clue))
+        c.update(extract_phrases(ans))
+    return Counter({
+        p: n for p, n in c.items() if not _is_generic_single_word(p, cap_count, lower_count)
+    })
 
-    # Capitalization-dominance tally over the same clue+answer text, used to
-    # filter generic single-word common nouns (e.g. "Species", "Scientists")
-    # that only look like entities because they happen to be sentence-initial,
-    # while keeping real single-word entities that are homonyms of common
-    # words (e.g. "China", "Volga", "Taft").
-    cap_count, lower_count = build_surface_counts(clue_text + answer_text)
 
-    def _is_generic_single_word(phrase):
-        if " " in phrase:
-            return False
-        key = phrase.lower()
-        return lower_count[key] > cap_count[key]
+def era_tokens(clusters_df, clues_df, cutoffs, min_freq=5, top_n=25):
+    """Per-era, per-cluster top phrases: long-format (era, cluster_id, rank,
+    phrase, count, tfidf_weight) plus per-(era, cluster) prevalence.
 
-    n_clusters = len(counts)
-    doc_freq = Counter()  # phrase -> number of clusters containing it
-    for counter in counts.values():
-        doc_freq.update(counter.keys())
+    For each era (clues with air_date year >= cutoff), phrase counts are
+    built per cluster with the existing cap-dominance filter, then the top
+    DEDUP_CANDIDATE_K candidates by count are deduped via `canonicalize`
+    before applying the min_freq floor. Within a cluster, phrases are ranked
+    by count desc, tiebreaking on tfidf weight then phrase text.
 
-    rows = []
-    for cid in sorted(counts):
-        qualifying = {
-            p: n for p, n in counts[cid].items()
-            if n >= min_freq and not _is_generic_single_word(p)
-        }
-        n_qual = len(qualifying)
-        if not qualifying:
-            rows.append({"cluster_id": cid, "rank": 0, "phrase": None, "count": 0,
-                         "tfidf_weight": 0.0, "n_qualifying_phrases": 0})
-            continue
-        scored = []
-        for phrase, n in qualifying.items():
-            idf = math.log(n_clusters / doc_freq[phrase])
-            weight = n * idf
-            if weight > 0:
-                scored.append((phrase, n, weight))
-        scored.sort(key=lambda x: (-x[2], -len(x[0].split()), -x[1], x[0]))
-        if not scored:
-            # Every qualifying phrase is common to all clusters (weight <= 0):
-            # no distinctive phrase to report, but the cluster still exists.
-            rows.append({"cluster_id": cid, "rank": 0, "phrase": None, "count": 0,
-                         "tfidf_weight": 0.0, "n_qualifying_phrases": n_qual})
-            continue
-        for rank, (phrase, n, weight) in enumerate(scored[:top_n], start=1):
-            rows.append({"cluster_id": cid, "rank": rank, "phrase": phrase, "count": n,
-                         "tfidf_weight": weight, "n_qualifying_phrases": n_qual})
-    return pd.DataFrame(
-        rows, columns=["cluster_id", "rank", "phrase", "count", "tfidf_weight", "n_qualifying_phrases"]
-    )
+    Returns (tokens_df, eras_df, merges) where merges is a flat list of
+    (era, cluster_id, lo_phrase, hi_phrase) tuples describing every dedup
+    merge that occurred.
+    """
+    keys = ["game_id", "round", "category"]
+    merged = clues_df.merge(clusters_df[keys + ["cluster_id"]], on=keys, how="inner")
+    merged["year"] = pd.to_datetime(merged["air_date"]).dt.year
+    token_rows, era_rows, all_merges = [], [], []
+
+    for cutoff in cutoffs:
+        era = merged[merged["year"] >= cutoff]
+        surface = build_surface_counts(
+            list(era["clue"].fillna("")) + list(era["answer"].fillna(""))
+        )
+        total_instances = era.groupby(keys).ngroups or 1
+        # per-cluster phrase counts, deduped and min_freq-filtered
+        per_cluster_counts = {}
+        for cid, sub in era.groupby("cluster_id"):
+            raw = _cluster_phrase_counts(sub, surface)
+            # dedup the top-K candidates by count, then keep >= min_freq
+            topk = dict(sorted(raw.items(), key=lambda kv: -kv[1])[:DEDUP_CANDIDATE_K])
+            merged_counts, merges = canonicalize(topk)
+            all_merges.extend((cutoff, cid, lo, hi) for lo, hi in merges)
+            per_cluster_counts[cid] = {p: n for p, n in merged_counts.items() if n >= min_freq}
+        # c-TF-IDF idf within this era's cluster set
+        doc_freq = Counter()
+        for counts in per_cluster_counts.values():
+            doc_freq.update(counts.keys())
+        n_clusters = len(per_cluster_counts)
+        # instances (distinct game/round/category) per cluster, for prevalence
+        sizes = era.groupby("cluster_id").apply(
+            lambda g: g.groupby(keys).ngroups, include_groups=False
+        )
+        for cid, counts in per_cluster_counts.items():
+            n_qual = len(counts)
+            era_rows.append({"era": cutoff, "cluster_id": int(cid),
+                             "size": int(sizes.get(cid, 0)),
+                             "share": float(sizes.get(cid, 0)) / total_instances,
+                             "n_qualifying_phrases": n_qual})
+            scored = []
+            for phrase, n in counts.items():
+                idf = math.log(n_clusters / doc_freq[phrase]) if doc_freq[phrase] else 0.0
+                scored.append((phrase, n, n * idf))
+            scored.sort(key=lambda x: (-x[1], -x[2], x[0]))  # count desc, then tfidf, then phrase
+            for rank, (phrase, n, w) in enumerate(scored[:top_n], start=1):
+                token_rows.append({"era": cutoff, "cluster_id": int(cid), "rank": rank,
+                                   "phrase": phrase, "count": int(n), "tfidf_weight": float(w)})
+
+    tokens_df = pd.DataFrame(token_rows, columns=["era", "cluster_id", "rank", "phrase", "count", "tfidf_weight"])
+    eras_df = pd.DataFrame(era_rows, columns=["era", "cluster_id", "size", "share", "n_qualifying_phrases"])
+    return tokens_df, eras_df, all_merges
+
+
+def _write_merge_report(merges, path):
+    lines = ["---", "draft: true", "---", "", "# Entity dedup merges", ""]
+    by_key = {}
+    for era, cid, lo, hi in merges:
+        by_key.setdefault((era, cid), []).append((lo, hi))
+    for (era, cid), pairs in sorted(by_key.items()):
+        lines.append(f"## era {era}, cluster {cid}")
+        for lo, hi in pairs:
+            lines.append(f"- `{lo}` -> `{hi}`")
+        lines.append("")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(lines), encoding="utf-8")
 
 
 def run_tokens(min_freq=5, top_n=25):
     clusters = pd.read_parquet(config.CATEGORY_CLUSTERS_PATH)
     clues = pd.read_parquet(config.PARQUET_PATH)
-    df = cluster_top_phrases(clusters, clues, min_freq=min_freq, top_n=top_n)
+    tokens_df, eras_df, merges = era_tokens(clusters, clues, config.ERA_CUTOFFS, min_freq, top_n)
     config.CATEGORY_TOKENS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    df.to_parquet(config.CATEGORY_TOKENS_PATH, index=False)
-    applicable = df[df["n_qualifying_phrases"] > 0]["cluster_id"].nunique()
-    print(f"Wrote {len(df):,} rows for {df['cluster_id'].nunique()} clusters "
-          f"({applicable} with qualifying phrases) -> {config.CATEGORY_TOKENS_PATH}")
+    tokens_df.to_parquet(config.CATEGORY_TOKENS_PATH, index=False)
+    eras_df.to_parquet(config.CATEGORY_ERAS_PATH, index=False)
+    _write_merge_report(merges, config.DEDUP_MERGES_PATH)
+    print(f"Wrote {len(tokens_df):,} token rows across {len(config.ERA_CUTOFFS)} eras; "
+          f"{len(merges):,} merges -> {config.DEDUP_MERGES_PATH}")

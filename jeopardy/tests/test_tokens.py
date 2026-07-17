@@ -70,7 +70,9 @@ def test_stopword_then_title_yields_nothing():
 
 
 import pandas as pd
-from jeopardy.analysis.tokens import cluster_top_phrases
+from jeopardy.analysis.tokens import era_tokens
+
+_AIR_DATE = pd.Timestamp("2000-01-01")  # single fixed date; era_tokens is exercised with cutoffs=[1980]
 
 
 def _clusters():
@@ -85,34 +87,35 @@ def _clusters():
 def _clues():
     rows = []
     for i in range(8):
-        rows.append({"game_id": i, "round": "Jeopardy", "category": "PRESIDENTS",
+        rows.append({"game_id": i, "round": "Jeopardy", "category": "PRESIDENTS", "air_date": _AIR_DATE,
                      "clue": "This president led during the Civil War", "answer": "Abraham Lincoln"})
-        rows.append({"game_id": i, "round": "Jeopardy", "category": "4-LETTER WORDS",
+        rows.append({"game_id": i, "round": "Jeopardy", "category": "4-LETTER WORDS", "air_date": _AIR_DATE,
                      "clue": f"a four letter word number {i}", "answer": f"wordx{i}"})
     return pd.DataFrame(rows)
 
 
 def test_entity_cluster_ranks_repeated_entity():
-    df = cluster_top_phrases(_clusters(), _clues(), min_freq=5, top_n=25)
-    c0 = df[df["cluster_id"] == 0]
+    tokens_df, eras_df, _ = era_tokens(_clusters(), _clues(), [1980], min_freq=5, top_n=25)
+    c0 = tokens_df[tokens_df["cluster_id"] == 0]
     assert c0.iloc[0]["phrase"] == "Abraham Lincoln"
     assert c0.iloc[0]["count"] == 8
     assert c0.iloc[0]["rank"] == 1
-    assert (c0["n_qualifying_phrases"] > 0).all()
+    assert (eras_df[eras_df["cluster_id"] == 0]["n_qualifying_phrases"] > 0).all()
 
 
 def test_wordplay_cluster_has_no_qualifying_phrases():
-    df = cluster_top_phrases(_clusters(), _clues(), min_freq=5, top_n=25)
-    c1 = df[df["cluster_id"] == 1]
-    assert len(c1) == 1
-    assert c1.iloc[0]["n_qualifying_phrases"] == 0
-    assert pd.isna(c1.iloc[0]["phrase"])
+    tokens_df, eras_df, _ = era_tokens(_clusters(), _clues(), [1980], min_freq=5, top_n=25)
+    c1_tokens = tokens_df[tokens_df["cluster_id"] == 1]
+    assert len(c1_tokens) == 0
+    c1_era = eras_df[eras_df["cluster_id"] == 1].iloc[0]
+    assert c1_era["n_qualifying_phrases"] == 0
 
 
 def test_all_clusters_represented_and_columns():
-    df = cluster_top_phrases(_clusters(), _clues(), min_freq=5, top_n=25)
-    assert set(df["cluster_id"]) == {0, 1}
-    assert list(df.columns) == ["cluster_id", "rank", "phrase", "count", "tfidf_weight", "n_qualifying_phrases"]
+    tokens_df, eras_df, _ = era_tokens(_clusters(), _clues(), [1980], min_freq=5, top_n=25)
+    # every cluster shows up in eras_df even when it has no qualifying phrases
+    assert set(eras_df["cluster_id"]) == {0, 1}
+    assert list(tokens_df.columns) == ["era", "cluster_id", "rank", "phrase", "count", "tfidf_weight"]
 
 
 def test_pipeline_entity_beats_common_word():
@@ -127,15 +130,15 @@ def test_pipeline_entity_beats_common_word():
         + [{"game_id": i, "round": "Jeopardy", "category": "MISC", "cluster_id": 2} for i in range(6)]
     )
     clues = pd.DataFrame(
-        [{"game_id": i, "round": "Jeopardy", "category": "PRES",
+        [{"game_id": i, "round": "Jeopardy", "category": "PRES", "air_date": _AIR_DATE,
           "clue": "Congress honored Abraham Lincoln", "answer": "Abraham Lincoln"} for i in range(6)]
-        + [{"game_id": i, "round": "Jeopardy", "category": "GOV",
+        + [{"game_id": i, "round": "Jeopardy", "category": "GOV", "air_date": _AIR_DATE,
             "clue": "Congress honored George Washington", "answer": "George Washington"} for i in range(6)]
-        + [{"game_id": i, "round": "Jeopardy", "category": "MISC",
+        + [{"game_id": i, "round": "Jeopardy", "category": "MISC", "air_date": _AIR_DATE,
             "clue": "no proper nouns appear in this clue at all", "answer": "nothing notable"} for i in range(6)]
     )
-    df = cluster_top_phrases(clusters, clues, min_freq=5, top_n=25)
-    c0 = df[df["cluster_id"] == 0].set_index("phrase")
+    tokens_df, _, _ = era_tokens(clusters, clues, [1980], min_freq=5, top_n=25)
+    c0 = tokens_df[tokens_df["cluster_id"] == 0].set_index("phrase")
     # "Abraham Lincoln" (distinctive to cluster 0) outranks "Congress" (shared)
     assert c0.loc["Abraham Lincoln", "rank"] < c0.loc["Congress", "rank"]
     assert c0.loc["Congress", "tfidf_weight"] < c0.loc["Abraham Lincoln", "tfidf_weight"]
@@ -166,7 +169,7 @@ def _animals_clusters_and_clues():
     for i in range(10):
         rows_clusters.append({"game_id": i, "round": "Jeopardy", "category": "ANIMALS", "cluster_id": 0})
         rows_clues.append({
-            "game_id": i, "round": "Jeopardy", "category": "ANIMALS",
+            "game_id": i, "round": "Jeopardy", "category": "ANIMALS", "air_date": _AIR_DATE,
             "clue": "Species like this thrive near China and were named for Taft",
             "answer": "China species",
         })
@@ -175,7 +178,7 @@ def _animals_clusters_and_clues():
     for i in range(30):
         rows_clusters.append({"game_id": 100 + i, "round": "Jeopardy", "category": "FILLER", "cluster_id": 1})
         rows_clues.append({
-            "game_id": 100 + i, "round": "Jeopardy", "category": "FILLER",
+            "game_id": 100 + i, "round": "Jeopardy", "category": "FILLER", "air_date": _AIR_DATE,
             "clue": "species require careful species study of species behavior",
             "answer": "species report",
         })
@@ -184,13 +187,13 @@ def _animals_clusters_and_clues():
 
 def test_generic_single_word_dropped_real_single_word_entities_kept():
     clusters, clues = _animals_clusters_and_clues()
-    df = cluster_top_phrases(clusters, clues, min_freq=5, top_n=25)
-    c0 = df[df["cluster_id"] == 0]
+    tokens_df, eras_df, _ = era_tokens(clusters, clues, [1980], min_freq=5, top_n=25)
+    c0 = tokens_df[tokens_df["cluster_id"] == 0]
     phrases = set(c0["phrase"])
     assert "Species" not in phrases
     assert "China" in phrases
     assert "Taft" in phrases
-    assert c0.iloc[0]["n_qualifying_phrases"] == 2
+    assert eras_df[eras_df["cluster_id"] == 0].iloc[0]["n_qualifying_phrases"] == 2
 
 
 def test_multiword_phrase_never_dropped_by_capitalization_filter():
@@ -201,7 +204,7 @@ def test_multiword_phrase_never_dropped_by_capitalization_filter():
     for i in range(10):
         rows_clusters.append({"game_id": i, "round": "Jeopardy", "category": "GEO", "cluster_id": 0})
         rows_clues.append({
-            "game_id": i, "round": "Jeopardy", "category": "GEO",
+            "game_id": i, "round": "Jeopardy", "category": "GEO", "air_date": _AIR_DATE,
             "clue": "United Kingdom is a united kingdom of nations",
             "answer": "United Kingdom",
         })
@@ -210,12 +213,46 @@ def test_multiword_phrase_never_dropped_by_capitalization_filter():
     for i in range(10):
         rows_clusters.append({"game_id": 100 + i, "round": "Jeopardy", "category": "MISC", "cluster_id": 1})
         rows_clues.append({
-            "game_id": 100 + i, "round": "Jeopardy", "category": "MISC",
+            "game_id": 100 + i, "round": "Jeopardy", "category": "MISC", "air_date": _AIR_DATE,
             "clue": "no proper nouns appear in this clue at all",
             "answer": "nothing notable",
         })
     clusters = pd.DataFrame(rows_clusters)
     clues = pd.DataFrame(rows_clues)
-    df = cluster_top_phrases(clusters, clues, min_freq=5, top_n=25)
-    c0 = df[df["cluster_id"] == 0]
+    tokens_df, _, _ = era_tokens(clusters, clues, [1980], min_freq=5, top_n=25)
+    c0 = tokens_df[tokens_df["cluster_id"] == 0]
     assert "United Kingdom" in set(c0["phrase"])
+
+
+def _era_clusters():
+    return pd.DataFrame([
+        {"game_id": g, "round": "Jeopardy", "category": "SCIENTISTS", "cluster_id": 0}
+        for g in range(12)
+    ])
+
+
+def _era_clues():
+    rows = []
+    for g in range(12):
+        yr = 1995 if g < 6 else 2015  # half old, half recent
+        rows.append({"game_id": g, "round": "Jeopardy", "category": "SCIENTISTS",
+                     "air_date": pd.Timestamp(f"{yr}-01-01"),
+                     "clue": "This physicist Niels Bohr and also Bohr", "answer": "Niels Bohr"})
+    return pd.DataFrame(rows)
+
+
+def test_era_tokens_long_format_and_dedup():
+    tokens_df, eras_df, merges = era_tokens(_era_clusters(), _era_clues(), [1980, 2010], min_freq=2, top_n=25)
+    assert set(tokens_df["era"]) == {1980, 2010}
+    # Bohr/Niels folded into Niels Bohr by dedup
+    phrases_1980 = set(tokens_df[tokens_df["era"] == 1980]["phrase"])
+    assert "Niels Bohr" in phrases_1980
+    assert "Bohr" not in phrases_1980
+    # eras_df has one row per (era, cluster)
+    assert set(eras_df.columns) == {"era", "cluster_id", "size", "share", "n_qualifying_phrases"}
+
+
+def test_era_tokens_count_sorted():
+    tokens_df, _, _ = era_tokens(_era_clusters(), _era_clues(), [1980], min_freq=2, top_n=25)
+    counts = tokens_df[tokens_df["era"] == 1980].sort_values("rank")["count"].tolist()
+    assert counts == sorted(counts, reverse=True)
