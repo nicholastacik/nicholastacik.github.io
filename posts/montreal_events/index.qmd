@@ -127,7 +127,7 @@ calendar shows a deadline, not a smear.
 ## The page
 
 The result lives at [the events page](events/) — a static page reading a committed
-`events.json`, with three views (All / This weekend / This month), category filter
+`events.json`, with three views (All / This weekend / Next 30 days), category filter
 chips, and a staleness indicator that flags itself if the data hasn't refreshed in a
 while. No server, no database, no build step beyond the skill run that produces the
 JSON; it's plain HTML/CSS/JS served straight out of the site's `_site` directory.

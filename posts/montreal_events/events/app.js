@@ -16,6 +16,8 @@ const state = { view: "all", categories: new Set() };
 let events = [];
 
 const $ = (sel) => document.querySelector(sel);
+const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const parseDate = (s) => (s ? new Date(s + "T00:00:00") : null);
 const today = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
 const addDays = (d, n) => { const c = new Date(d); c.setDate(c.getDate() + n); return c; };
@@ -66,11 +68,16 @@ function badges(ev) {
 }
 
 function card(ev) {
-  const meta = [CATEGORY_LABELS[ev.category], fmtRange(ev), ev.location]
+  const title = escapeHtml(ev.title);
+  const description = escapeHtml(ev.description);
+  const notes = ev.notes ? escapeHtml(ev.notes) : null;
+  const location = ev.location ? escapeHtml(ev.location) : null;
+  const url = ev.url ? escapeHtml(ev.url) : null;
+  const meta = [CATEGORY_LABELS[ev.category], fmtRange(ev), location]
     .filter(Boolean).join(" · ");
   const links = [];
-  if (ev.url) {
-    links.push(`<a href="${ev.url}" rel="noopener">Website</a>`);
+  if (url) {
+    links.push(`<a href="${url}" rel="noopener">Website</a>`);
     if (ev.url_ok === false)
       links.push(`<span class="dead-link">⚠ link may be dead</span>`);
   }
@@ -79,9 +86,9 @@ function card(ev) {
     links.push(`<a href="https://www.google.com/maps/search/?api=1&query=${q}" rel="noopener">Map</a>`);
   }
   return `<article class="card">
-    <h2>${ev.title}${badges(ev)}</h2>
+    <h2>${title}${badges(ev)}</h2>
     <p class="meta">${meta}</p>
-    <p>${ev.description}${ev.notes ? ` <em>${ev.notes}</em>` : ""}</p>
+    <p>${description}${notes ? ` <em>${notes}</em>` : ""}</p>
     ${links.length ? `<div class="links">${links.join(" ")}</div>` : ""}
   </article>`;
 }
