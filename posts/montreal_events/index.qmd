@@ -1,0 +1,176 @@
+---
+title: "A Self-Updating Montreal Events Guide"
+description: "Turning a ChatGPT-maintained Google Doc into a live events page with a Claude Code skill, a JSON schema, and zero hosting or API costs."
+date: "2026-07-16"
+draft: true
+categories: [claude, automation, quarto]
+---
+
+Someone in my household keeps a Google Doc where ChatGPT does a weekly pass on what's
+happening around Montreal — festivals, museum exhibits, trivia nights, hikes, all of it.
+It's genuinely useful, but it's a document: you open it, scroll, and lose your place. I
+wanted it as a page — filterable, sorted, with a "what's on this weekend" view — without
+signing up for a new API key or standing up a service that costs money to run. This is
+how I got there, and where the plan didn't survive contact with reality.
+
+## The doc-as-API trick
+
+The Doc is link-shared, and link-shared Google Docs expose an unauthenticated export
+endpoint: `.../export?format=txt`. No OAuth, no service account, no API key — just a
+plain-text dump of the doc's contents, reachable from anywhere. `fetch_doc.py` hits that
+URL and hands the raw text to the extraction step. It's not a documented API and it could
+change, but for a personal project it's the entire integration cost of "get the doc's
+contents into Python": one GET request.
+
+## LLM extraction behind a schema validator
+
+The doc isn't structured data — it's prose written for a human, formatted however
+ChatGPT felt like formatting it that week. A regex or hand-rolled parser would be
+chasing the doc's layout forever. So extraction is an LLM step: read the doc text,
+emit `events.json`. The part that makes that safe is that the LLM never gets to publish
+directly — everything it produces has to pass a schema validator first.
+
+That's `montreal_events/events.schema.json`, a JSON Schema for the whole file:
+
+```json
+{
+  "type": "object",
+  "required": ["last_updated", "source_doc", "events"],
+  "additionalProperties": false,
+  "properties": {
+    "last_updated": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+    "source_doc": { "type": "string", "minLength": 1 },
+    "events": { "type": "array", "items": { "$ref": "#/$defs/event" } }
+  }
+}
+```
+
+and `montreal_events/validate.py` is the gate that runs it, plus a handful of checks a
+schema alone can't express — no duplicate ids, `start_date` before `end_date`, nothing
+already expired:
+
+```python
+def validate_events(data: dict, today: datetime.date) -> list[str]:
+    schema = json.loads(SCHEMA_PATH.read_text())
+    errors = [
+        f"schema: {e.json_path}: {e.message}"
+        for e in Draft202012Validator(schema).iter_errors(data)
+    ]
+    if errors:
+        return errors  # semantic checks assume structural validity
+
+    if data["last_updated"] != today.isoformat():
+        errors.append(
+            f"last_updated is {data['last_updated']}, expected {today.isoformat()}"
+        )
+
+    seen = set()
+    for ev in data["events"]:
+        eid = ev["id"]
+        if eid in seen:
+            errors.append(f"duplicate id: {eid}")
+        seen.add(eid)
+
+        start = _parse_date(ev["start_date"], "start_date", eid, errors)
+        end = _parse_date(ev["end_date"], "end_date", eid, errors)
+        if start and end and start > end:
+            errors.append(f"{eid}: start_date after end_date")
+        if ev["status"] == "date-specific" and end and end < today:
+            errors.append(f"{eid}: expired (ended {end.isoformat()})")
+
+    return errors
+```
+
+If `events.json` doesn't pass, nothing gets committed. The LLM can be as sloppy as it
+wants with formatting; it can't get a malformed or duplicate event past the gate.
+
+That bet paid off faster than I expected. One week in, the doc's author restructured it
+completely — entry cards with canonical ids (`EVT-003`, `MUS-007`...), pipe-delimited
+fields, a calendar index, archive and wishlist sections. A deterministic parser tuned to
+the old layout would have needed a rewrite. Instead, the fix was entirely prompt rules —
+a few paragraphs of updated extraction instructions in the skill's `SKILL.md` describing
+the new card format. Zero lines of Python changed. The doc's own ids even became our
+event ids and calendar-sync keys, which cost nothing to adopt since the calendar map was
+still empty at that point.
+
+## In-session skill vs. paid CI
+
+I considered a GitHub Action on a schedule: pull the doc, call an LLM API, validate,
+commit, done, fully hands-off. I didn't build it. That path means an API key sitting in
+repo secrets and a per-run cost for the extraction call, for a doc that changes at most
+weekly. Instead this runs as a Claude Code skill (`/update-montreal-events`) that I invoke
+in-session when I want a refresh: fetch the doc, extract, validate, check links, commit.
+Same steps, but it rides on a Claude Code session I'm already paying for instead of a
+metered API key living in CI. The trade is that it's not automatic — someone has to run
+it — which is a fine trade for something that updates on a weekly cadence anyway.
+
+## Calendar sync via MCP
+
+The other half of "useful" is having these events show up somewhere I already look: a
+shared Google Calendar. That's driven by the Google Calendar MCP connector, with
+`montreal_events/calendar_map.json` doing the dedup — a flat `id -> gcal_event_id`
+mapping so re-running the sync is a no-op instead of a pile of duplicate calendar entries.
+
+The one wrinkle was authorization, not code: the group calendar lives on a different
+Google account than the one connected to Claude. The fix was on the calendar side, not
+ours — share the calendar to the connector's account with "Make changes to events," and
+the MCP then has full access by calendar id. No design change needed.
+
+The first real sync created 27 all-day events (11 festivals/events, 14 exhibits, 2
+Ottawa day trips) and populated `calendar_map.json` with all 27 id mappings. The one
+convention I had to invent along the way was for open-ended exhibits: a doc entry like
+"until September 14" has no real start date, and putting a month-long bar on the
+calendar for every one of those would wallpaper it. Instead those become a single-day
+"closing marker" — an all-day event titled `(ends 2026-09-14)` with a "Last day: ..."
+description — so the calendar shows a deadline, not a smear.
+
+## The page
+
+The result lives at [the events page](events/) — a static page reading a committed
+`events.json`, with three views (All / This weekend / This month), category filter
+chips, and a staleness indicator that flags itself if the data hasn't refreshed in a
+while. No server, no database, no build step beyond the skill run that produces the
+JSON; it's plain HTML/CSS/JS served straight out of the site's `_site` directory.
+
+The current snapshot: 66 events across festivals, music, museums, sports, board games,
+trivia, escape rooms, hikes, and markets, plus a handful of Ottawa weekend-trip entries
+that got added when the doc's author started tracking those too.
+
+## What broke / surprised
+
+A few things didn't work on the first try:
+
+- **The HEAD-then-GET link check was too narrow.** The advisory link checker
+  (`montreal_events/check_links.py`) originally only retried with GET when a HEAD
+  request came back `405 Method Not Allowed`. That's the "polite" reason a site rejects
+  HEAD, but it turns out sites also reject HEAD as a bot-blocking measure and return
+  `403`, which the original logic just recorded as dead. The fix widened the retry to any
+  4xx/5xx except a trusted `404` — a one-line change (`response.status_code >= 400 and
+  response.status_code != 404` instead of `== 405`), caught in review before it ever
+  produced a bad run.
+
+- **The date-window filter hid things that were still running.** In `app.js`,
+  `inView()` decides whether an event belongs in the "this weekend" or "this month"
+  view. The bug: for a null `start_date` (the common case for an open-ended "until X"
+  exhibit), the original code fell back to `end` on both sides of the comparison —
+  `(start ?? end) <= win[1]`. That silently collapsed a currently-running exhibit's
+  window down to a single day (its end date), so it would vanish from "this weekend" or
+  "this month" until that end date arrived, even though it was open the whole time. Also
+  caught in review, also a one-line fix: `(start ?? new Date(0)) <= win[1]` treats a
+  missing start as "already started," not "starts on the end date."
+
+- **The SEPAQ links look dead, but probably aren't.** All three SEPAQ (Quebec park)
+  pages have failed the link checker on every run so far, alongside a couple of smaller
+  sites. All three failing identically, on both HEAD and GET, points more toward
+  bot-blocking than actually-dead pages — worth an eyeball in a real browser before
+  trusting the checker's "dead" badge on the page.
+
+- **Some categorization is a judgment call, not a fact.** The extraction step has to
+  decide a category for things that don't fit neatly — Otakuthon and Cirque du Soleil
+  both landed in "other" rather than being forced into festival or music. That's the LLM
+  doing its best with an enum that can't cover everything, and it's a fine trade as long
+  as it's consistent.
+
+None of these were show-stoppers, but all four are the kind of bug you only find by
+running the real pipeline against real data — not something a spec would have caught in
+advance.
