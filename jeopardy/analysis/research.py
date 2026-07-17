@@ -6,25 +6,37 @@ import pandas as pd
 from jeopardy import config
 
 
-def build_research_data(tokens_df, labels):
-    """Per-type entity data for the research page, sorted by applicability desc."""
-    out = []
-    for cluster_id, name in labels.items():
-        rows = tokens_df[tokens_df["cluster_id"] == cluster_id]
-        applicability = int(rows["n_qualifying_phrases"].iloc[0]) if len(rows) else 0
-        entities = [
-            {"phrase": r["phrase"], "count": int(r["count"])}
-            for _, r in rows.iterrows()
-            if r["phrase"] is not None and pd.notna(r["phrase"])
-        ]
-        out.append({
-            "cluster_id": int(cluster_id),
-            "name": name,
-            "applicability": applicability,
-            "entities": entities,
-        })
-    out.sort(key=lambda d: d["applicability"], reverse=True)
-    return out
+def build_research_data(tokens_df, eras_df, labels):
+    """Per-era, per-type entity data for the research page.
+
+    Returns {"eras": [...], "byEra": {"<era>": [ {cluster_id, name, applicability,
+    prevalence, entities:[{phrase,count}]} sorted by applicability desc ]}}.
+    Entities arrive count-sorted via `rank`; applicability is `n_qualifying_phrases`;
+    prevalence is `share`.
+    """
+    eras = sorted(eras_df["era"].unique())
+    by_era = {}
+    for era in eras:
+        tokens_era = tokens_df[tokens_df["era"] == era]
+        stats_era = eras_df[eras_df["era"] == era].set_index("cluster_id")
+        entries = []
+        for cluster_id, name in labels.items():
+            rows = tokens_era[tokens_era["cluster_id"] == cluster_id].sort_values("rank")
+            stat = stats_era.loc[cluster_id] if cluster_id in stats_era.index else None
+            entries.append({
+                "cluster_id": int(cluster_id),
+                "name": name,
+                "applicability": int(stat["n_qualifying_phrases"]) if stat is not None else 0,
+                "prevalence": float(stat["share"]) if stat is not None else 0.0,
+                "entities": [
+                    {"phrase": r["phrase"], "count": int(r["count"])}
+                    for _, r in rows.iterrows()
+                    if r["phrase"] is not None and pd.notna(r["phrase"])
+                ],
+            })
+        entries.sort(key=lambda d: d["applicability"], reverse=True)
+        by_era[str(int(era))] = entries
+    return {"eras": [int(e) for e in eras], "byEra": by_era}
 
 
 _HTML_TEMPLATE = """<!doctype html>
@@ -107,6 +119,52 @@ _HTML_TEMPLATE = """<!doctype html>
     line-height: 1.5;
   }
 
+  .era-bar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 14px clamp(16px, 4vw, 48px);
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .era-bar-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ash);
+    flex: none;
+  }
+
+  .era-toggle {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .era-pill {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    letter-spacing: 0.03em;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    color: var(--ash);
+    border-radius: var(--radius);
+    padding: 6px 14px;
+    cursor: pointer;
+  }
+
+  .era-pill:hover { color: var(--paper); border-color: var(--gold-dim); }
+
+  .era-pill.active {
+    background: var(--gold);
+    border-color: var(--gold);
+    color: var(--ink);
+    font-weight: 600;
+  }
+
   .layout {
     display: grid;
     grid-template-columns: 280px 1fr 380px;
@@ -175,15 +233,36 @@ _HTML_TEMPLATE = """<!doctype html>
   }
 
   .side-item .meta {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--ash);
     display: block;
     margin-top: 3px;
   }
 
+  .side-item .meta .stat {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ash);
+    display: block;
+  }
+
   .side-item.dim { opacity: 0.45; }
-  .side-item.dim .meta { color: var(--brick); }
+  .side-item.dim .meta .stat { color: var(--brick); }
+
+  .prevalence {
+    display: block;
+    height: 3px;
+    margin-top: 5px;
+    background: var(--line);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .prevalence-fill {
+    display: block;
+    height: 100%;
+    background: var(--gold-dim);
+  }
+
+  .side-item.active .prevalence-fill { background: var(--gold); }
 
   .side-empty {
     padding: 16px 14px;
@@ -378,8 +457,13 @@ _HTML_TEMPLATE = """<!doctype html>
     <p class="eyebrow">Field notes for trivia prep</p>
     <h1>The Board</h1>
     <p>50 Jeopardy! category clusters, ranked by how deep you can actually study them.
-       Pick one, drill into its most recurring answers, and pull live facts from Wikipedia.</p>
+       Pick a decade to see what dominated the board then, drill into its most recurring
+       answers, and pull live facts from Wikipedia.</p>
   </header>
+  <div class="era-bar" role="group" aria-label="Study era">
+    <span class="era-bar-label">The board, as of</span>
+    <div id="era-toggle" class="era-toggle"></div>
+  </div>
   <div class="layout">
     <aside class="side" aria-label="Categories">
       <div class="side-head">
@@ -403,10 +487,25 @@ _HTML_TEMPLATE = """<!doctype html>
       const filterInput = document.getElementById('filter-input');
       const mainPanel = document.getElementById('main-panel');
       const detailPanel = document.getElementById('detail-panel');
+      const eraToggle = document.getElementById('era-toggle');
       const wikiCache = new Map();
 
-      let selectedType = null;
+      let currentEra = DATA.eras.includes(2010) ? 2010 : DATA.eras[0];
+      let selectedTypeId = null;
       let selectedEntity = null;
+
+      function currentList() {
+        return DATA.byEra[String(currentEra)] || [];
+      }
+
+      function maxPrevalence(list) {
+        return Math.max(0.0001, ...list.map(d => d.prevalence));
+      }
+
+      function pctLabel(prevalence) {
+        const pct = prevalence * 100;
+        return (pct >= 10 ? pct.toFixed(0) : pct.toFixed(1)) + '%';
+      }
 
       function escapeHtml(s) {
         return String(s).replace(/[&<>"']/g, c => ({
@@ -434,10 +533,35 @@ _HTML_TEMPLATE = """<!doctype html>
         return null;
       }
 
+      function renderEraToggle() {
+        eraToggle.innerHTML = '';
+        for (const era of DATA.eras) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'era-pill' + (era === currentEra ? ' active' : '');
+          btn.setAttribute('aria-pressed', era === currentEra ? 'true' : 'false');
+          btn.textContent = era + 's';
+          btn.addEventListener('click', () => selectEra(era));
+          eraToggle.appendChild(btn);
+        }
+      }
+
+      function selectEra(era) {
+        if (era === currentEra) return;
+        currentEra = era;
+        selectedEntity = null;
+        renderEraToggle();
+        renderSide(filterInput.value);
+        renderMain();
+        renderDetailEmpty();
+      }
+
       function renderSide(filterText) {
         const q = (filterText || '').trim().toLowerCase();
+        const list = currentList();
+        const maxShare = maxPrevalence(list);
         sideList.innerHTML = '';
-        const filtered = DATA.filter(d => d.name.toLowerCase().includes(q));
+        const filtered = list.filter(d => d.name.toLowerCase().includes(q));
         if (!filtered.length) {
           const empty = document.createElement('div');
           empty.className = 'side-empty';
@@ -450,17 +574,22 @@ _HTML_TEMPLATE = """<!doctype html>
           const btn = document.createElement('button');
           btn.type = 'button';
           btn.className = 'side-item' + (!studyable ? ' dim' : '') +
-            (selectedType && selectedType.cluster_id === d.cluster_id ? ' active' : '');
+            (selectedTypeId === d.cluster_id ? ' active' : '');
           btn.setAttribute('role', 'listitem');
+          const barPct = Math.max(4, (d.prevalence / maxShare) * 100);
+          const metaHtml = studyable
+            ? `<span class="stat">${d.applicability} qualifying &middot; ${pctLabel(d.prevalence)} of board</span>` +
+              `<span class="prevalence"><span class="prevalence-fill" style="width:${barPct}%"></span></span>`
+            : '<span class="stat">not really studyable</span>';
           btn.innerHTML = `<span class="name">${escapeHtml(d.name)}</span>` +
-            `<span class="meta">${studyable ? d.entities.length + ' answers' : 'not really studyable'}</span>`;
-          btn.addEventListener('click', () => selectType(d));
+            `<span class="meta">${metaHtml}</span>`;
+          btn.addEventListener('click', () => selectType(d.cluster_id));
           sideList.appendChild(btn);
         }
       }
 
-      function selectType(d) {
-        selectedType = d;
+      function selectType(clusterId) {
+        selectedTypeId = clusterId;
         selectedEntity = null;
         renderSide(filterInput.value);
         renderMain();
@@ -468,13 +597,15 @@ _HTML_TEMPLATE = """<!doctype html>
       }
 
       function renderMain() {
-        if (!selectedType) {
+        const d = selectedTypeId != null
+          ? currentList().find(x => x.cluster_id === selectedTypeId)
+          : null;
+        if (!d) {
           mainPanel.innerHTML = '<p class="placeholder">Select a category from the left to see its most recurring answers.</p>';
           return;
         }
-        const d = selectedType;
         let html = `<div class="main-head"><h2>${escapeHtml(d.name)}</h2>` +
-          `<p class="sub">applicability score ${d.applicability} &middot; ${d.entities.length} ranked answers</p></div>`;
+          `<p class="sub">applicability score ${d.applicability} &middot; ${pctLabel(d.prevalence)} of ${currentEra}s categories &middot; ${d.entities.length} ranked answers</p></div>`;
         if (!d.entities.length) {
           html += '<span class="tag-brick">Not really studyable</span>' +
             '<p class="placeholder">This cluster didn\\'t turn up enough repeating answers to study directly ' +
@@ -547,6 +678,7 @@ _HTML_TEMPLATE = """<!doctype html>
 
       filterInput.addEventListener('input', () => renderSide(filterInput.value));
 
+      renderEraToggle();
       renderSide('');
       renderMain();
       renderDetailEmpty();
@@ -557,7 +689,7 @@ _HTML_TEMPLATE = """<!doctype html>
 """
 
 
-def render_html(data: list[dict]) -> str:
+def render_html(data: dict) -> str:
     """Render the self-contained research page with `data` embedded as JSON."""
     payload = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
     return _HTML_TEMPLATE.replace("__DATA_JSON__", payload)
@@ -565,10 +697,15 @@ def render_html(data: list[dict]) -> str:
 
 def run_research():
     tokens = pd.read_parquet(config.CATEGORY_TOKENS_PATH)
+    eras = pd.read_parquet(config.CATEGORY_ERAS_PATH)
     labels = pd.read_csv(config.CLUSTER_LABELS_PATH).set_index("cluster_id")["name"].to_dict()
-    data = build_research_data(tokens, labels)
+    data = build_research_data(tokens, eras, labels)
     html = render_html(data)
     config.RESEARCH_HTML_PATH.parent.mkdir(parents=True, exist_ok=True)
-    config.RESEARCH_HTML_PATH.write_text(html)
-    studyable = sum(1 for d in data if d["entities"])
-    print(f"Wrote {config.RESEARCH_HTML_PATH} ({len(data)} types, {studyable} studyable)")
+    config.RESEARCH_HTML_PATH.write_text(html, encoding="utf-8")
+    last_era = data["byEra"][str(data["eras"][-1])]
+    studyable = sum(1 for d in last_era if d["entities"])
+    print(
+        f"Wrote {config.RESEARCH_HTML_PATH} "
+        f"({len(data['eras'])} eras, {len(last_era)} types/era, {studyable} studyable in {data['eras'][-1]}s)"
+    )
