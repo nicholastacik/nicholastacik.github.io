@@ -2,6 +2,7 @@
 title: "A Self-Updating Montreal Events Guide"
 description: "Turning a ChatGPT-maintained Google Doc into a live events page with a Claude Code skill, a JSON schema, and zero hosting or API costs."
 date: "2026-07-16"
+image: thumbnail.png
 draft: true
 categories: [claude, automation, quarto]
 ---
