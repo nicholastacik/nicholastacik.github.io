@@ -27,6 +27,7 @@ clusters = pd.read_parquet("category_clusters.parquet")
 summary = pd.read_parquet("cluster_summary.parquet")
 labels = pd.read_csv("cluster_labels.csv").set_index("cluster_id")["name"].to_dict()
 tokens = pd.read_parquet("category_tokens.parquet")
+tokens = tokens[tokens["era"] == 1980]
 
 plt.rcParams["figure.dpi"] = 110
 ```
@@ -89,8 +90,8 @@ to see its type, an example category, and that type's most common entity:
 
 ```{python}
 #| label: fig-clusters
-#| fig-cap: "123k category instances, grouped into 50 types (hover to explore; ~10k-point sample)."
-frac = min(1.0, 10000 / len(clusters))
+#| fig-cap: "123k category instances, grouped into 50 types (hover to explore; ~4.5k-point sample)."
+frac = min(1.0, 4500 / len(clusters))
 samp = clusters.groupby("cluster_id", group_keys=False)[clusters.columns.tolist()].apply(
     lambda g: g.sample(frac=frac, random_state=42)
 )
@@ -103,7 +104,7 @@ fig = px.scatter(
     hover_name="type",
     hover_data={"category": True, "top_entity": True,
                 "umap_x": False, "umap_y": False, "type": False, "cluster_id": False},
-    render_mode="webgl", opacity=0.55,
+    render_mode="svg", opacity=0.55,
 )
 fig.update_traces(marker={"size": 4})
 fig.update_layout(showlegend=False, height=620,
@@ -162,7 +163,9 @@ not:
 ```{python}
 #| label: fig-applicability
 #| fig-cap: "How studyable each type is: distinct entities recurring 5+ times."
-ap = (tokens.groupby("cluster_id")["n_qualifying_phrases"].first().reset_index())
+eras = pd.read_parquet("category_eras.parquet")
+eras = eras[eras["era"] == 1980]
+ap = eras[["cluster_id", "n_qualifying_phrases"]].copy()
 ap["type"] = ap["cluster_id"].map(labels)
 ap = ap.sort_values("n_qualifying_phrases")
 top = ap.tail(12); bottom = ap.head(8)
@@ -197,7 +200,9 @@ for name in ["U.S. Presidents", "World Geography & Waters", "Books & Authors"]:
 
 The natural next step is a lookup tool: pick a category type, see its most common entities,
 and jump straight to Wikipedia for each. That interactive research page is being built next
-— it will live at `research/` (built next).
+— it will live at `research/` (built next). It will also be filterable by era, from 1980
+(all-time) up through 2020, so you can see how a type's common entities have shifted
+decade by decade.
 
 ```{python}
 #| label: thumbnail
