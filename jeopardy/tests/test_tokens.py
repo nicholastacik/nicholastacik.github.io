@@ -256,3 +256,51 @@ def test_era_tokens_count_sorted():
     tokens_df, _, _ = era_tokens(_era_clusters(), _era_clues(), [1980], min_freq=2, top_n=25)
     counts = tokens_df[tokens_df["era"] == 1980].sort_values("rank")["count"].tolist()
     assert counts == sorted(counts, reverse=True)
+
+
+def _many_entities_clusters_and_clues():
+    # cluster 0: 12 distinct two-word entities (5 occurrences each, so each
+    # is >= min_freq on its own) plus a dedupable single-word pair
+    # "Emmy"/"Emmys" (5 occurrences each). None of these phrases collide via
+    # the contiguous-component or plural dedup rules except the Emmy pair.
+    names = [
+        "Meryl Streep", "Tom Hanks", "Denzel Washington", "Julia Roberts",
+        "Brad Pitt", "Angelina Jolie", "Robert Downey", "Al Pacino",
+        "Jack Nicholson", "Cate Blanchett", "Morgan Freeman", "Nicole Kidman",
+    ]
+    rows_clusters, rows_clues = [], []
+    gid = 0
+    for name in names:
+        for _ in range(5):
+            rows_clusters.append({"game_id": gid, "round": "Jeopardy", "category": "AWARDS", "cluster_id": 0})
+            rows_clues.append({"game_id": gid, "round": "Jeopardy", "category": "AWARDS", "air_date": _AIR_DATE,
+                                "clue": "this actor won an award for a film role", "answer": name})
+            gid += 1
+    for word in ("Emmy", "Emmys"):
+        for _ in range(5):
+            rows_clusters.append({"game_id": gid, "round": "Jeopardy", "category": "AWARDS", "cluster_id": 0})
+            rows_clues.append({"game_id": gid, "round": "Jeopardy", "category": "AWARDS", "air_date": _AIR_DATE,
+                                "clue": "this television award is given every year", "answer": word})
+            gid += 1
+    return pd.DataFrame(rows_clusters), pd.DataFrame(rows_clues)
+
+
+def test_n_qualifying_phrases_uncapped_and_pre_dedup():
+    # Regression test for the applicability-metric bug: n_qualifying_phrases
+    # must count every distinct raw phrase >= min_freq, BEFORE the
+    # DEDUP_CANDIDATE_K top-150 cap and BEFORE canonicalize() dedup - not
+    # the capped/deduped count used for the displayed top-N tokens.
+    clusters, clues = _many_entities_clusters_and_clues()
+    tokens_df, eras_df, merges = era_tokens(clusters, clues, [1980], min_freq=5, top_n=25)
+
+    # sanity: the display path *did* dedup Emmy/Emmys into one canonical row
+    assert any(lo in ("Emmy", "Emmys") and hi in ("Emmy", "Emmys") for _, _, lo, hi in merges)
+    c0_tokens = tokens_df[tokens_df["cluster_id"] == 0]
+    assert "Emmy" not in set(c0_tokens["phrase"])
+    assert "Emmys" in set(c0_tokens["phrase"])
+    assert len(c0_tokens) == 13  # 12 actor names + 1 merged Emmy/Emmys row
+
+    # n_qualifying_phrases must NOT be reduced by that dedup: 12 actor names
+    # + Emmy + Emmys, counted separately, uncapped = 14.
+    n_qual = eras_df[eras_df["cluster_id"] == 0].iloc[0]["n_qualifying_phrases"]
+    assert n_qual == 14

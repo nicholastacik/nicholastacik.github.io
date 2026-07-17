@@ -136,10 +136,20 @@ def era_tokens(clusters_df, clues_df, cutoffs, min_freq=5, top_n=25):
     phrase, count, tfidf_weight) plus per-(era, cluster) prevalence.
 
     For each era (clues with air_date year >= cutoff), phrase counts are
-    built per cluster with the existing cap-dominance filter, then the top
-    DEDUP_CANDIDATE_K candidates by count are deduped via `canonicalize`
-    before applying the min_freq floor. Within a cluster, phrases are ranked
-    by count desc, tiebreaking on tfidf weight then phrase text.
+    built per cluster with the existing cap-dominance filter. Two decoupled
+    views are derived from those raw, full counts:
+
+    - `n_qualifying_phrases` (applicability/studyability signal, stored in
+      eras_df) is the count of DISTINCT phrases in the full raw counts with
+      count >= min_freq - uncapped and computed BEFORE the top-
+      DEDUP_CANDIDATE_K candidate cap and BEFORE dedup, so it isn't
+      suppressed by types with many dedupable near-duplicate names.
+    - The displayed top-N entities (token_rows) still go through the
+      existing path: top DEDUP_CANDIDATE_K candidates by count -> dedup via
+      `canonicalize` -> min_freq floor -> count-sort -> top_n.
+
+    Within a cluster, displayed phrases are ranked by count desc,
+    tiebreaking on tfidf weight then phrase text.
 
     Returns (tokens_df, eras_df, merges) where merges is a flat list of
     (era, cluster_id, lo_phrase, hi_phrase) tuples describing every dedup
@@ -156,10 +166,13 @@ def era_tokens(clusters_df, clues_df, cutoffs, min_freq=5, top_n=25):
             list(era["clue"].fillna("")) + list(era["answer"].fillna(""))
         )
         total_instances = era.groupby(keys).ngroups or 1
-        # per-cluster phrase counts, deduped and min_freq-filtered
+        # per-cluster: full raw counts (for applicability) and the
+        # capped+deduped+min_freq-filtered counts (for display)
+        per_cluster_raw = {}
         per_cluster_counts = {}
         for cid, sub in era.groupby("cluster_id"):
             raw = _cluster_phrase_counts(sub, surface)
+            per_cluster_raw[cid] = raw
             # dedup the top-K candidates by count, then keep >= min_freq
             topk = dict(sorted(raw.items(), key=lambda kv: -kv[1])[:DEDUP_CANDIDATE_K])
             merged_counts, merges = canonicalize(topk)
@@ -175,7 +188,7 @@ def era_tokens(clusters_df, clues_df, cutoffs, min_freq=5, top_n=25):
             lambda g: g.groupby(keys).ngroups, include_groups=False
         )
         for cid, counts in per_cluster_counts.items():
-            n_qual = len(counts)
+            n_qual = sum(1 for n in per_cluster_raw[cid].values() if n >= min_freq)
             era_rows.append({"era": cutoff, "cluster_id": int(cid),
                              "size": int(sizes.get(cid, 0)),
                              "share": float(sizes.get(cid, 0)) / total_instances,
