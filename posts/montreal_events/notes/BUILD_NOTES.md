@@ -33,3 +33,9 @@ Build phases append decisions/surprises; each skill run appends a changelog.
 - Dead links: same 6 as last run (larecreation, sauvequipeut, ezkapaz, 3× sepaq — still suspect bot-blocking for SEPAQ).
 - Calendar: skipped — Google Calendar MCP still needs re-authorization.
 - Blog observation: the V2 restructure is the LLM-extraction bet paying off — the format changed completely and the pipeline needed only prompt-rule edits in SKILL.md, zero code changes. A deterministic parser would have been a rewrite.
+
+### 2026-07-16 (late) — initial calendar sync
+- Calendar access solved cross-account: the group calendar lives on a different Google account than the Claude connector, so it was shared to the connector account with "Make changes to events" — the MCP then has owner-level access by calendar ID. No design change needed.
+- Created 27 all-day events (11 festivals/events, 14 exhibits, 2 Ottawa trips); calendar_map.json now holds all id → gcal_event_id mappings.
+- Convention adopted and codified in SKILL.md: null-start "until X" exhibits become single-day closing markers titled "(ends <date>)" with "Last day:" descriptions — a month-spanning bar for every exhibit would have wallpapered the calendar.
+- Verified dedup: list_events shows exactly 27, one per id; re-running the sync is a no-op.
