@@ -95,8 +95,11 @@ Read `montreal_events/calendar_map.json`. For each event in events.json with
 - **Not in the map** → create an all-day event on the target calendar:
   summary = event title; start date = `start_date` (or `end_date` if start is
   null); end date = `end_date` **plus one day** (all-day end dates are
-  exclusive); description = event description + the event URL. Record
-  `{"gcal_event_id", "start_date", "end_date"}` in the map.
+  exclusive); description = event description + the event URL; location =
+  the event location. For null-start "until X" events this yields a
+  single-day **closing marker**: append " (ends <Mon D>)" to the summary and
+  prefix the description with "Last day:" so the marker reads correctly.
+  Record `{"gcal_event_id", "start_date", "end_date"}` in the map.
 - **In the map with different dates** → update the calendar event's dates
   (same exclusive-end rule) and refresh the map entry.
 - **In the map with same dates** → do nothing.
