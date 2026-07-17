@@ -6,8 +6,7 @@ draft: true
 categories: [claude, automation, quarto]
 ---
 
-Someone in my household keeps a Google Doc where ChatGPT does a weekly pass on what's
-happening around Montreal — festivals, museum exhibits, trivia nights, hikes, all of it.
+I keep a curated Google Doc of Montréal events — festivals, museum exhibits, trivia nights, hikes — that ChatGPT refreshes weekly.
 It's genuinely useful, but it's a document: you open it, scroll, and lose your place. I
 wanted it as a page — filterable, sorted, with a "what's on this weekend" view — without
 signing up for a new API key or standing up a service that costs money to run. This is
@@ -160,7 +159,7 @@ A few things didn't work on the first try:
   missing start as "already started," not "starts on the end date."
 
 - **The SEPAQ links look dead, but probably aren't.** All three SEPAQ (Quebec park)
-  pages have failed the link checker on every run so far, alongside a couple of smaller
+  pages have failed the link checker on every run so far, alongside a few smaller
   sites. All three failing identically, on both HEAD and GET, points more toward
   bot-blocking than actually-dead pages — worth an eyeball in a real browser before
   trusting the checker's "dead" badge on the page.
