@@ -2047,3 +2047,809 @@ cluster_id,phrase,keep,canonical,source
 49,Texas,true,Texas,llm
 49,Though,false,Though,llm
 49,Unlike,false,Unlike,llm
+0,Russian,false,Russian,llm
+0,Sherlock Holmes,true,Sherlock Holmes,llm
+0,Gulliver,true,Gulliver,llm
+0,Oliver Twist,true,Oliver Twist,llm
+0,Lord of the Flies,true,Lord of the Flies,llm
+0,Tarzan,true,Tarzan,llm
+0,Mississippi,true,Mississippi,llm
+0,Earth,false,Earth,llm
+0,Fahrenheit,true,Fahrenheit 451,llm
+0,John Green,true,John Green,llm
+0,Thomas Hardy,true,Thomas Hardy,llm
+0,Twilight,true,Twilight,llm
+0,Ulysses,true,Ulysses,llm
+0,Chatterley,true,Lady Chatterley's Lover,llm
+0,David Copperfield,true,David Copperfield,llm
+5,April,false,April,llm
+5,Mike Tyson,true,Mike Tyson,llm
+5,June,false,June,llm
+5,Cleveland,true,Cleveland,llm
+5,Le,false,Le,llm
+5,England,true,England,llm
+5,Georgia,true,Georgia,llm
+5,Joe Namath,true,Joe Namath,llm
+10,Atlantic Ocean,true,Atlantic Ocean,llm
+10,Mexico,true,Mexico,llm
+10,Henry Hudson,true,Henry Hudson,llm
+10,New Zealand,true,New Zealand,llm
+10,Russia,true,Russia,llm
+10,African,false,African,llm
+10,August,false,August,llm
+10,China,true,China,llm
+10,New York,true,New York,llm
+10,World War II,true,World War II,llm
+10,Indian Ocean,true,Indian Ocean,llm
+10,Britain,true,Britain,llm
+10,Cook,true,James Cook,llm
+10,Japanese,false,Japanese,llm
+10,John,false,John,llm
+10,South America,true,South America,llm
+10,Europe,true,Europe,llm
+10,Caribbean,true,Caribbean,llm
+10,Maine,true,Maine,llm
+10,Though,false,Though,llm
+10,Northwest Passage,true,Northwest Passage,llm
+15,Grey's Anatomy,true,Grey's Anatomy,llm
+15,Dallas,true,Dallas,llm
+15,Happy Days,true,Happy Days,llm
+15,George,false,George,llm
+15,Charlie,false,Charlie,llm
+15,June,false,June,llm
+15,Frasier,true,Frasier,llm
+15,Murphy Brown,true,Murphy Brown,llm
+15,Beverly Hills,true,Beverly Hills,llm
+15,Tony,false,Tony,llm
+15,Steve Martin,true,Steve Martin,llm
+15,West Wing,true,West Wing,llm
+15,Parks and Recreation,true,Parks and Recreation,llm
+15,Earth,false,Earth,llm
+15,Mad Men,true,Mad Men,llm
+15,Brooklyn Nine-Nine,true,Brooklyn Nine-Nine,llm
+15,The Sopranos,true,The Sopranos,llm
+15,Disney,true,Disney,llm
+15,Game of Thrones,true,Game of Thrones,llm
+15,Harry,false,Harry,llm
+15,Philadelphia,true,Philadelphia,llm
+21,Charlemagne,true,Charlemagne,llm
+21,John,false,John,llm
+21,India,true,India,llm
+21,Germany,true,Germany,llm
+21,Great,false,Great,llm
+21,Sweden,true,Sweden,llm
+21,Elizabeth I,true,Elizabeth I,llm
+21,War,false,War,llm
+21,Poland,true,Poland,llm
+26,F. Scott Fitzgerald,true,F. Scott Fitzgerald,llm
+26,Agatha Christie,true,Agatha Christie,llm
+26,Lawrence,true,D.H. Lawrence,llm
+26,Arthur,false,Arthur,llm
+26,War,true,War and Peace,llm
+26,Jane Austen,true,Jane Austen,llm
+26,Chicago,true,Chicago,llm
+26,Uncle Tom,true,Uncle Tom's Cabin,llm
+26,France,true,France,llm
+26,Toni Morrison,true,Toni Morrison,llm
+26,Steinbeck,true,John Steinbeck,llm
+26,Prejudice,true,Pride and Prejudice,llm
+31,Charlie's Angels,true,Charlie's Angels,llm
+31,Grey's Anatomy,true,Grey's Anatomy,llm
+31,Bewitched,true,Bewitched,llm
+31,Dallas,true,Dallas,llm
+31,Happy Days,true,Happy Days,llm
+31,The West Wing,true,The West Wing,llm
+31,Love Lucy,true,I Love Lucy,llm
+31,Brooklyn Nine-Nine,true,Brooklyn Nine-Nine,llm
+31,Parks and Recreation,true,Parks and Recreation,llm
+31,Glee,true,Glee,llm
+31,The Good Place,true,The Good Place,llm
+31,Hulu,true,Hulu,llm
+31,Only Murders in the Building,true,Only Murders in the Building,llm
+31,Stranger Things,true,Stranger Things,llm
+31,Succession,true,Succession,llm
+31,Ted Lasso,true,Ted Lasso,llm
+36,William & Mary,true,William & Mary,llm
+36,the Latin,false,the Latin,llm
+36,Brown,true,Brown University,llm
+36,Catholic,false,Catholic,llm
+36,Virginia,true,Virginia,llm
+36,Michigan,true,Michigan,llm
+36,Nobel Prize,true,Nobel Prize,llm
+41,April,false,April,llm
+41,Nissan,true,Nissan,llm
+41,Mustang,true,Mustang,llm
+41,Tesla Motors,true,Tesla Motors,llm
+41,Air Force,true,Air Force,llm
+41,Los Angeles,true,Los Angeles,llm
+41,San Francisco,true,San Francisco,llm
+41,Smithsonian National Air and Space Museum,true,Smithsonian National Air and Space Museum,llm
+41,Australia,true,Australia,llm
+41,Airbus,true,Airbus,llm
+46,Great Lakes,true,Great Lakes,llm
+46,Greenland,true,Greenland,llm
+46,Greece,true,Greece,llm
+46,Norway,true,Norway,llm
+1,South America,true,South America,llm
+1,Israel,true,Israel,llm
+1,Africa,true,Africa,llm
+1,Communist Party,true,Communist Party,llm
+1,Cuba,true,Cuba,llm
+1,England,true,England,llm
+1,Poland,true,Poland,llm
+1,Canada,true,Canada,llm
+1,Mexico,true,Mexico,llm
+1,Spain,true,Spain,llm
+1,Winston Churchill,true,Winston Churchill,llm
+1,Iraq,true,Iraq,llm
+1,East Germany,true,East Germany,llm
+1,Argentina,true,Argentina,llm
+1,Asian,false,Asian,llm
+1,Dec,false,Dec,llm
+1,Feb,false,Feb,llm
+1,League of Nations,true,League of Nations,llm
+1,Nazi,true,Nazi,llm
+1,War,false,War,llm
+1,Vietnam War,true,Vietnam War,llm
+1,Jan,false,Jan,llm
+1,Stalin,true,Joseph Stalin,llm
+1,Ukraine,true,Ukraine,llm
+6,King James Bible,true,King James Bible,llm
+6,Daniel,true,Daniel,llm
+6,Latin,true,Latin,llm
+6,Cain,true,Cain,llm
+6,Jonah,true,Jonah,llm
+11,Australia,true,Australia,llm
+11,Madrid,true,Madrid,llm
+11,Canadian,true,Canada,llm
+11,Venice,true,Venice,llm
+11,Asian,false,Asian,llm
+11,Beijing,true,Beijing,llm
+11,Buenos Aires,true,Buenos Aires,llm
+11,Mediterranean,true,Mediterranean,llm
+11,Sydney,true,Sydney,llm
+11,Austria,true,Austria,llm
+11,British,false,British,llm
+16,Irish,true,Irish,llm
+16,Scottish,true,Scottish,llm
+16,Bible,true,Bible,llm
+16,Old French,true,Old French,llm
+16,South Africa,true,South Africa,llm
+16,Canada,true,Canada,llm
+16,Germany,true,Germany,llm
+16,Japan,true,Japan,llm
+16,London,true,London,llm
+16,Swahili,true,Swahili,llm
+16,Earth,false,Earth,llm
+16,Don,false,Don,llm
+16,New York City,true,New York City,llm
+16,Shakespeare,true,Shakespeare,llm
+16,Italy,true,Italy,llm
+16,California,true,California,llm
+16,New York,true,New York,llm
+16,Swedish,true,Swedish,llm
+16,White House,true,White House,llm
+22,Latin,true,Latin,llm
+22,Joy of Cooking,true,Joy of Cooking,llm
+22,Spain,true,Spain,llm
+22,Christmas,true,Christmas,llm
+22,Boston,true,Boston,llm
+22,Heloise,true,Heloise,llm
+22,Scotch,true,Scotch,llm
+22,Don,false,Don,llm
+22,Asian,false,Asian,llm
+22,Greece,true,Greece,llm
+22,Hawaiian,true,Hawaiian,llm
+22,China,true,China,llm
+22,Middle Eastern,true,Middle Eastern,llm
+22,Jewish,true,Jewish,llm
+22,Brazil,true,Brazil,llm
+22,Starbucks,true,Starbucks,llm
+22,Kellogg,true,Kellogg,llm
+22,Kraft,true,Kraft,llm
+22,Wisconsin,true,Wisconsin,llm
+22,Canadian,true,Canada,llm
+22,Cajun,true,Cajun,llm
+22,Denmark,true,Denmark,llm
+22,Chicago,true,Chicago,llm
+22,Manhattan,true,Manhattan,llm
+22,Parmesan,true,Parmesan,llm
+22,Swedish,true,Swedish,llm
+22,London,true,London,llm
+22,Korean,true,Korean,llm
+22,Nuremberg,true,Nuremberg,llm
+22,Dame Prue Leith,true,Dame Prue Leith,llm
+22,Georgia Peach,true,Georgia Peach,llm
+22,Giada De Laurentiis,true,Giada De Laurentiis,llm
+22,Gordon Ramsay,true,Gordon Ramsay,llm
+22,Wendy,false,Wendy,llm
+27,Summer Olympics,true,Summer Olympics,llm
+27,Texas Hold'em,true,Texas Hold'em,llm
+27,Jimmy,false,Jimmy,llm
+27,Wimbledon,true,Wimbledon,llm
+27,India,true,India,llm
+27,Twister,true,Twister,llm
+27,Roman,true,Roman,llm
+27,Japan,true,Japan,llm
+27,Kareem Abdul-Jabbar,true,Kareem Abdul-Jabbar,llm
+27,America,true,America,llm
+27,Australia,true,Australia,llm
+27,Milton Bradley,true,Milton Bradley,llm
+27,Pong,true,Pong,llm
+27,Yahtzee,true,Yahtzee,llm
+27,Cheryl,false,Cheryl,llm
+27,Dragons,true,Dungeons & Dragons,llm
+27,Dungeons,true,Dungeons & Dragons,llm
+27,Ping Hdqtrs,true,Ping Hdqtrs,llm
+27,Army,false,Army,llm
+27,San Francisco,true,San Francisco,llm
+27,Sarah,false,Sarah,llm
+27,Brazil,true,Brazil,llm
+27,China,true,China,llm
+27,Hall of Fame,false,Hall of Fame,llm
+27,Tour de France,true,Tour de France,llm
+27,Vegas,true,Vegas,llm
+27,Boardwalk,true,Boardwalk,llm
+27,Jenga,true,Jenga,llm
+32,Merriam-Webster,true,Merriam-Webster,llm
+32,Mary,false,Mary,llm
+32,California,true,California,llm
+32,African,false,African,llm
+32,Paul,false,Paul,llm
+32,Roman,true,Roman,llm
+32,Army,false,Army,llm
+32,Texas,true,Texas,llm
+32,Dutch,true,Dutch,llm
+32,France,true,France,llm
+32,Indian,true,Indian,llm
+32,Jesus,true,Jesus,llm
+32,North America,true,North America,llm
+32,South American,true,South America,llm
+32,Peter,false,Peter,llm
+32,Scottish,true,Scottish,llm
+32,Broadway,true,Broadway,llm
+32,Earth,false,Earth,llm
+32,Jimmy,false,Jimmy,llm
+32,Internet,true,Internet,llm
+32,Disney,true,Disney,llm
+32,Lewis Carroll,true,Lewis Carroll,llm
+32,Asia,true,Asia,llm
+32,Florida,true,Florida,llm
+32,Yiddish,true,Yiddish,llm
+32,Though,false,Though,llm
+32,Jack Dorsey,true,Jack Dorsey,llm
+32,Olympic,true,Olympics,llm
+32,Scotch,true,Scotch,llm
+37,Germany,true,Germany,llm
+37,Charles,false,Charles,llm
+37,Dutch,true,Dutch,llm
+37,France,true,France,llm
+37,Peace Prize,true,Nobel Peace Prize,llm
+37,Robert Goddard,true,Robert Goddard,llm
+37,Watson,true,Watson,llm
+37,Edward Jenner,true,Edward Jenner,llm
+37,Robert Fulton,true,Robert Fulton,llm
+37,China,true,China,llm
+37,Mendel,true,Gregor Mendel,llm
+37,April,false,April,llm
+37,Kelvin,true,Kelvin,llm
+37,Sun,false,Sun,llm
+37,Halley,true,Edmond Halley,llm
+37,Neil,false,Neil,llm
+37,Swiss,true,Swiss,llm
+37,Tyson,true,Neil deGrasse Tyson,llm
+42,Netherlands,true,Netherlands,llm
+42,South American,true,South America,llm
+42,German,false,German,llm
+42,Iran,true,Iran,llm
+42,Arabic,true,Arabic,llm
+42,Colombia,true,Colombia,llm
+42,Algeria,true,Algeria,llm
+42,Nicaragua,true,Nicaragua,llm
+42,Mediterranean,true,Mediterranean,llm
+42,Thailand,true,Thailand,llm
+47,Rock and Roll Hall of Fame,true,Rock and Roll Hall of Fame,llm
+47,Paul McCartney,true,Paul McCartney,llm
+47,John Lennon,true,John Lennon,llm
+47,Whitney Houston,true,Whitney Houston,llm
+47,Hello,true,Hello,llm
+47,Led Zeppelin,true,Led Zeppelin,llm
+47,Lady Gaga,true,Lady Gaga,llm
+47,Beyoncé,true,Beyoncé,llm
+47,Jay-Z,true,Jay-Z,llm
+47,Canadian,true,Canada,llm
+47,Kendrick Lamar,true,Kendrick Lamar,llm
+2,China,true,China,llm
+2,Texas,true,Texas,llm
+2,John,false,John,llm
+2,July,false,July,llm
+2,Paris,true,Paris,llm
+2,African,false,African,llm
+2,Germany,true,Germany,llm
+2,Indian,true,India,llm
+2,Guinness,true,Guinness,llm
+2,Though,false,Though,llm
+2,Ohio,true,Ohio,llm
+2,Boston,true,Boston,llm
+2,Canada,true,Canada,llm
+2,Scotland,true,Scotland,llm
+2,Scottish,true,Scotland,llm
+2,Australia,true,Australia,llm
+2,Massachusetts,true,Massachusetts,llm
+2,World,false,World,llm
+2,Canadian,true,Canada,llm
+2,Shakespeare,true,Shakespeare,llm
+2,George Washington,true,George Washington,llm
+2,April,false,April,llm
+2,India,true,India,llm
+2,Britain,true,Britain,llm
+2,Mexico,true,Mexico,llm
+2,War,false,War,llm
+2,Jesus,true,Jesus,llm
+7,St. Patrick's Day,true,St. Patrick's Day,llm
+7,French,true,France,llm
+7,Mexico,true,Mexico,llm
+7,Valentine,true,Valentine's Day,llm
+7,Flag Day,true,Flag Day,llm
+7,Roman,false,Roman,llm
+7,Jesus,true,Jesus,llm
+7,Saturday,true,Saturday,llm
+7,Thursday,true,Thursday,llm
+7,Jan,false,Jan,llm
+7,British,false,British,llm
+7,Dec,false,Dec,llm
+7,Friday,true,Friday,llm
+7,Canada,true,Canada,llm
+7,Arlington National Cemetery,true,Arlington National Cemetery,llm
+7,California,true,California,llm
+7,France,true,France,llm
+7,Oct,false,Oct,llm
+7,German,false,German,llm
+7,Groundhog Day,true,Groundhog Day,llm
+7,Hindu,true,Hindu,llm
+7,Day of the Dead,true,Day of the Dead,llm
+7,Diwali,true,Diwali,llm
+12,According,false,According,llm
+12,John,false,John,llm
+12,Robert Browning,true,Robert Browning,llm
+12,Greek,false,Greek,llm
+12,Charles Dickens,true,Charles Dickens,llm
+12,Paul Revere,true,Paul Revere,llm
+12,Sylvia Plath,true,Sylvia Plath,llm
+12,Kipling,true,Rudyard Kipling,llm
+12,Emma Lazarus,true,Emma Lazarus,llm
+12,Ezra Pound,true,Ezra Pound,llm
+17,Eugene O'Neill,true,Eugene O'Neill,llm
+17,Rodgers and Hammerstein,true,Rodgers and Hammerstein,llm
+17,Fiddler on the Roof,true,Fiddler on the Roof,llm
+17,Oklahoma,true,Oklahoma,llm
+17,Camelot,true,Camelot,llm
+17,West Side Story,true,West Side Story,llm
+17,A Chorus Line,true,A Chorus Line,llm
+17,Producers,true,The Producers,llm
+23,George Gershwin,true,George Gershwin,llm
+23,Austrian,false,Austrian,llm
+23,Messiah,true,Messiah,llm
+23,William Tell,true,William Tell,llm
+23,Bizet,true,Bizet,llm
+23,Debussy,true,Debussy,llm
+23,Marriage of Figaro,true,The Marriage of Figaro,llm
+23,Opus,false,Opus,llm
+23,Pagliacci,true,Pagliacci,llm
+28,Dr. Seuss,true,Dr. Seuss,llm
+28,According,false,According,llm
+28,Gretel,true,Hansel and Gretel,llm
+28,American,false,American,llm
+28,Simple Simon,true,Simple Simon,llm
+28,Donald Duck,true,Donald Duck,llm
+28,Scooby,true,Scooby-Doo,llm
+28,Toy Story,true,Toy Story,llm
+28,Mary Poppins,true,Mary Poppins,llm
+28,Mowgli,true,Mowgli,llm
+28,Cheshire Cat,true,Cheshire Cat,llm
+28,Calvin,true,Calvin and Hobbes,llm
+28,Dolittle,true,Doctor Dolittle,llm
+28,Green Eggs,true,Green Eggs and Ham,llm
+28,Inc,true,"Monsters, Inc.",llm
+28,Mo Rocca,true,Mo Rocca,llm
+28,Monopoly,true,Monopoly,llm
+28,Tick,true,The Tick,llm
+33,The Godfather,true,The Godfather,llm
+33,Robin Williams,true,Robin Williams,llm
+33,Leonardo DiCaprio,true,Leonardo DiCaprio,llm
+33,Once Upon a Time in Hollywood,true,Once Upon a Time in Hollywood,llm
+33,Shawshank Redemption,true,The Shawshank Redemption,llm
+38,Georgia,true,Georgia,llm
+38,John,false,John,llm
+38,Philadelphia,true,Philadelphia,llm
+38,Andrew Jackson,true,Andrew Jackson,llm
+38,France,true,France,llm
+38,September,false,September,llm
+38,August,false,August,llm
+38,Britain,true,Britain,llm
+38,Maryland,true,Maryland,llm
+38,California,true,California,llm
+38,Florida,true,Florida,llm
+38,James,false,James,llm
+38,Chicago,true,Chicago,llm
+38,African Americans,true,African Americans,llm
+43,Jean-Paul Sartre,true,Jean-Paul Sartre,llm
+43,France,true,France,llm
+43,Civil War,true,Civil War,llm
+43,Harry Truman,true,Harry Truman,llm
+43,John,false,John,llm
+43,Teddy Roosevelt,true,Teddy Roosevelt,llm
+43,March,false,March,llm
+43,Lincoln,true,Abraham Lincoln,llm
+43,Julius Caesar,true,Julius Caesar,llm
+43,Martin Luther King,true,Martin Luther King,llm
+43,Bush,true,Bush,llm
+43,Congress,true,Congress,llm
+43,Jean,false,Jean,llm
+43,New York Times,true,New York Times,llm
+43,Adam Smith,true,Adam Smith,llm
+48,Venn Diagram,true,Venn Diagram,llm
+48,California,true,California,llm
+48,Arabic,false,Arabic,llm
+48,Christmas,true,Christmas,llm
+48,Egyptian,false,Egyptian,llm
+48,Bible,true,Bible,llm
+48,Canada,true,Canada,llm
+48,Chinese,false,Chinese,llm
+48,Frenchman,false,Frenchman,llm
+48,New York City,true,New York City,llm
+48,Constitution,true,Constitution,llm
+48,Hebrew,false,Hebrew,llm
+48,Kelvin,true,Kelvin,llm
+48,South Africa,true,South Africa,llm
+48,London,true,London,llm
+48,John Playfair,true,John Playfair,llm
+48,King James Bible,true,King James Bible,llm
+3,Thomas Jefferson,true,Thomas Jefferson,llm
+3,Greek,false,Greek,llm
+3,Michael,false,Michael,llm
+3,Civil War,true,Civil War,llm
+3,David,false,David,llm
+3,Napoleon,true,Napoleon,llm
+3,Spanish,false,Spanish,llm
+3,April,false,April,llm
+3,Paul,false,Paul,llm
+3,Arthur,false,Arthur,llm
+3,Gerald Ford,true,Gerald Ford,llm
+3,Don,false,Don,llm
+3,Bush,true,Bush,llm
+3,Louis,false,Louis,llm
+3,Henry,false,Henry,llm
+3,Massachusetts,true,Massachusetts,llm
+3,Boston,true,Boston,llm
+3,Jack,false,Jack,llm
+3,Paris,true,Paris,llm
+3,Roman,false,Roman,llm
+3,Charles,false,Charles,llm
+3,Detroit,true,Detroit,llm
+3,Elizabeth I,true,Elizabeth I,llm
+3,Joseph,false,Joseph,llm
+3,Kelvin Harrison Jr,true,Kelvin Harrison Jr,llm
+3,Ken Jennings,true,Ken Jennings,llm
+3,Robin Roberts,true,Robin Roberts,llm
+3,Swedish,false,Swedish,llm
+8,Europe,true,Europe,llm
+8,Yves Saint Laurent,true,Yves Saint Laurent,llm
+8,America,true,America,llm
+8,Asian,false,Asian,llm
+8,Egyptian,true,Egypt,llm
+8,Heloise,true,Heloise,llm
+8,Scotland,true,Scotland,llm
+8,Spain,true,Spain,llm
+8,According,false,According,llm
+8,Don,false,Don,llm
+8,Mary Quant,true,Mary Quant,llm
+8,Despite,false,Despite,llm
+8,Egypt,true,Egypt,llm
+8,New York,true,New York,llm
+8,Hawaiian,false,Hawaiian,llm
+8,Anne,false,Anne,llm
+8,Gothic,true,Gothic,llm
+8,Turkish,false,Turkish,llm
+8,Kyoto,true,Kyoto,llm
+8,New Orleans,true,New Orleans,llm
+8,Amish,true,Amish,llm
+8,Irish,false,Irish,llm
+8,Velcro,true,Velcro,llm
+8,Swiss,false,Swiss,llm
+8,Burberry,true,Burberry,llm
+8,Calvin Klein,true,Calvin Klein,llm
+8,Native American,true,Native American,llm
+8,Oxford,true,Oxford,llm
+13,Susan B. Anthony,true,Susan B. Anthony,llm
+13,Jackie Kennedy,true,Jackie Kennedy,llm
+13,Bird Johnson,true,Lady Bird Johnson,llm
+13,Dolley Madison,true,Dolley Madison,llm
+13,July,false,July,llm
+13,Jane Addams,true,Jane Addams,llm
+13,Barbara Bush,true,Barbara Bush,llm
+13,Diana,true,Diana,llm
+13,January,false,January,llm
+13,June,false,June,llm
+13,Rosalynn Carter,true,Rosalynn Carter,llm
+13,Victoria,true,Victoria,llm
+13,English,false,English,llm
+13,Mother Teresa,true,Mother Teresa,llm
+13,Spanish,false,Spanish,llm
+13,Vogue,true,Vogue,llm
+13,Israel,true,Israel,llm
+19,Frank Sinatra,true,Frank Sinatra,llm
+19,Dustin Hoffman,true,Dustin Hoffman,llm
+19,Italian,false,Italian,llm
+19,Robert Redford,true,Robert Redford,llm
+19,Shakespeare,true,Shakespeare,llm
+19,Black,false,Black,llm
+19,Don,false,Don,llm
+19,The Godfather,true,The Godfather,llm
+19,English,false,English,llm
+24,Jason,true,Jason,llm
+24,Sparta,true,Sparta,llm
+24,Artemis,true,Artemis,llm
+24,Cleopatra,true,Cleopatra,llm
+24,Hindu,false,Hindu,llm
+24,Chinese,false,Chinese,llm
+24,Persians,true,Persians,llm
+29,Leonardo da Vinci,true,Leonardo da Vinci,llm
+29,Georgia O'Keeffe,true,Georgia O'Keeffe,llm
+29,Jacques-Louis David,true,Jacques-Louis David,llm
+29,Francisco Goya,true,Francisco Goya,llm
+29,Lautrec,true,Toulouse-Lautrec,llm
+29,Salvador Dali,true,Salvador Dali,llm
+29,Alexander Calder,true,Alexander Calder,llm
+29,London,true,London,llm
+29,Rodin Museum,true,Rodin Museum,llm
+29,Venus de Milo,true,Venus de Milo,llm
+29,Edvard Munch,true,Edvard Munch,llm
+29,Vermeer,true,Vermeer,llm
+29,Greek,false,Greek,llm
+34,North America,true,North America,llm
+34,France,true,France,llm
+34,Mercury,true,Mercury,llm
+34,Antarctica,true,Antarctica,llm
+34,Colorado,true,Colorado,llm
+34,Einstein,true,Einstein,llm
+34,Europe,true,Europe,llm
+34,Venus,true,Venus,llm
+34,Sarah,false,Sarah,llm
+34,Spanish,false,Spanish,llm
+34,Cu,true,Cu,llm
+34,Yellowstone National Park,true,Yellowstone National Park,llm
+34,Italy,true,Italy,llm
+34,July,false,July,llm
+34,Chicago,true,Chicago,llm
+34,Despite,false,Despite,llm
+34,El Ni,true,El Niño,llm
+39,Canada,true,Canada,llm
+39,Chicago,true,Chicago,llm
+39,France,true,France,llm
+39,Paris,true,Paris,llm
+39,Bert and Ernie,true,Bert and Ernie,llm
+39,English,true,England,llm
+39,Broadway,true,Broadway,llm
+39,England,true,England,llm
+39,Jeopardy,true,Jeopardy,llm
+39,Las Vegas,true,Las Vegas,llm
+39,Russian,false,Russian,llm
+39,Alex,false,Alex,llm
+39,George,false,George,llm
+39,Jimmy,false,Jimmy,llm
+39,John,false,John,llm
+39,Sony,true,Sony,llm
+39,China,true,China,llm
+39,Sarah,false,Sarah,llm
+39,World War II,true,World War II,llm
+39,Though,false,Though,llm
+39,Virginia,true,Virginia,llm
+39,Pacific,true,Pacific,llm
+39,White House,true,White House,llm
+39,April,false,April,llm
+39,Olympic,true,Olympics,llm
+39,Friday,false,Friday,llm
+39,Gordon Ramsay,true,Gordon Ramsay,llm
+39,Sunday,false,Sunday,llm
+44,Halley's Comet,true,Halley's Comet,llm
+44,Aquarius,true,Aquarius,llm
+44,Libra,true,Libra,llm
+44,Scorpio,true,Scorpio,llm
+44,July,false,July,llm
+44,Roman,false,Roman,llm
+44,Cassini,true,Cassini,llm
+44,Jet Propulsion Laboratory,true,Jet Propulsion Laboratory,llm
+44,Leo,true,Leo,llm
+44,Messier,true,Messier,llm
+49,German,false,German,llm
+49,Antarctica,true,Antarctica,llm
+49,China,true,China,llm
+49,Chinese,true,China,llm
+49,Indian,true,India,llm
+49,India,true,India,llm
+49,British,false,British,llm
+49,America,true,America,llm
+49,Siamese,true,Siamese,llm
+49,Egyptian,false,Egyptian,llm
+49,Europe,true,Europe,llm
+49,England,true,England,llm
+49,Alex,false,Alex,llm
+49,Don,false,Don,llm
+49,Russian,false,Russian,llm
+49,Spanish,false,Spanish,llm
+49,Native American,true,Native American,llm
+49,Old English,true,Old English,llm
+49,Earth,false,Earth,llm
+49,Hawaii,true,Hawaii,llm
+49,Assam,true,Assam,llm
+49,Great Dane,true,Great Dane,llm
+49,Jurassic,true,Jurassic,llm
+4,British Museum,true,British Museum,llm
+4,Italian,false,Italian,llm
+4,Louis,false,Louis,llm
+4,World,false,World,llm
+4,America,true,America,llm
+4,Museum,false,Museum,llm
+4,Arizona,true,Arizona,llm
+4,France,true,France,llm
+4,Atlanta,true,Atlanta,llm
+4,Greek,false,Greek,llm
+4,Jerusalem,true,Jerusalem,llm
+4,Los Angeles,true,Los Angeles,llm
+4,New Jersey,true,New Jersey,llm
+4,Mississippi,true,Mississippi,llm
+4,Roman,false,Roman,llm
+4,San Diego,true,San Diego,llm
+9,Procter & Gamble,true,Procter & Gamble,llm
+9,Johnson & Johnson,true,Johnson & Johnson,llm
+9,Coca-Cola,true,Coca-Cola,llm
+9,General Motors,true,General Motors,llm
+9,Hershey,true,Hershey,llm
+9,Japanese,false,Japanese,llm
+9,Mart,false,Mart,llm
+9,April,false,April,llm
+9,Busch,true,Busch,llm
+9,Campbell,true,Campbell,llm
+9,Mattel,true,Mattel,llm
+9,Ford,true,Ford,llm
+9,Seattle,true,Seattle,llm
+9,John,false,John,llm
+9,Forbes,true,Forbes,llm
+9,July,false,July,llm
+9,Georgia,true,Georgia,llm
+9,Wells Fargo,true,Wells Fargo,llm
+14,Latin,false,Latin,llm
+14,African,false,African,llm
+14,Asian,false,Asian,llm
+14,England,true,England,llm
+14,Georgia,true,Georgia,llm
+14,India,true,India,llm
+14,Indian,false,Indian,llm
+14,Washington,true,Washington,llm
+14,Mediterranean,true,Mediterranean,llm
+14,March,false,March,llm
+14,Ireland,true,Ireland,llm
+14,Canada,true,Canada,llm
+14,April,false,April,llm
+14,Unlike,false,Unlike,llm
+14,South,false,South,llm
+14,Davis,true,Davis,llm
+14,Brazil,true,Brazil,llm
+14,Ecuador,true,Ecuador,llm
+14,Kentucky,true,Kentucky,llm
+14,Venus,true,Venus,llm
+20,King James Bible,true,King James Bible,llm
+20,France,true,France,llm
+20,Rome,true,Rome,llm
+20,Jewish,false,Jewish,llm
+20,Indian,false,Indian,llm
+20,the Middle English,true,Middle English,llm
+20,African,false,African,llm
+20,Freud,true,Freud,llm
+20,Russian,false,Russian,llm
+20,Webster,true,Webster,llm
+20,Asian,false,Asian,llm
+20,California,true,California,llm
+20,Though,false,Though,llm
+20,Arabic,false,Arabic,llm
+20,Dutch,false,Dutch,llm
+20,Europe,true,Europe,llm
+20,Matthew,false,Matthew,llm
+20,New York City,true,New York City,llm
+20,Yiddish,false,Yiddish,llm
+20,India,true,India,llm
+20,Genesis,true,Genesis,llm
+20,Moon,false,Moon,llm
+20,Old Norse,true,Old Norse,llm
+20,Scrabble,true,Scrabble,llm
+20,Congress,true,Congress,llm
+20,Supreme Court,true,Supreme Court,llm
+25,A Midsummer Night's Dream,true,A Midsummer Night's Dream,llm
+25,King Lear,true,King Lear,llm
+25,Kate,false,Kate,llm
+25,Ophelia,true,Ophelia,llm
+25,Duncan,true,Duncan,llm
+30,Department of Commerce,true,Department of Commerce,llm
+30,England,true,England,llm
+30,Federal Reserve,true,Federal Reserve,llm
+30,London,true,London,llm
+30,God,false,God,llm
+30,German,false,German,llm
+30,Bureau of Engraving,true,Bureau of Engraving,llm
+30,July,false,July,llm
+30,Bush,true,Bush,llm
+30,Virginia,true,Virginia,llm
+30,Parliament,true,Parliament,llm
+30,Spanish,false,Spanish,llm
+30,Sterling,true,Sterling,llm
+35,Democrat,true,Democrat,llm
+35,West Virginia,true,West Virginia,llm
+40,Jan,false,Jan,llm
+40,African,false,African,llm
+40,Bill Clinton,true,Bill Clinton,llm
+40,Jr,false,Jr,llm
+40,Kennedy,true,Kennedy,llm
+40,Abraham Lincoln,true,Abraham Lincoln,llm
+40,London,true,London,llm
+40,Nov,false,Nov,llm
+40,Paris,true,Paris,llm
+40,Bush,true,Bush,llm
+40,World War II,true,World War II,llm
+40,Army,false,Army,llm
+40,German,false,German,llm
+40,Atlanta,true,Atlanta,llm
+40,Nobel Peace Prize,true,Nobel Peace Prize,llm
+40,Nobel Prize,true,Nobel Prize,llm
+40,Russian,false,Russian,llm
+40,Thomas Jefferson,true,Thomas Jefferson,llm
+45,Alzheimer's Disease,true,Alzheimer's Disease,llm
+45,Lyme Disease,true,Lyme Disease,llm
+45,Eustachian Tube,true,Eustachian Tube,llm
+45,Parkinson's Disease,true,Parkinson's Disease,llm
+45,Fallopian,true,Fallopian Tube,llm
+45,Roman,false,Roman,llm
+45,Graves,true,Graves' Disease,llm
+45,Heimlich,true,Heimlich Maneuver,llm
+45,Hippocrates,true,Hippocrates,llm
+45,Washington,true,Washington,llm
+45,Barr,true,Epstein-Barr Virus,llm
+45,Freud,true,Freud,llm
+45,Lou Gehrig,true,Lou Gehrig,llm
+45,Sarah,false,Sarah,llm
+45,Stanford University,true,Stanford University,llm
+45,Epstein,true,Epstein-Barr Virus,llm
+45,Tylenol,true,Tylenol,llm
+45,Bayer,true,Bayer,llm
+45,Black Death,true,Black Death,llm
+45,Crohn,true,Crohn's Disease,llm
+45,Jakob,false,Jakob,llm
+45,Japanese,false,Japanese,llm
+45,Neanderthals,true,Neanderthals,llm
+45,Arnold,false,Arnold,llm
+32,June,false,June,llm
+34,English,false,English,llm
+7,Nov,false,Nov,llm
+40,William,false,William,llm
+15,Jr,false,Jr,llm
+14,European,false,European,llm
+32,George,false,George,llm
+14,June,false,June,llm
+3,June,false,June,llm
+3,March,false,March,llm
+10,March,false,March,llm
+42,British,false,British,llm
+49,Canadian,false,Canadian,llm
+24,Persian,false,Persian,llm
+40,Oct,false,Oct,llm
+39,July,false,July,llm
+38,English,false,English,llm
+49,English,false,English,llm
+3,African,false,African,llm
+40,Charles,false,Charles,llm
+36,Greek,false,Greek,llm
+40,Robert,false,Robert,llm
+13,Though,false,Though,llm
+15,French,false,French,llm
+40,Feb,false,Feb,llm
+15,February,false,February,llm
