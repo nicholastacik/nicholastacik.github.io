@@ -51,8 +51,9 @@ candidates → LLM → decisions → apply on regeneration.)
 (same safety as the dedup merge-review). Tune the prompt / fix specific decisions if needed.
 
 **Output (committed):** `posts/jeopardy_ds/entity_decisions.csv` —
-`cluster_id, phrase, keep, canonical`. A curated committed artifact (like `cluster_labels.csv`):
-the pipeline applies it deterministically; re-running the LLM may differ.
+`cluster_id, phrase, keep, canonical, source`. A curated committed artifact (like
+`cluster_labels.csv`): the pipeline applies it deterministically; re-running the LLM may
+differ. The `source` column (`llm | manual`) protects hand-fixes — see Iteration workflow.
 
 ### 3. Apply deterministically (token pipeline)
 
@@ -75,6 +76,25 @@ Then re-rank count-desc and take top_n as today. Regenerate `category_tokens.par
 Add a short methodology section (and one before/after example) to `index.qmd`: hand-rules got
 most of the way, but couldn't judge "John" vs "John Adams" or spot "Clue Crew" metadata — so
 an LLM took a second look and cleaned the lists. This is the "story addition" the author wants.
+
+## Iteration workflow (this strategy will be tuned several times)
+
+The design assumes multiple refinement rounds. Each is cheap because the LLM output is a plain
+committed CSV the pipeline only *reads*:
+
+- **Spot-fix a bad call:** edit the row in `entity_decisions.csv` directly (set `keep`/`canonical`,
+  set `source=manual`). No LLM re-run.
+- **Re-apply is fast:** `uv run --group analysis python -m jeopardy tokens` then `... research`
+  regenerate the artifacts + tool from the CSV in ~a minute — **no re-embed/re-cluster** (the
+  expensive steps never re-run). Then re-view.
+- **Scoped re-judge:** the LLM can be re-run for just the cluster(s) you're unhappy with;
+  decisions are keyed per `(cluster_id, phrase)`, so only those rows change.
+- **Hand-fixes survive:** an LLM re-run only replaces `source==llm` rows; any row with
+  `source==manual` is never overwritten. So a manual correction persists across future LLM passes.
+- **Default-keep:** a phrase absent from the CSV defaults to keep, so partial/edited decision
+  files always work (and new candidates after a data change stay until judged).
+- **Prompt tuning:** if the whole strategy needs adjusting, edit the LLM prompt and re-run the
+  pass (respecting `manual` rows); the tests and apply-logic are unchanged.
 
 ## Reproducibility
 
