@@ -35,6 +35,7 @@ draft: true
 ## era 1980, cluster 2
 - `American` -> `Native American`
 - `Americans` -> `Native American`
+- `Latin` -> `the Latin`
 - `New York` -> `New York City`
 - `Olympics` -> `Olympic`
 - `World` -> `World War II`
@@ -50,11 +51,12 @@ draft: true
 - `Thomas` -> `Thomas Jefferson`
 - `Lincoln` -> `Abraham Lincoln`
 - `World` -> `World War II`
+- `Albert` -> `Albert Einstein`
 
 ## era 1980, cluster 4
 - `New York` -> `New York City`
 - `Vegas` -> `Las Vegas`
-- `Museum` -> `Space Museum`
+- `British` -> `British Museum`
 - `Mexico` -> `New Mexico`
 - `George` -> `George Washington`
 
@@ -69,7 +71,6 @@ draft: true
 - `Yankee Stadium` -> `New York Yankees`
 - `Dodger` -> `Dodgers`
 - `Laker` -> `Lakers`
-- `Chicago` -> `Chicago Bears`
 - `Ali` -> `Muhammad Ali`
 - `Red Sox` -> `Boston Red Sox`
 - `Boston` -> `Boston Red Sox`
@@ -84,6 +85,7 @@ draft: true
 - `France` -> `Tour de France`
 - `Mike` -> `Mike Tyson`
 - `Reds` -> `Cincinnati Reds`
+- `Bulls` -> `Chicago Bulls`
 
 ## era 1980, cluster 6
 - `Bible` -> `James Bible`
@@ -114,20 +116,22 @@ draft: true
 ## era 1980, cluster 8
 - `Latin` -> `the Latin`
 - `Greek` -> `the Greek`
-- `Sarah` -> `Sarah of the Clue Crew`
 - `Romans` -> `Roman`
 - `Dior` -> `Christian Dior`
 - `Christian` -> `Christian Dior`
 - `New York` -> `New York City`
 - `Levi` -> `Levi Strauss`
 - `Chanel` -> `Coco Chanel`
+- `Coco` -> `Coco Chanel`
 - `Egyptians` -> `Egyptian`
 - `Mary` -> `Mary Quant`
+- `Brit` -> `Brits`
 
 ## era 1980, cluster 9
 - `America` -> `Bank of America`
 - `American` -> `American Express`
 - `Washington` -> `Washington Post`
+- `Dow` -> `Dow Jones`
 
 ## era 1980, cluster 10
 - `Columbus` -> `Christopher Columbus`
@@ -207,10 +211,12 @@ draft: true
 - `Greek` -> `the Greek`
 - `Greeks` -> `the Greek`
 - `Italian` -> `the Italian`
+- `Arabic` -> `the Arabic`
 - `Romans` -> `Roman`
 - `Americans` -> `American`
 - `Africa` -> `South Africa`
 - `New York` -> `New York City`
+- `Brit` -> `Brits`
 - `Norse` -> `Old Norse`
 
 ## era 1980, cluster 17
@@ -243,6 +249,7 @@ draft: true
 - `Paul` -> `Paul Newman`
 - `Bond` -> `James Bond`
 - `George` -> `George Clooney`
+- `Spielberg` -> `Steven Spielberg`
 - `Michael` -> `Michael Douglas`
 - `Frank` -> `Frank Sinatra`
 - `Bogart` -> `Humphrey Bogart`
@@ -254,6 +261,7 @@ draft: true
 - `German` -> `the German`
 - `Italian` -> `the Italian`
 - `Americans` -> `American`
+- `Bible` -> `James Bible`
 - `Brit` -> `Brits`
 - `Middle English` -> `the Middle English`
 - `New York` -> `New York City`
@@ -277,6 +285,7 @@ draft: true
 - `America` -> `South America`
 - `New York` -> `New York City`
 - `England` -> `New England`
+- `Alaska` -> `Baked Alaska`
 
 ## era 1980, cluster 23
 - `Bach` -> `Johann Sebastian Bach`
@@ -300,6 +309,7 @@ draft: true
 - `Caesar` -> `Julius Caesar`
 - `Alexander` -> `Alexander the Great`
 - `Great` -> `Alexander the Great`
+- `Aztec` -> `Aztecs`
 
 ## era 1980, cluster 25
 - `Shakespeare` -> `William Shakespeare`
@@ -340,11 +350,8 @@ draft: true
 
 ## era 1980, cluster 27
 - `Olympics` -> `Olympic`
-- `Sarah` -> `Sarah of the Clue Crew`
-- `Jimmy` -> `Jimmy of the Clue Crew`
 - `French` -> `French Open`
 - `British` -> `British Open`
-- `Cheryl` -> `Cheryl of the Clue Crew`
 - `Latin` -> `the Latin`
 - `Texas` -> `Texas Hold`
 - `Vegas` -> `Las Vegas`
@@ -381,6 +388,7 @@ draft: true
 - `Washington` -> `George Washington`
 - `Munch` -> `Edvard Munch`
 - `Calder` -> `Alexander Calder`
+- `Alexander` -> `Alexander Calder`
 
 ## era 1980, cluster 30
 - `Latin` -> `the Latin`
@@ -403,6 +411,7 @@ draft: true
 - `Emmys` -> `Emmy`
 - `New York` -> `New York City`
 - `Mary` -> `Mary Tyler Moore Show`
+- `American` -> `American Idol`
 - `Angel` -> `Angels`
 
 ## era 1980, cluster 32
@@ -411,7 +420,6 @@ draft: true
 - `Greek` -> `the Greek`
 - `English` -> `Old English`
 - `Americans` -> `American`
-- `Jimmy` -> `Jimmy of the Clue Crew`
 - `New York` -> `New York City`
 - `Brit` -> `Brits`
 - `South` -> `South American`
@@ -431,7 +439,6 @@ draft: true
 - `Greek` -> `the Greek`
 - `Greeks` -> `the Greek`
 - `Latin` -> `the Latin`
-- `Sarah` -> `Sarah of the Clue Crew`
 - `Newton` -> `Isaac Newton`
 - `Nobel` -> `Nobel Prize`
 - `American` -> `South American`
@@ -497,6 +504,8 @@ draft: true
 - `Isaac` -> `Isaac Newton`
 - `Pasteur` -> `Louis Pasteur`
 - `Louis` -> `Louis Pasteur`
+- `Charles` -> `Charles Darwin`
+- `Darwin` -> `Charles Darwin`
 - `Bell` -> `Alexander Graham Bell`
 - `Alexander Graham` -> `Alexander Graham Bell`
 - `Franklin` -> `Ben Franklin`
@@ -517,8 +526,7 @@ draft: true
 ## era 1980, cluster 38
 - `Washington` -> `George Washington`
 - `George` -> `George Washington`
-- `American` -> `American War`
-- `Americans` -> `American War`
+- `Americans` -> `American`
 - `Congress` -> `Continental Congress`
 - `New York` -> `New York City`
 - `England` -> `New England`
@@ -530,10 +538,7 @@ draft: true
 - `Hamilton` -> `Alexander Hamilton`
 
 ## era 1980, cluster 39
-- `Sarah` -> `Sarah of the Clue Crew`
-- `Jimmy` -> `Jimmy of the Clue Crew`
 - `Americans` -> `American`
-- `New York` -> `New York City`
 - `Vegas` -> `Las Vegas`
 
 ## era 1980, cluster 40
@@ -564,6 +569,7 @@ draft: true
 ## era 1980, cluster 43
 - `Americans` -> `American`
 - `Churchill` -> `Winston Churchill`
+- `Twain` -> `Mark Twain`
 - `Nixon` -> `Richard Nixon`
 - `Marx` -> `Karl Marx`
 - `Lincoln` -> `Abraham Lincoln`
@@ -593,8 +599,6 @@ draft: true
 ## era 1980, cluster 45
 - `Latin` -> `the Latin`
 - `Greek` -> `the Greek`
-- `Sarah` -> `Sarah of the Clue Crew`
-- `Jimmy` -> `Jimmy of the Clue Crew`
 - `American` -> `Americans`
 - `Red Cross` -> `American Red Cross`
 - `Cleveland` -> `Cleveland Clinic`
@@ -633,7 +637,8 @@ draft: true
 - `Latin` -> `the Latin`
 - `French` -> `Old French`
 - `English` -> `Old English`
-- `Americans` -> `American`
+- `American` -> `American Sign Language`
+- `Americans` -> `American Sign Language`
 - `Britain` -> `Great Britain`
 - `Egyptians` -> `Egyptian`
 - `Africa` -> `South Africa`
@@ -649,6 +654,7 @@ draft: true
 
 ## era 1990, cluster 0
 - `Dickens` -> `Charles Dickens`
+- `Charles` -> `Charles Dickens`
 - `Hemingway` -> `Ernest Hemingway`
 - `Pulitzer` -> `Pulitzer Prize`
 - `Dick` -> `Moby Dick`
@@ -749,11 +755,11 @@ draft: true
 ## era 1990, cluster 8
 - `Latin` -> `the Latin`
 - `Greek` -> `the Greek`
-- `Sarah` -> `Sarah of the Clue Crew`
 - `Dior` -> `Christian Dior`
 - `Christian` -> `Christian Dior`
 - `Levi` -> `Levi Strauss`
 - `Chanel` -> `Coco Chanel`
+- `Mary` -> `Mary Jane`
 - `Egyptians` -> `Egyptian`
 - `Brit` -> `Brits`
 
@@ -816,6 +822,7 @@ draft: true
 - `New York` -> `New York City`
 - `Washington` -> `Martha Washington`
 - `Olympics` -> `Olympic`
+- `Lincoln` -> `Mary Todd Lincoln`
 - `Clinton` -> `Hillary Clinton`
 - `Ford` -> `Betty Ford`
 - `Marie` -> `Marie Curie`
@@ -844,9 +851,12 @@ draft: true
 - `Greek` -> `the Greek`
 - `Greeks` -> `the Greek`
 - `Italian` -> `the Italian`
+- `Germans` -> `German`
+- `Arabic` -> `the Arabic`
 - `Romans` -> `Roman`
 - `Africa` -> `South Africa`
 - `Brit` -> `Brits`
+- `Norse` -> `Old Norse`
 
 ## era 1990, cluster 17
 - `Tonys` -> `Tony`
@@ -906,10 +916,10 @@ draft: true
 ## era 1990, cluster 22
 - `French` -> `the French`
 - `American` -> `South American`
-- `South` -> `South American`
 - `Americans` -> `South American`
 - `New York` -> `New York City`
 - `England` -> `New England`
+- `America` -> `South America`
 
 ## era 1990, cluster 23
 - `Bach` -> `Johann Sebastian Bach`
@@ -923,6 +933,7 @@ draft: true
 - `Gershwin` -> `George Gershwin`
 - `Grieg` -> `Edvard Grieg`
 - `Seville` -> `Barber of Seville`
+- `Figaro` -> `Marriage of Figaro`
 
 ## era 1990, cluster 24
 - `Greeks` -> `Greek`
@@ -973,13 +984,11 @@ draft: true
 - `Melville` -> `Herman Melville`
 
 ## era 1990, cluster 27
-- `Sarah` -> `Sarah of the Clue Crew`
-- `Jimmy` -> `Jimmy of the Clue Crew`
-- `Olympics` -> `Olympic`
+- `Olympic` -> `Summer Olympics`
+- `Olympics` -> `Summer Olympics`
 - `French` -> `French Open`
 - `British` -> `British Open`
 - `American` -> `Native American`
-- `Cheryl` -> `Cheryl of the Clue Crew`
 - `Latin` -> `the Latin`
 - `Texas` -> `Texas Hold`
 - `Vegas` -> `Las Vegas`
@@ -1025,6 +1034,7 @@ draft: true
 - `Constitution` -> `National Constitution Center`
 - `Amendment` -> `First Amendment`
 - `Court` -> `Supreme Court`
+- `French` -> `Old French`
 - `Washington` -> `George Washington`
 - `George` -> `George Washington`
 - `Treasury` -> `Treasury Department`
@@ -1051,7 +1061,6 @@ draft: true
 - `English` -> `Old English`
 - `American` -> `Native American`
 - `Americans` -> `Native American`
-- `Jimmy` -> `Jimmy of the Clue Crew`
 - `New York` -> `New York City`
 - `Brit` -> `Brits`
 
@@ -1062,14 +1071,13 @@ draft: true
 - `Bond` -> `James Bond`
 - `George` -> `George Clooney`
 - `Jack` -> `Jack Nicholson`
+- `Washington` -> `Denzel Washington`
 - `Spielberg` -> `Steven Spielberg`
 
 ## era 1990, cluster 34
 - `Earth` -> `the Earth`
 - `Greek` -> `the Greek`
 - `Latin` -> `the Latin`
-- `Sarah` -> `Sarah of the Clue Crew`
-- `Jimmy` -> `Jimmy of the Clue Crew`
 - `Nobel` -> `Nobel Prize`
 - `Newton` -> `Isaac Newton`
 - `Africa` -> `South Africa`
@@ -1164,12 +1172,7 @@ draft: true
 - `Hamilton` -> `Alexander Hamilton`
 
 ## era 1990, cluster 39
-- `Sarah` -> `Sarah of the Clue Crew`
-- `Jimmy` -> `Jimmy of the Clue Crew`
 - `Americans` -> `American`
-- `Cheryl` -> `Cheryl of the Clue Crew`
-- `New York` -> `New York City`
-- `Sofia` -> `Sofia of the Clue Crew`
 - `Vegas` -> `Las Vegas`
 
 ## era 1990, cluster 40
@@ -1185,12 +1188,13 @@ draft: true
 - `Pulitzer` -> `Pulitzer Prize`
 - `Clinton` -> `Bill Clinton`
 - `Lincoln` -> `Abraham Lincoln`
-- `World` -> `World War II`
+- `Marshall` -> `Thurgood Marshall`
 
 ## era 1990, cluster 41
 - `British` -> `British Airways`
 - `American` -> `American Airlines`
 - `New York` -> `New York City`
+- `France` -> `Air France`
 - `Henry` -> `Henry Ford`
 - `World` -> `World War II`
 - `United` -> `United States`
@@ -1228,11 +1232,10 @@ draft: true
 ## era 1990, cluster 45
 - `Latin` -> `the Latin`
 - `Greek` -> `the Greek`
-- `Sarah` -> `Sarah of the Clue Crew`
-- `Jimmy` -> `Jimmy of the Clue Crew`
 - `Americans` -> `American`
 - `Cleveland` -> `Cleveland Clinic`
 - `Red Cross` -> `American Red Cross`
+- `Stanford` -> `Stanford University`
 - `Carl` -> `Carl Jung`
 
 ## era 1990, cluster 46
@@ -1252,7 +1255,6 @@ draft: true
 - `Beatle` -> `Beatles`
 - `Grammys` -> `Grammy`
 - `Rolling Stone` -> `Rolling Stones`
-- `Elvis` -> `Elvis Presley`
 - `Springsteen` -> `Bruce Springsteen`
 - `Johnny` -> `Johnny Cash`
 - `Hall` -> `Roll Hall of Fame`
@@ -1270,6 +1272,7 @@ draft: true
 - `American` -> `American Sign Language`
 - `Americans` -> `American Sign Language`
 - `Britain` -> `Great Britain`
+- `New York` -> `New York City`
 - `Africa` -> `South Africa`
 - `Army` -> `the Army`
 
@@ -1313,7 +1316,9 @@ draft: true
 ## era 2000, cluster 2
 - `American` -> `Native American`
 - `Americans` -> `Native American`
+- `Latin` -> `the Latin`
 - `New York` -> `New York City`
+- `America` -> `North America`
 - `Olympics` -> `Olympic`
 - `Africa` -> `South Africa`
 - `Mexico` -> `New Mexico`
@@ -1325,7 +1330,7 @@ draft: true
 - `Henry` -> `Henry VIII`
 - `Pulitzer` -> `Pulitzer Prize`
 - `Ford` -> `Gerald Ford`
-- `Jimmy` -> `Jimmy of the Clue Crew`
+- `Olympics` -> `Olympic`
 
 ## era 2000, cluster 4
 - `Washington` -> `Washington Monument`
@@ -1366,12 +1371,12 @@ draft: true
 - `Psalm` -> `Psalms`
 - `Romans` -> `Roman`
 - `Muslim` -> `Muslims`
-- `Sarah` -> `Sarah of the Clue Crew`
 - `Ark` -> `Ark of the Covenant`
 - `Galilee` -> `Sea of Galilee`
 - `Mount` -> `Mount Sinai`
 
 ## era 2000, cluster 7
+- `Christmas` -> `Christmas Day`
 - `New Year` -> `Chinese New Year`
 - `Chinese` -> `Chinese New Year`
 - `Earth` -> `Earth Day`
@@ -1385,8 +1390,6 @@ draft: true
 ## era 2000, cluster 8
 - `Latin` -> `the Latin`
 - `Greek` -> `the Greek`
-- `Sarah` -> `Sarah of the Clue Crew`
-- `Cheryl` -> `Cheryl of the Clue Crew`
 - `New York` -> `New York City`
 - `Chanel` -> `Coco Chanel`
 - `Mary` -> `Mary Jane`
@@ -1469,14 +1472,16 @@ draft: true
 - `New York` -> `New York City`
 - `David` -> `David Letterman`
 - `Adam` -> `Adam Sandler`
-- `Mary` -> `Mary Tyler Moore Show`
+- `Mary Tyler Moore` -> `Mary Tyler Moore Show`
 - `House` -> `White House`
 - `Steve` -> `Steve Martin`
 
 ## era 2000, cluster 16
 - `Latin` -> `the Latin`
 - `Greek` -> `the Greek`
+- `Greeks` -> `the Greek`
 - `Italian` -> `the Italian`
+- `Germans` -> `German`
 - `English` -> `Old English`
 - `Arabic` -> `the Arabic`
 - `Romans` -> `Roman`
@@ -1534,7 +1539,6 @@ draft: true
 
 ## era 2000, cluster 21
 - `Romans` -> `Roman`
-- `Henry` -> `Henry VIII`
 - `London` -> `Tower of London`
 - `Britain` -> `Great Britain`
 - `War` -> `Crimean War`
@@ -1548,11 +1552,11 @@ draft: true
 
 ## era 2000, cluster 22
 - `French` -> `the French`
-- `American` -> `Latin American`
-- `Latin` -> `Latin American`
-- `Americans` -> `Latin American`
+- `Americans` -> `American`
 - `New York` -> `New York City`
+- `Latin` -> `Latin American`
 - `England` -> `New England`
+- `South` -> `South American`
 
 ## era 2000, cluster 23
 - `Bach` -> `Johann Sebastian Bach`
@@ -1575,6 +1579,8 @@ draft: true
 - `Helen` -> `Helen of Troy`
 - `Aztec` -> `Aztecs`
 - `Great` -> `Alexander the Great`
+- `Alexander` -> `Alexander the Great`
+- `Caesar` -> `Julius Caesar`
 - `Trojan` -> `Trojan War`
 - `Titans` -> `Titan`
 
@@ -1609,11 +1615,8 @@ draft: true
 - `Oscar` -> `Oscar Wilde`
 
 ## era 2000, cluster 27
-- `Sarah` -> `Sarah of the Clue Crew`
-- `Jimmy` -> `Jimmy of the Clue Crew`
 - `Olympics` -> `Olympic`
 - `French` -> `the French`
-- `Cheryl` -> `Cheryl of the Clue Crew`
 - `American` -> `Native American`
 - `Latin` -> `the Latin`
 - `Texas` -> `Texas Hold`
@@ -1664,6 +1667,7 @@ draft: true
 - `Americans` -> `American Red Cross`
 - `Red Cross` -> `American Red Cross`
 - `Homeland Security` -> `Department of Homeland Security`
+- `Agriculture` -> `Department of Agriculture`
 - `Greek` -> `the Greek`
 - `New York` -> `New York City`
 - `Bill` -> `Bill of Rights`
@@ -1681,12 +1685,12 @@ draft: true
 ## era 2000, cluster 32
 - `Latin` -> `the Latin`
 - `French` -> `the French`
-- `Jimmy` -> `Jimmy of the Clue Crew`
 - `American` -> `Native American`
 - `Americans` -> `Native American`
 - `English` -> `Old English`
 - `New York` -> `New York City`
 - `Brit` -> `Brits`
+- `America` -> `North America`
 
 ## era 2000, cluster 33
 - `Oscar` -> `Best Picture Oscar`
@@ -1697,15 +1701,11 @@ draft: true
 - `Kevin` -> `Kevin Costner`
 - `Bond` -> `James Bond`
 - `John` -> `John Wayne`
-- `Steve` -> `Steve Martin`
 - `Peter` -> `Peter Sellers`
 
 ## era 2000, cluster 34
 - `Greek` -> `the Greek`
-- `Sarah` -> `Sarah of the Clue Crew`
 - `Latin` -> `the Latin`
-- `Jimmy` -> `Jimmy of the Clue Crew`
-- `Kelly` -> `Kelly of the Clue Crew`
 - `Nobel` -> `Nobel Prize`
 - `Romans` -> `Roman`
 - `American` -> `South American`
@@ -1748,6 +1748,7 @@ draft: true
 - `Penn` -> `Penn State`
 - `Oregon` -> `University of Oregon`
 - `England` -> `New England`
+- `Miami` -> `University of Miami`
 
 ## era 2000, cluster 37
 - `Nobel` -> `Nobel Prize`
@@ -1761,6 +1762,7 @@ draft: true
 - `Darwin` -> `Charles Darwin`
 - `Tesla` -> `Nikola Tesla`
 - `Bell` -> `Alexander Graham Bell`
+- `Marie` -> `Marie Curie`
 - `Franklin` -> `Ben Franklin`
 - `Bohr` -> `Niels Bohr`
 - `Niels` -> `Niels Bohr`
@@ -1790,11 +1792,8 @@ draft: true
 - `North` -> `North Carolina`
 
 ## era 2000, cluster 39
-- `Sarah` -> `Sarah of the Clue Crew`
-- `Jimmy` -> `Jimmy of the Clue Crew`
-- `Cheryl` -> `Cheryl of the Clue Crew`
 - `Americans` -> `American`
-- `Sofia` -> `Sofia of the Clue Crew`
+- `Vegas` -> `Las Vegas`
 
 ## era 2000, cluster 40
 - `American` -> `African American`
@@ -1812,7 +1811,6 @@ draft: true
 - `World` -> `World War II`
 
 ## era 2000, cluster 41
-- `Sarah` -> `Sarah of the Clue Crew`
 - `Toyota` -> `Toyota Grand Prix`
 - `British` -> `British Airways`
 - `New York` -> `New York City`
@@ -1845,12 +1843,11 @@ draft: true
 - `Laboratory` -> `Jet Propulsion Laboratory`
 - `Tycho` -> `Tycho Brahe`
 - `Brahe` -> `Tycho Brahe`
+- `Kuiper` -> `Kuiper Belt`
 
 ## era 2000, cluster 45
 - `Latin` -> `the Latin`
 - `Greek` -> `the Greek`
-- `Sarah` -> `Sarah of the Clue Crew`
-- `Jimmy` -> `Jimmy of the Clue Crew`
 - `Americans` -> `American`
 - `Cleveland` -> `Cleveland Clinic`
 - `Red Cross` -> `American Red Cross`
@@ -1873,7 +1870,6 @@ draft: true
 - `Rolling Stone` -> `Rolling Stones`
 - `Johnny` -> `Johnny Cash`
 - `Springsteen` -> `Bruce Springsteen`
-- `Black` -> `Black Eyed Peas`
 - `Hall` -> `Roll Hall of Fame`
 - `American` -> `American Idol`
 - `California` -> `Hotel California`
@@ -1888,6 +1884,7 @@ draft: true
 - `American` -> `American Sign Language`
 - `Americans` -> `American Sign Language`
 - `Britain` -> `Great Britain`
+- `John` -> `John Playfair`
 
 ## era 2000, cluster 49
 - `Africa` -> `South Africa`
@@ -1895,6 +1892,7 @@ draft: true
 - `Mexico` -> `New Mexico`
 - `Galapagos` -> `Galapagos Islands`
 - `Darwin` -> `Charles Darwin`
+- `Egyptians` -> `Egyptian`
 - `Americas` -> `America`
 
 ## era 2010, cluster 0
@@ -1912,6 +1910,7 @@ draft: true
 - `Oscar` -> `Oscar Wilde`
 
 ## era 2010, cluster 1
+- `Germany` -> `East Germany`
 - `Soviet` -> `Soviet Union`
 - `Soviets` -> `Soviet Union`
 - `Union` -> `Soviet Union`
@@ -1928,7 +1927,6 @@ draft: true
 - `American` -> `Native American`
 - `Americans` -> `Native American`
 - `Native Americans` -> `Native American`
-- `New York` -> `New York City`
 - `America` -> `North America`
 - `Africa` -> `South Africa`
 - `Olympics` -> `Olympic`
@@ -1949,6 +1947,7 @@ draft: true
 - `Museum` -> `Space Museum`
 - `Vegas` -> `Las Vegas`
 - `Mexico` -> `New Mexico`
+- `Kansas` -> `Kansas City`
 
 ## era 2010, cluster 5
 - `Olympics` -> `Olympic`
@@ -1980,7 +1979,6 @@ draft: true
 - `Psalm` -> `Psalms`
 - `Romans` -> `Roman`
 - `Muslim` -> `Muslims`
-- `Sarah` -> `Sarah of the Clue Crew`
 - `Ark` -> `Ark of the Covenant`
 - `Mount` -> `Mount Sinai`
 - `Pilate` -> `Pontius Pilate`
@@ -2018,6 +2016,7 @@ draft: true
 - `English` -> `English Channel`
 - `Africa` -> `South Africa`
 - `Panama` -> `Panama Canal`
+- `Viking` -> `Vikings`
 
 ## era 2010, cluster 11
 - `American` -> `South American`
@@ -2070,7 +2069,6 @@ draft: true
 ## era 2010, cluster 14
 - `Greek` -> `the Greek`
 - `Greeks` -> `the Greek`
-- `Sarah` -> `Sarah of the Clue Crew`
 - `Latin` -> `the Latin`
 - `American` -> `South American`
 - `Asia` -> `Southeast Asia`
@@ -2132,7 +2130,6 @@ draft: true
 
 ## era 2010, cluster 20
 - `Latin` -> `the Latin`
-- `French` -> `the French`
 - `Greek` -> `the Greek`
 - `German` -> `the German`
 - `Italian` -> `the Italian`
@@ -2219,7 +2216,6 @@ draft: true
 
 ## era 2010, cluster 27
 - `Olympics` -> `Olympic`
-- `Jimmy` -> `Jimmy of the Clue Crew`
 - `Texas` -> `Texas Hold`
 - `American` -> `Native American`
 - `White` -> `Charlie White`
@@ -2238,8 +2234,9 @@ draft: true
 
 ## era 2010, cluster 29
 - `American` -> `American Gothic`
-- `Gogh` -> `Van Gogh`
+- `Rodin` -> `Rodin Museum`
 - `David` -> `Louis David`
+- `Van Gogh` -> `Vincent van Gogh`
 - `New York` -> `New York City`
 - `Mary` -> `Mary Cassatt`
 - `Cassatt` -> `Mary Cassatt`
@@ -2279,7 +2276,6 @@ draft: true
 - `American` -> `Native American`
 - `Americans` -> `Native American`
 - `New York` -> `New York City`
-- `Jimmy` -> `Jimmy of the Clue Crew`
 - `Brit` -> `Brits`
 
 ## era 2010, cluster 33
@@ -2287,17 +2283,18 @@ draft: true
 - `Oscars` -> `Best Picture Oscar`
 - `Best Picture` -> `Best Picture Oscar`
 - `George` -> `George Clooney`
+- `Washington` -> `Denzel Washington`
 - `Jack` -> `Jack Nicholson`
 - `World` -> `World War II`
 - `Michael` -> `Michael Caine`
 
 ## era 2010, cluster 34
 - `Greek` -> `the Greek`
-- `Sarah` -> `Sarah of the Clue Crew`
 - `Latin` -> `the Latin`
 - `Nobel` -> `Nobel Prize`
 - `American` -> `South American`
 - `Pacific` -> `Pacific Ocean`
+- `Ni` -> `El Ni`
 
 ## era 2010, cluster 35
 - `George` -> `George Washington`
@@ -2372,7 +2369,6 @@ draft: true
 - `House` -> `White House`
 
 ## era 2010, cluster 39
-- `Sarah` -> `Sarah of the Clue Crew`
 - `Americans` -> `American`
 - `George` -> `George Stephanopoulos`
 - `World` -> `World War II`
@@ -2392,6 +2388,7 @@ draft: true
 ## era 2010, cluster 41
 - `Ford` -> `Ford Motor Company`
 - `Toyota` -> `Toyota Grand Prix`
+- `Tesla` -> `Tesla Motors`
 - `New York` -> `New York City`
 - `Delta` -> `Delta Flight Museum`
 - `Speedway` -> `Las Vegas Motor Speedway`
@@ -2420,12 +2417,11 @@ draft: true
 - `Sagan` -> `Carl Sagan`
 - `Hubble` -> `Hubble Space Telescope`
 - `Proxima` -> `Proxima Centauri`
+- `Livermore` -> `Lawrence Livermore Nat`
 
 ## era 2010, cluster 45
 - `Latin` -> `the Latin`
 - `Greek` -> `the Greek`
-- `Sarah` -> `Sarah of the Clue Crew`
-- `Kelly` -> `Kelly of the Clue Crew`
 - `Davis` -> `Davis Veterinary Hospital`
 - `Veterinary Hospital` -> `Davis Veterinary Hospital`
 - `Americans` -> `American`
@@ -2500,6 +2496,8 @@ draft: true
 - `Native American` -> `Native Americans`
 - `Americans` -> `Native Americans`
 - `Olympics` -> `Olympic`
+- `George` -> `George Washington`
+- `Washington` -> `George Washington`
 
 ## era 2020, cluster 3
 - `Americans` -> `American`
@@ -2764,7 +2762,6 @@ draft: true
 - `Olympics` -> `Olympic`
 - `Ken` -> `Ken Jennings`
 - `Sudoku` -> `Killer Sudoku`
-- `Jimmy of the Clue Crews` -> `Jimmy of the Clue Crew`
 - `Mario` -> `Super Mario`
 
 ## era 2020, cluster 28
@@ -2943,6 +2940,7 @@ draft: true
 - `George` -> `George Bernard Shaw`
 - `Hume` -> `David Hume`
 - `David` -> `David Hume`
+- `New York` -> `New York Times`
 - `Jefferson` -> `Thomas Jefferson`
 - `Martin Luther` -> `Martin Luther King`
 
