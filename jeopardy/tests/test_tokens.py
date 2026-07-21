@@ -320,3 +320,35 @@ def test_mechanical_noise_keeps_real_and_ambiguous():
     # real entities, and the ambiguous ones the LLM (not the pre-filter) must judge
     for p in ["Isaac Newton", "May", "April", "March", "English", "Oh Brother"]:
         assert not is_mechanical_noise(p)
+
+
+from jeopardy.analysis.tokens import apply_entity_decisions, load_entity_decisions
+
+
+def test_apply_drops_remaps_and_default_keeps():
+    counts = {"John": 40, "Grey": 20, "Anatomy": 15, "Isaac Newton": 30}
+    decisions = {
+        "John": (False, ""),               # drop (vague)
+        "Grey": (True, "Grey's Anatomy"),  # merge into fuller
+        "Anatomy": (True, "Grey's Anatomy"),
+        # "Isaac Newton" absent -> default keep
+    }
+    out = apply_entity_decisions(counts, decisions)
+    assert "John" not in out
+    assert out["Grey's Anatomy"] == 35   # 20 + 15 summed
+    assert out["Isaac Newton"] == 30     # default keep
+    assert "Grey" not in out and "Anatomy" not in out
+
+
+def test_load_entity_decisions_missing_file(tmp_path):
+    assert load_entity_decisions(tmp_path / "nope.csv") == {}
+
+
+def test_load_entity_decisions_parses(tmp_path):
+    p = tmp_path / "d.csv"
+    p.write_text("cluster_id,phrase,keep,canonical,source\n"
+                 "3,John,false,,llm\n"
+                 "3,Grey,true,Grey's Anatomy,llm\n")
+    d = load_entity_decisions(p)
+    assert d[3]["John"] == (False, "")
+    assert d[3]["Grey"] == (True, "Grey's Anatomy")

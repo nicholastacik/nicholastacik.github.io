@@ -1,4 +1,5 @@
 """Most-common proper-noun phrases per cluster-type."""
+import csv
 import math
 import re
 from collections import Counter
@@ -124,6 +125,34 @@ def is_mechanical_noise(phrase):
     return phrase in _INTERJECTIONS
 
 
+def load_entity_decisions(path):
+    """{cluster_id: {phrase: (keep, canonical)}} from the CSV; {} if the file is absent."""
+    out = {}
+    if not path.exists():
+        return out
+    with open(path, newline="", encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            keep = row["keep"].strip().lower() in ("true", "1", "yes")
+            out.setdefault(int(row["cluster_id"]), {})[row["phrase"]] = (keep, row["canonical"])
+    return out
+
+
+def apply_entity_decisions(counts, cluster_decisions):
+    """Drop keep=False; remap canonical!=phrase (summing); default-keep absent phrases."""
+    out = {}
+    for phrase, n in counts.items():
+        decision = cluster_decisions.get(phrase)
+        if decision is None:
+            out[phrase] = out.get(phrase, 0) + n
+            continue
+        keep, canonical = decision
+        if not keep:
+            continue
+        target = canonical if (canonical and canonical.strip()) else phrase
+        out[target] = out.get(target, 0) + n
+    return out
+
+
 def _cluster_phrase_counts(sub, surface):
     """sub: rows (clue/answer) for one (era, cluster). Returns
     Counter(phrase -> count) after the cap-dominance filter.
@@ -170,6 +199,7 @@ def era_tokens(clusters_df, clues_df, cutoffs, min_freq=5, top_n=25):
     merged = clues_df.merge(clusters_df[keys + ["cluster_id"]], on=keys, how="inner")
     merged["year"] = pd.to_datetime(merged["air_date"]).dt.year
     token_rows, era_rows, all_merges = [], [], []
+    decisions = load_entity_decisions(config.ENTITY_DECISIONS_PATH)
 
     for cutoff in cutoffs:
         era = merged[merged["year"] >= cutoff]
@@ -188,6 +218,7 @@ def era_tokens(clusters_df, clues_df, cutoffs, min_freq=5, top_n=25):
             topk = dict(sorted(raw.items(), key=lambda kv: -kv[1])[:DEDUP_CANDIDATE_K])
             merged_counts, merges = canonicalize(topk)
             all_merges.extend((cutoff, cid, lo, hi) for lo, hi in merges)
+            merged_counts = apply_entity_decisions(merged_counts, decisions.get(int(cid), {}))
             per_cluster_counts[cid] = {p: n for p, n in merged_counts.items() if n >= min_freq}
         # c-TF-IDF idf within this era's cluster set
         doc_freq = Counter()
