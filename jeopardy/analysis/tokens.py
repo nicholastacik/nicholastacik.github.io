@@ -114,6 +114,16 @@ def _is_generic_single_word(phrase, cap_count, lower_count):
     return lower_count[key] > cap_count[key]
 
 
+_INTERJECTIONS = {"Oh", "Hi", "Ah", "Hey"}
+
+
+def is_mechanical_noise(phrase):
+    """Unambiguous non-entity noise: Clue Crew presenter metadata + bare interjections."""
+    if "clue crew" in phrase.lower():
+        return True
+    return phrase in _INTERJECTIONS
+
+
 def _cluster_phrase_counts(sub, surface):
     """sub: rows (clue/answer) for one (era, cluster). Returns
     Counter(phrase -> count) after the cap-dominance filter.
@@ -127,7 +137,8 @@ def _cluster_phrase_counts(sub, surface):
         c.update(extract_phrases(clue))
         c.update(extract_phrases(ans))
     return Counter({
-        p: n for p, n in c.items() if not _is_generic_single_word(p, cap_count, lower_count)
+        p: n for p, n in c.items()
+        if not _is_generic_single_word(p, cap_count, lower_count) and not is_mechanical_noise(p)
     })
 
 

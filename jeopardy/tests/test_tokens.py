@@ -304,3 +304,19 @@ def test_n_qualifying_phrases_uncapped_and_pre_dedup():
     # + Emmy + Emmys, counted separately, uncapped = 14.
     n_qual = eras_df[eras_df["cluster_id"] == 0].iloc[0]["n_qualifying_phrases"]
     assert n_qual == 14
+
+
+from jeopardy.analysis.tokens import is_mechanical_noise
+
+
+def test_mechanical_noise_drops_clue_crew_and_interjections():
+    assert is_mechanical_noise("Sarah of the Clue Crew")
+    assert is_mechanical_noise("Jimmy of the Clue Crew")
+    assert is_mechanical_noise("Oh")
+    assert is_mechanical_noise("Hi")
+
+
+def test_mechanical_noise_keeps_real_and_ambiguous():
+    # real entities, and the ambiguous ones the LLM (not the pre-filter) must judge
+    for p in ["Isaac Newton", "May", "April", "March", "English", "Oh Brother"]:
+        assert not is_mechanical_noise(p)
