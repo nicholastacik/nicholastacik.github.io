@@ -672,7 +672,7 @@ _HTML_TEMPLATE = """<!doctype html>
           const scoped = byEra.filter(c => c.phrase === selectedEntity.phrase);
           if (scoped.length) return { clues: scoped, scoped: true };
         }
-        const general = byEra.length ? byEra : pool;
+        const general = byEra;
         return { clues: general, scoped: false };
       }
 
