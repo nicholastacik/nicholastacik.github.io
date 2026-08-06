@@ -629,14 +629,18 @@ _HTML_TEMPLATE = """<!doctype html>
         }
         let html = `<div class="main-head"><h2>${escapeHtml(d.name)}</h2>` +
           `<p class="sub">applicability score ${d.applicability} &middot; ${pctLabel(d.prevalence)} of ${currentEra}s categories &middot; ${d.entities.length} ranked answers</p></div>`;
-        html += '<div class="sample-box" id="sample-box">' +
-          '<button type="button" class="sample-clue-btn" id="sample-clue-btn">Sample clue &#9860;</button>' +
-          '<div id="sample-card"></div></div>';
+        const hasSamples = ((DATA.sampleClues && DATA.sampleClues[String(d.cluster_id)]) || []).length > 0;
+        if (hasSamples) {
+          html += '<div class="sample-box" id="sample-box">' +
+            '<button type="button" class="sample-clue-btn" id="sample-clue-btn">Sample clue &#9860;</button>' +
+            '<div id="sample-card"></div></div>';
+        }
         if (!d.entities.length) {
           html += '<span class="tag-brick">Not really studyable</span>' +
             '<p class="placeholder">This cluster didn\\'t turn up enough repeating answers to study directly ' +
             '&mdash; treat it as a grab-bag and review its categories individually.</p>';
           mainPanel.innerHTML = html;
+          wireSampleButton(d.cluster_id);
           return;
         }
         html += '<ul class="entity-list">';
@@ -650,11 +654,15 @@ _HTML_TEMPLATE = """<!doctype html>
         });
         html += '</ul>';
         mainPanel.innerHTML = html;
-        const sampleBtn = document.getElementById('sample-clue-btn');
-        if (sampleBtn) sampleBtn.addEventListener('click', () => rollSampleClue(d.cluster_id));
+        wireSampleButton(d.cluster_id);
         mainPanel.querySelectorAll('.entity-row').forEach(row => {
           row.addEventListener('click', () => selectEntity(d.entities[Number(row.dataset.idx)]));
         });
+      }
+
+      function wireSampleButton(clusterId) {
+        const sampleBtn = document.getElementById('sample-clue-btn');
+        if (sampleBtn) sampleBtn.addEventListener('click', () => rollSampleClue(clusterId));
       }
 
       function eligibleClues(clusterId) {
