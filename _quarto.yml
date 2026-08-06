@@ -14,6 +14,7 @@ project:
     - "!posts/jeopardy_ds/cluster_naming_prompt.md"
     - "!posts/jeopardy_ds/notes/"
     - "!posts/montreal_events/notes/"
+    - "!posts/ptcg/notes/"
 
 website:
   title: "Nicholas Tacik"
