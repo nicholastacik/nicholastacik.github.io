@@ -48,6 +48,13 @@ def cluster(k):
     run_cluster(k if k is not None else config.DEFAULT_K)
 
 
+@cli.command(name="cluster-dist")
+def cluster_dist():
+    """Augment committed category_clusters.parquet with a centroid_dist column (no re-cluster)."""
+    from jeopardy.analysis.cluster import run_cluster_dist
+    run_cluster_dist()
+
+
 @cli.command(name="name-clusters")
 def name_clusters():
     """Optional: name clusters via OpenAI -> cluster_labels.csv (needs OPENAI_API_KEY)."""
