@@ -24,6 +24,9 @@ RANDOM_SEED = 42                          # shuffle + KMeans + UMAP
 DEFAULT_K = 50                            # KMeans clusters
 OPENAI_MODEL = "gpt-4o-mini"              # optional cluster naming
 
+MISC_ID = -1                              # synthetic "hard to classify" overflow cluster
+MISC_FRACTION = 0.05                      # worst 5% by centroid distance -> misc pool
+
 EMBEDDINGS_PATH = DATA_DIR / "embeddings.npy"       # gitignored cache
 INSTANCES_PATH = DATA_DIR / "instances.parquet"     # gitignored instance index
 _POST_DIR = REPO_ROOT / "posts" / "jeopardy_ds"

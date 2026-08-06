@@ -21,6 +21,17 @@ def project_2d(embeddings, seed):
     return reducer.fit_transform(embeddings)
 
 
+def centroid_distances(embeddings, labels):
+    """Per-row Euclidean distance to the mean centroid of the row's own label."""
+    labels = np.asarray(labels)
+    dist = np.empty(len(labels), dtype=float)
+    for lab in np.unique(labels):
+        mask = labels == lab
+        centroid = embeddings[mask].mean(axis=0)
+        dist[mask] = np.linalg.norm(embeddings[mask] - centroid, axis=1)
+    return dist
+
+
 def run_cluster(k):
     instances = pd.read_parquet(config.INSTANCES_PATH)
     embeddings = np.load(config.EMBEDDINGS_PATH)
@@ -31,6 +42,7 @@ def run_cluster(k):
     out["cluster_id"] = labels
     out["umap_x"] = coords[:, 0]
     out["umap_y"] = coords[:, 1]
+    out["centroid_dist"] = centroid_distances(embeddings, labels)
     config.CATEGORY_CLUSTERS_PATH.parent.mkdir(parents=True, exist_ok=True)
     out.to_parquet(config.CATEGORY_CLUSTERS_PATH, index=False)
 
@@ -38,3 +50,16 @@ def run_cluster(k):
     summary.to_parquet(config.CLUSTER_SUMMARY_PATH, index=False)
     write_naming_prompt(summary, config.NAMING_PROMPT_PATH)
     print(f"Clustered {len(out):,} instances into {k} clusters -> {config.CATEGORY_CLUSTERS_PATH}")
+
+
+def run_cluster_dist():
+    clusters = pd.read_parquet(config.CATEGORY_CLUSTERS_PATH)
+    embeddings = np.load(config.EMBEDDINGS_PATH)
+    if len(embeddings) != len(clusters):
+        raise SystemExit(
+            f"embeddings ({len(embeddings)}) and clusters ({len(clusters)}) row counts differ; "
+            "re-run `jeopardy embed` + `jeopardy cluster` first"
+        )
+    clusters["centroid_dist"] = centroid_distances(embeddings, clusters["cluster_id"].to_numpy())
+    clusters.to_parquet(config.CATEGORY_CLUSTERS_PATH, index=False)
+    print(f"Added centroid_dist to {len(clusters):,} rows -> {config.CATEGORY_CLUSTERS_PATH}")
