@@ -380,6 +380,7 @@ draft: true
 - `David` -> `Louis David`
 - `Gauguin` -> `Paul Gauguin`
 - `Rodin` -> `Auguste Rodin`
+- `Van Gogh` -> `Vincent van Gogh`
 - `Manet` -> `Edouard Manet`
 - `Degas` -> `Edgar Degas`
 - `Warhol` -> `Andy Warhol`
@@ -411,7 +412,6 @@ draft: true
 - `Homeland Security` -> `Department of Homeland Security`
 - `Agriculture` -> `Department of Agriculture`
 - `Commerce` -> `Department of Commerce`
-- `Interior` -> `Department of the Interior`
 
 ## era 1980, cluster 31
 - `Emmys` -> `Emmy`
@@ -1060,7 +1060,6 @@ draft: true
 - `Bill` -> `Bill of Rights`
 - `Homeland Security` -> `Department of Homeland Security`
 - `Agriculture` -> `Department of Agriculture`
-- `Interior` -> `Department of the Interior`
 
 ## era 1990, cluster 31
 - `Emmys` -> `Emmy`
@@ -1646,6 +1645,7 @@ draft: true
 - `Texas` -> `Texas Hold`
 - `Vegas` -> `Las Vegas`
 - `White` -> `Charlie White`
+- `Ping` -> `Ping Hdqtrs`
 
 ## era 2000, cluster 28
 - `Christmas` -> `Christmas Carol`
@@ -1693,7 +1693,6 @@ draft: true
 - `Agriculture` -> `Department of Agriculture`
 - `Greek` -> `the Greek`
 - `New York` -> `New York City`
-- `Interior` -> `Department of the Interior`
 - `Bill` -> `Bill of Rights`
 
 ## era 2000, cluster 31
@@ -2537,6 +2536,7 @@ draft: true
 - `Americans` -> `Native Americans`
 - `Olympics` -> `Olympic`
 - `George` -> `George Washington`
+- `Washington` -> `George Washington`
 
 ## era 2020, cluster 3
 - `Americans` -> `American`
@@ -2727,7 +2727,6 @@ draft: true
 - `English` -> `Old English`
 - `Brits` -> `the Brits`
 - `Brit` -> `the Brits`
-- `Americans` -> `American`
 - `Christians` -> `Christian`
 - `Dutch` -> `South African of Dutch`
 - `African` -> `South African of Dutch`
@@ -2874,7 +2873,6 @@ draft: true
 - `Nixon` -> `Richard Nixon`
 - `New York` -> `New York City`
 - `Jackson` -> `Andrew Jackson`
-- `Taft` -> `William Howard Taft`
 - `Grover` -> `Grover Cleveland`
 - `Cleveland` -> `Grover Cleveland`
 - `Lincoln` -> `Abraham Lincoln`
@@ -2888,6 +2886,7 @@ draft: true
 - `Hoover` -> `Herbert Hoover`
 - `Gore` -> `Al Gore`
 - `Wilson` -> `Woodrow Wilson`
+- `William` -> `William Rufus De`
 - `Jefferson` -> `Thomas Jefferson`
 - `Carter` -> `Jimmy Carter`
 - `Franklin` -> `Franklin Delano Roosevelt`
@@ -2977,7 +2976,6 @@ draft: true
 - `Greeks` -> `Greek`
 - `John` -> `John Adams`
 - `Paine` -> `Thomas Paine`
-- `Paul` -> `Paul Sartre`
 - `George` -> `George Bernard Shaw`
 - `Hume` -> `David Hume`
 - `David` -> `David Hume`

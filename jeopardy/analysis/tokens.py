@@ -204,8 +204,13 @@ def era_tokens(clusters_df, clues_df, cutoffs, min_freq=5, top_n=25):
 
     for cutoff in cutoffs:
         era = merged[merged["year"] >= cutoff]
+        # Surface cap/lowercase stats are corpus-wide. The misc pool (MISC_ID) is an
+        # additive DUPLICATE of rows already counted under their original cluster, so
+        # exclude it here or its text is double-counted, perturbing single-word entity
+        # decisions in unrelated clusters.
+        base_rows = era[era["cluster_id"] != config.MISC_ID]
         surface = build_surface_counts(
-            list(era["clue"].fillna("")) + list(era["answer"].fillna(""))
+            list(base_rows["clue"].fillna("")) + list(base_rows["answer"].fillna(""))
         )
         total_instances = era.groupby(keys).ngroups or 1
         # per-cluster: full raw counts (for applicability) and the
@@ -221,11 +226,13 @@ def era_tokens(clusters_df, clues_df, cutoffs, min_freq=5, top_n=25):
             all_merges.extend((cutoff, cid, lo, hi) for lo, hi in merges)
             merged_counts = apply_entity_decisions(merged_counts, decisions.get(int(cid), {}))
             per_cluster_counts[cid] = {p: n for p, n in merged_counts.items() if n >= min_freq}
-        # c-TF-IDF idf within this era's cluster set
+        # c-TF-IDF over the ORIGINAL clusters only, so the additive misc pool doesn't
+        # perturb existing clusters' idf/tfidf (and thus their ranking).
+        idf_counts = {cid: c for cid, c in per_cluster_counts.items() if cid != config.MISC_ID}
         doc_freq = Counter()
-        for counts in per_cluster_counts.values():
+        for counts in idf_counts.values():
             doc_freq.update(counts.keys())
-        n_clusters = len(per_cluster_counts)
+        n_clusters = len(idf_counts)
         # instances (distinct game/round/category) per cluster, for prevalence
         sizes = era.groupby("cluster_id").apply(
             lambda g: g.groupby(keys).ngroups, include_groups=False

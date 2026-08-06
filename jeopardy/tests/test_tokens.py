@@ -369,3 +369,39 @@ def test_misc_membership_added_produces_overflow_cluster_in_tokens():
     # the misc rows are additive: cluster 0 still present and unchanged in count
     c0 = tokens_df[(tokens_df["cluster_id"] == 0) & (tokens_df["phrase"] == "Abraham Lincoln")]
     assert int(c0.iloc[0]["count"]) == 8
+
+
+def test_misc_pool_leaves_existing_cluster_tokens_byte_identical():
+    # cluster 0 (low centroid_dist, stays out of misc) answers "Mercury" (capitalized).
+    # cluster 1 (high centroid_dist, selected into misc) uses lowercase "mercury".
+    # Without the fix, duplicating cluster 1 into -1 doubles lowercase "mercury" in the
+    # corpus surface stats -> "Mercury" is judged generic and dropped from cluster 0;
+    # and the -1 group changes n_clusters -> cluster 0's tfidf shifts. Both must NOT happen.
+    clusters = pd.DataFrame(
+        [{"game_id": i, "round": "Jeopardy", "category": "SPACE", "cluster_id": 0,
+          "centroid_dist": 0.1} for i in range(6)]
+        + [{"game_id": 100 + i, "round": "Jeopardy", "category": "METALS", "cluster_id": 1,
+            "centroid_dist": 9.0} for i in range(6)]
+    )
+    clues = pd.DataFrame(
+        [{"game_id": i, "round": "Jeopardy", "category": "SPACE", "row": 1.0, "column": 1.0,
+          "air_date": _AIR_DATE, "clue": "This planet is closest to the sun", "answer": "Mercury"}
+         for i in range(6)]
+        + [{"game_id": 100 + i, "round": "Jeopardy", "category": "METALS", "row": 1.0, "column": 1.0,
+            "air_date": _AIR_DATE, "clue": "the liquid mercury pools here", "answer": "a metal"}
+           for i in range(6)]
+    )
+    base, base_eras, _ = era_tokens(clusters, clues, [1980], min_freq=1, top_n=25)
+    combined = pd.concat([clusters, misc_membership(clusters, 0.5, -1)], ignore_index=True)
+    m_tokens, m_eras, _ = era_tokens(combined, clues, [1980], min_freq=1, top_n=25)
+
+    cols = ["era", "cluster_id", "rank", "phrase", "count", "tfidf_weight"]
+    b = base[base["cluster_id"] != -1][cols].sort_values(cols[:5]).reset_index(drop=True)
+    m = m_tokens[m_tokens["cluster_id"] != -1][cols].sort_values(cols[:5]).reset_index(drop=True)
+    pd.testing.assert_frame_equal(b, m)                       # existing rows byte-identical
+    assert "Mercury" in set(m["phrase"])                      # single-word entity survived
+    # applicability for existing clusters unchanged
+    be = base_eras[base_eras["cluster_id"] != -1].set_index("cluster_id")["n_qualifying_phrases"]
+    me = m_eras[m_eras["cluster_id"] != -1].set_index("cluster_id")["n_qualifying_phrases"]
+    assert be.to_dict() == me.to_dict()
+    assert -1 in set(m_eras["cluster_id"])                    # misc still computed
