@@ -33,6 +33,12 @@ sections — use them only to resolve dates a card leaves vague. Rules:
 - One entry per card. `id` = the card's ID, lowercased (`EVT-003` →
   `evt-003`) — the doc's IDs are canonical and stable; they are the
   calendar-sync key.
+- Managed fields — read the entry's `{{tool <id> | hidden=.. | calendar=.. |
+  recurrence=.. | image=..}}` line and emit them onto the event:
+  `hidden`/`calendar` → booleans (`yes`→true, `no`→false); `recurrence` →
+  the string, or null when `none`; `image` → the URL, or null when `auto`.
+  If the line is missing, default to `hidden:false, calendar:false,
+  recurrence:null, image:null` and note it in the run log.
 - **Skip**: everything under ARCHIVE; wishlist entries with no venue/link
   (goal-only cards like WISH-002/003/004 — keep venue watch items like
   WISH-001 as `lead`); cross-category bundle cards with no venue of their

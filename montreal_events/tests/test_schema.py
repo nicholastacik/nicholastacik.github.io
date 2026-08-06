@@ -46,3 +46,34 @@ def test_schema_rejects_bad_category_and_extra_key():
     }
     errors = list(Draft202012Validator(schema).iter_errors(doc))
     assert len(errors) >= 2  # bad enum + additionalProperties
+
+
+def test_schema_accepts_managed_fields():
+    schema = json.loads(SCHEMA_PATH.read_text())
+    doc = {
+        "last_updated": "2026-08-06",
+        "source_doc": "https://docs.google.com/document/d/x/",
+        "events": [{
+            "id": "evt-003", "title": "A", "category": "festival",
+            "status": "date-specific", "start_date": None, "end_date": None,
+            "location": None, "url": None, "url_ok": None, "description": "d",
+            "hidden": True, "calendar": False, "recurrence": "weekly, Tuesdays",
+            "image": "https://example.com/x.png",
+        }],
+    }
+    assert list(Draft202012Validator(schema).iter_errors(doc)) == []
+
+
+def test_schema_rejects_hidden_as_string():
+    schema = json.loads(SCHEMA_PATH.read_text())
+    doc = {
+        "last_updated": "2026-08-06",
+        "source_doc": "x",
+        "events": [{
+            "id": "evt-003", "title": "A", "category": "festival",
+            "status": "evergreen", "start_date": None, "end_date": None,
+            "location": None, "url": None, "url_ok": None, "description": "d",
+            "hidden": "yes",
+        }],
+    }
+    assert list(Draft202012Validator(schema).iter_errors(doc)) != []

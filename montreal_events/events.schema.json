@@ -31,7 +31,11 @@
         "url": { "type": ["string", "null"], "pattern": "^https?://" },
         "url_ok": { "type": ["boolean", "null"] },
         "description": { "type": "string", "minLength": 1 },
-        "notes": { "type": ["string", "null"] }
+        "notes": { "type": ["string", "null"] },
+        "hidden": { "type": "boolean" },
+        "calendar": { "type": "boolean" },
+        "recurrence": { "type": ["string", "null"] },
+        "image": { "type": ["string", "null"] }
       }
     }
   }
