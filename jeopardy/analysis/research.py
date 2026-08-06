@@ -6,7 +6,7 @@ import pandas as pd
 from jeopardy import config
 
 
-def build_research_data(tokens_df, eras_df, labels):
+def build_research_data(tokens_df, eras_df, labels, sample_clues_df=None):
     """Per-era, per-type entity data for the research page.
 
     Returns {"eras": [...], "byEra": {"<era>": [ {cluster_id, name, applicability,
@@ -36,7 +36,15 @@ def build_research_data(tokens_df, eras_df, labels):
             })
         entries.sort(key=lambda d: d["applicability"], reverse=True)
         by_era[str(int(era))] = entries
-    return {"eras": [int(e) for e in eras], "byEra": by_era}
+    sample_map = {}
+    if sample_clues_df is not None:
+        for cid, grp in sample_clues_df.groupby("cluster_id"):
+            sample_map[str(int(cid))] = [
+                {"phrase": (None if pd.isna(r["phrase"]) else r["phrase"]),
+                 "clue": r["clue"], "answer": r["answer"], "year": int(r["year"])}
+                for _, r in grp.iterrows()
+            ]
+    return {"eras": [int(e) for e in eras], "byEra": by_era, "sampleClues": sample_map}
 
 
 _HTML_TEMPLATE = """<!doctype html>
@@ -300,6 +308,21 @@ _HTML_TEMPLATE = """<!doctype html>
     font-family: var(--mono);
     margin: 0 0 20px;
   }
+
+  .sample-box { margin: 0 0 22px; }
+  .sample-clue-btn, .reveal-answer-btn {
+    font-family: var(--mono); font-size: 12px; letter-spacing: 0.04em;
+    text-transform: uppercase; background: var(--panel-2); border: 1px solid var(--gold-dim);
+    color: var(--gold); border-radius: var(--radius); padding: 8px 14px; cursor: pointer;
+  }
+  .sample-clue-btn:hover, .reveal-answer-btn:hover { color: var(--paper); border-color: var(--gold); }
+  .sample-card {
+    margin-top: 12px; padding: 14px 16px; background: var(--panel);
+    border: 1px solid var(--line); border-left: 3px solid var(--gold); border-radius: var(--radius);
+  }
+  .sample-card .clue-text { font-size: 15px; line-height: 1.55; margin: 0 0 12px; }
+  .sample-card .scope { font-family: var(--mono); font-size: 11px; color: var(--ash); margin: 0 0 8px; }
+  .sample-card .answer-text { font-size: 15px; color: var(--gold); margin: 10px 0 0; }
 
   .tag-brick {
     display: inline-block;
@@ -606,6 +629,9 @@ _HTML_TEMPLATE = """<!doctype html>
         }
         let html = `<div class="main-head"><h2>${escapeHtml(d.name)}</h2>` +
           `<p class="sub">applicability score ${d.applicability} &middot; ${pctLabel(d.prevalence)} of ${currentEra}s categories &middot; ${d.entities.length} ranked answers</p></div>`;
+        html += '<div class="sample-box" id="sample-box">' +
+          '<button type="button" class="sample-clue-btn" id="sample-clue-btn">Sample clue &#9860;</button>' +
+          '<div id="sample-card"></div></div>';
         if (!d.entities.length) {
           html += '<span class="tag-brick">Not really studyable</span>' +
             '<p class="placeholder">This cluster didn\\'t turn up enough repeating answers to study directly ' +
@@ -624,9 +650,46 @@ _HTML_TEMPLATE = """<!doctype html>
         });
         html += '</ul>';
         mainPanel.innerHTML = html;
+        const sampleBtn = document.getElementById('sample-clue-btn');
+        if (sampleBtn) sampleBtn.addEventListener('click', () => rollSampleClue(d.cluster_id));
         mainPanel.querySelectorAll('.entity-row').forEach(row => {
           row.addEventListener('click', () => selectEntity(d.entities[Number(row.dataset.idx)]));
         });
+      }
+
+      function eligibleClues(clusterId) {
+        const pool = (DATA.sampleClues && DATA.sampleClues[String(clusterId)]) || [];
+        const byEra = pool.filter(c => c.year >= currentEra);
+        if (selectedEntity) {
+          const scoped = byEra.filter(c => c.phrase === selectedEntity.phrase);
+          if (scoped.length) return { clues: scoped, scoped: true };
+        }
+        const general = byEra.length ? byEra : pool;
+        return { clues: general, scoped: false };
+      }
+
+      function rollSampleClue(clusterId) {
+        const card = document.getElementById('sample-card');
+        if (!card) return;
+        const { clues, scoped } = eligibleClues(clusterId);
+        if (!clues.length) {
+          card.innerHTML = '<div class="sample-card"><p class="scope">No clue on the board for this filter.</p></div>';
+          return;
+        }
+        const pick = clues[Math.floor(Math.random() * clues.length)];
+        const scopeLabel = scoped
+          ? 'Answer is &ldquo;' + escapeHtml(selectedEntity.phrase) + '&rdquo; &middot; ' + pick.year
+          : 'Any answer in this category &middot; ' + pick.year + ' &middot; un-highlight to broaden';
+        card.innerHTML = '<div class="sample-card">' +
+          '<p class="scope">' + scopeLabel + '</p>' +
+          '<p class="clue-text">' + escapeHtml(pick.clue) + '</p>' +
+          '<button type="button" class="reveal-answer-btn" id="reveal-answer-btn">Reveal answer</button>' +
+          '<button type="button" class="sample-clue-btn" id="another-clue-btn" style="margin-left:8px">Another</button>' +
+          '<p class="answer-text" id="answer-text" hidden>' + escapeHtml(pick.answer) + '</p></div>';
+        document.getElementById('reveal-answer-btn').addEventListener('click', () => {
+          const a = document.getElementById('answer-text'); if (a) a.hidden = false;
+        });
+        document.getElementById('another-clue-btn').addEventListener('click', () => rollSampleClue(clusterId));
       }
 
       function renderDetailEmpty() {
@@ -699,7 +762,9 @@ def run_research():
     tokens = pd.read_parquet(config.CATEGORY_TOKENS_PATH)
     eras = pd.read_parquet(config.CATEGORY_ERAS_PATH)
     labels = pd.read_csv(config.CLUSTER_LABELS_PATH).set_index("cluster_id")["name"].to_dict()
-    data = build_research_data(tokens, eras, labels)
+    sample = pd.read_parquet(config.CATEGORY_SAMPLE_CLUES_PATH) \
+        if config.CATEGORY_SAMPLE_CLUES_PATH.exists() else None
+    data = build_research_data(tokens, eras, labels, sample)
     html = render_html(data)
     config.RESEARCH_HTML_PATH.parent.mkdir(parents=True, exist_ok=True)
     config.RESEARCH_HTML_PATH.write_text(html, encoding="utf-8")
