@@ -352,3 +352,20 @@ def test_load_entity_decisions_parses(tmp_path):
     d = load_entity_decisions(p)
     assert d[3]["John"] == (False, "")
     assert d[3]["Grey"] == (True, "Grey's Anatomy")
+
+
+from jeopardy.analysis.misc_pool import misc_membership
+
+
+def test_misc_membership_added_produces_overflow_cluster_in_tokens():
+    # Two real clusters; mark the worst-fitting instances as misc (-1) and
+    # confirm era_tokens treats -1 as its own type with its own entities.
+    clusters = _clusters().copy()
+    clusters["centroid_dist"] = [float(i) for i in range(len(clusters))]
+    misc = misc_membership(clusters, fraction=0.25, misc_id=-1)
+    combined = pd.concat([clusters, misc], ignore_index=True)
+    tokens_df, eras_df, _ = era_tokens(combined, _clues(), [1980], min_freq=1, top_n=25)
+    assert -1 in set(eras_df["cluster_id"])
+    # the misc rows are additive: cluster 0 still present and unchanged in count
+    c0 = tokens_df[(tokens_df["cluster_id"] == 0) & (tokens_df["phrase"] == "Abraham Lincoln")]
+    assert int(c0.iloc[0]["count"]) == 8
