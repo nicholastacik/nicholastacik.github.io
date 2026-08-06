@@ -109,8 +109,9 @@ def test_render_html_has_era_selector_over_all_eras():
 def _sample_clues_df():
     return pd.DataFrame([
         {"cluster_id": 0, "phrase": "Abraham Lincoln", "clue": "16th president",
-         "answer": "Abraham Lincoln", "year": 1994},
-        {"cluster_id": 0, "phrase": None, "clue": "any clue", "answer": "something", "year": 2001},
+         "answer": "Abraham Lincoln", "year": 1994, "category": "PRESIDENTS"},
+        {"cluster_id": 0, "phrase": None, "clue": "any clue", "answer": "something", "year": 2001,
+         "category": "PRESIDENTS"},
     ])
 
 
@@ -119,7 +120,7 @@ def test_build_research_data_embeds_sample_clues_keyed_by_cluster():
     assert "sampleClues" in data
     assert "0" in data["sampleClues"]
     entry = data["sampleClues"]["0"][0]
-    assert set(entry.keys()) == {"phrase", "clue", "answer", "year"}
+    assert set(entry.keys()) == {"phrase", "clue", "answer", "year", "category"}
 
 
 def test_build_research_data_sample_clues_default_empty():

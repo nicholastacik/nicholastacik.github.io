@@ -31,13 +31,14 @@ def test_sample_clue_maps_merged_answer_to_canonical_entity():
     assert len(scoped) == 3                                   # capped at k
     assert set(scoped["answer"]) <= {"van Gogh", "Vincent van Gogh"}
     assert scoped["year"].notna().all() and (scoped["year"] == 2005).all()
+    assert (scoped["category"] == "ART").all()
 
 
 def test_general_pool_has_null_phrase_and_is_capped():
     df = build_sample_clues(_clusters(), _clues(), decisions={}, k=3, general_n=5, min_freq=5)
     general = df[(df["cluster_id"] == 0) & (df["phrase"].isna())]
     assert 1 <= len(general) <= 5
-    assert list(df.columns) == ["cluster_id", "phrase", "clue", "answer", "year"]
+    assert list(df.columns) == ["cluster_id", "phrase", "clue", "answer", "year", "category"]
 
 
 def test_dropped_entity_gets_no_scoped_clues():

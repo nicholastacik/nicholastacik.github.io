@@ -69,6 +69,12 @@ def test_stopword_then_title_yields_nothing():
     assert extract_phrases("The President spoke") == []
 
 
+def test_contraction_stem_not_extracted():
+    assert extract_phrases("Don't count your chickens") == []      # "Don" from Don't is skipped
+    assert extract_phrases("Lincoln's hat is here") == ["Lincoln"]  # possessive 's is NOT a contraction
+    assert "Don" not in extract_phrases('"Don\'t Sleep in the Subway" was a hit')
+
+
 import pandas as pd
 from jeopardy.analysis.tokens import era_tokens
 

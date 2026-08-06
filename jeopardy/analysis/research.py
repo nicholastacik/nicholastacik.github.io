@@ -41,7 +41,8 @@ def build_research_data(tokens_df, eras_df, labels, sample_clues_df=None):
         for cid, grp in sample_clues_df.groupby("cluster_id"):
             sample_map[str(int(cid))] = [
                 {"phrase": (None if pd.isna(r["phrase"]) else r["phrase"]),
-                 "clue": r["clue"], "answer": r["answer"], "year": int(r["year"])}
+                 "clue": r["clue"], "answer": r["answer"], "year": int(r["year"]),
+                 "category": r["category"]}
                 for _, r in grp.iterrows()
             ]
     return {"eras": [int(e) for e in eras], "byEra": by_era, "sampleClues": sample_map}
@@ -481,7 +482,8 @@ _HTML_TEMPLATE = """<!doctype html>
     <h1>The Board</h1>
     <p>50 Jeopardy! category clusters, ranked by how deep you can actually study them.
        Pick a decade to see what dominated the board then, drill into its most recurring
-       answers, and pull live facts from Wikipedia.</p>
+       answers, and pull live facts from Wikipedia. A type's <em>recurring answers</em> count is
+       how many distinct answers come up 5+ times &mdash; the higher it is, the more studying pays off.</p>
   </header>
   <div class="era-bar" role="group" aria-label="Study era">
     <span class="era-bar-label">The board, as of</span>
@@ -516,6 +518,7 @@ _HTML_TEMPLATE = """<!doctype html>
       let currentEra = DATA.eras.includes(2010) ? 2010 : DATA.eras[0];
       let selectedTypeId = null;
       let selectedEntity = null;
+      let lastSampleClue = null;
 
       function currentList() {
         return DATA.byEra[String(currentEra)] || [];
@@ -601,7 +604,7 @@ _HTML_TEMPLATE = """<!doctype html>
           btn.setAttribute('role', 'listitem');
           const barPct = Math.max(4, (d.prevalence / maxShare) * 100);
           const metaHtml = studyable
-            ? `<span class="stat">${d.applicability} qualifying &middot; ${pctLabel(d.prevalence)} of board</span>` +
+            ? `<span class="stat">${d.applicability} recurring answers &middot; ${pctLabel(d.prevalence)} of board</span>` +
               `<span class="prevalence"><span class="prevalence-fill" style="width:${barPct}%"></span></span>`
             : '<span class="stat">not really studyable</span>';
           btn.innerHTML = `<span class="name">${escapeHtml(d.name)}</span>` +
@@ -628,7 +631,7 @@ _HTML_TEMPLATE = """<!doctype html>
           return;
         }
         let html = `<div class="main-head"><h2>${escapeHtml(d.name)}</h2>` +
-          `<p class="sub">applicability score ${d.applicability} &middot; ${pctLabel(d.prevalence)} of ${currentEra}s categories &middot; ${d.entities.length} ranked answers</p></div>`;
+          `<p class="sub">${d.applicability} recurring answers &middot; ${pctLabel(d.prevalence)} of ${currentEra}s categories</p></div>`;
         const hasSamples = ((DATA.sampleClues && DATA.sampleClues[String(d.cluster_id)]) || []).length > 0;
         if (hasSamples) {
           html += '<div class="sample-box" id="sample-box">' +
@@ -670,25 +673,37 @@ _HTML_TEMPLATE = """<!doctype html>
         const byEra = pool.filter(c => c.year >= currentEra);
         if (selectedEntity) {
           const scoped = byEra.filter(c => c.phrase === selectedEntity.phrase);
-          if (scoped.length) return { clues: scoped, scoped: true };
+          if (scoped.length) return { clues: scoped, scoped: true, fellBack: false };
+          return { clues: byEra, scoped: false, fellBack: true };
         }
-        const general = byEra;
-        return { clues: general, scoped: false };
+        return { clues: byEra, scoped: false, fellBack: false };
       }
 
       function rollSampleClue(clusterId) {
         const card = document.getElementById('sample-card');
         if (!card) return;
-        const { clues, scoped } = eligibleClues(clusterId);
+        const { clues, scoped, fellBack } = eligibleClues(clusterId);
         if (!clues.length) {
-          card.innerHTML = '<div class="sample-card"><p class="scope">No clue on the board for this filter.</p></div>';
+          const msg = fellBack
+            ? 'No clue on this board has &ldquo;' + escapeHtml(selectedEntity.phrase) + '&rdquo; as its answer.'
+            : 'No clue on the board for this filter.';
+          card.innerHTML = '<div class="sample-card"><p class="scope">' + msg + '</p></div>';
           return;
         }
-        const pick = clues[Math.floor(Math.random() * clues.length)];
+        let choices = clues;
+        if (clues.length > 1 && lastSampleClue) {
+          const filtered = clues.filter(c => c.clue !== lastSampleClue);
+          if (filtered.length) choices = filtered;
+        }
+        const pick = choices[Math.floor(Math.random() * choices.length)];
+        lastSampleClue = pick.clue;
         const scopeLabel = scoped
-          ? 'Answer is &ldquo;' + escapeHtml(selectedEntity.phrase) + '&rdquo; &middot; ' + pick.year
-          : 'Any answer in this category &middot; ' + pick.year + ' &middot; un-highlight to broaden';
+          ? 'Answer is related to &ldquo;' + escapeHtml(selectedEntity.phrase) + '&rdquo;'
+          : (fellBack
+              ? 'No clue for &ldquo;' + escapeHtml(selectedEntity.phrase) + '&rdquo; this era &mdash; showing another from this category'
+              : 'Any answer in this category &middot; un-highlight to broaden');
         card.innerHTML = '<div class="sample-card">' +
+          '<p class="scope">' + escapeHtml(pick.category) + ' &middot; ' + pick.year + '</p>' +
           '<p class="scope">' + scopeLabel + '</p>' +
           '<p class="clue-text">' + escapeHtml(pick.clue) + '</p>' +
           '<button type="button" class="reveal-answer-btn" id="reveal-answer-btn">Reveal answer</button>' +
