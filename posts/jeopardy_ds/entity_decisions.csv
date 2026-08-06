@@ -3371,3 +3371,88 @@ cluster_id,phrase,keep,canonical,source
 49,Madagascar,false,Madagascar,llm-relevance
 49,Norway,false,Norway,llm-relevance
 49,Washington,false,Washington,llm-relevance
+9,Campbell,true,Campbell Soup Company,llm-disambig
+9,Anheuser,true,Anheuser-Busch,llm-disambig
+14,Bartlett,true,Bartlett pear,llm-disambig
+14,Susan,true,Black-eyed Susan,llm-disambig
+14,Mendel,true,Gregor Mendel,llm-disambig
+14,Sitka,true,Sitka spruce,llm-disambig
+14,Kearny,false,Kearny,llm-disambig
+14,Bermuda,true,Bermuda grass,llm-disambig
+19,Kong,true,King Kong,llm-disambig
+24,Arthur,true,King Arthur,llm-disambig
+29,Toulouse,true,Henri de Toulouse-Lautrec,llm-disambig
+34,Fe,true,Iron,llm-disambig
+34,Na,true,Sodium,llm-disambig
+34,Hg,true,Mercury (element),llm-disambig
+34,Cu,true,Copper,llm-disambig
+34,Ca,true,Calcium,llm-disambig
+34,Mohs,true,Mohs scale,llm-disambig
+34,Coriolis,true,Coriolis effect,llm-disambig
+39,According,false,According,llm-disambig
+39,Grandma,false,Grandma,llm-disambig
+39,Abe,true,Abraham Lincoln,llm-disambig
+44,Tyson,true,Neil deGrasse Tyson,llm-disambig
+49,Komodo,true,Komodo dragon,llm-disambig
+49,Bactrian,true,Bactrian camel,llm-disambig
+49,Siamese,true,Siamese cat,llm-disambig
+0,Arthur,true,King Arthur,llm-disambig
+0,Peace,false,Peace,llm-disambig
+5,James,true,LeBron James,llm-disambig
+15,Conan,true,Conan O'Brien,llm-disambig
+15,Oprah,true,Oprah Winfrey,llm-disambig
+20,Webster,true,Noah Webster,llm-disambig
+20,Merriam,true,Merriam-Webster,llm-disambig
+30,Lincoln,true,Abraham Lincoln,llm-disambig
+30,Hatchett,true,Glenda Hatchett,llm-disambig
+30,Miranda,true,Miranda warning,llm-disambig
+30,Sterling,true,Pound sterling,llm-disambig
+35,Kennedy,true,John F. Kennedy,llm-disambig
+35,Grant,true,Ulysses S. Grant,llm-disambig
+40,Kennedy,true,John F. Kennedy,llm-disambig
+40,Dec,false,Dec,llm-disambig
+40,Sept,false,Sept,llm-disambig
+40,Though,false,Though,llm-disambig
+45,Oz,true,Mehmet Oz,llm-disambig
+45,Langerhans,true,Paul Langerhans,llm-disambig
+45,Reye,true,Reye syndrome,llm-disambig
+45,Hodgkin,true,Thomas Hodgkin,llm-disambig
+45,Broca,true,Paul Broca,llm-disambig
+21,Victoria,true,Queen Victoria,llm-disambig
+21,Isabella,true,Isabella I of Castile,llm-disambig
+26,Wells,true,H. G. Wells,llm-disambig
+31,Fox,true,Fox Broadcasting Company,llm-disambig
+31,Simpsons,true,The Simpsons,llm-disambig
+31,Sopranos,true,The Sopranos,llm-disambig
+36,Georgia,true,University of Georgia,llm-disambig
+36,Irish,false,Irish,llm-disambig
+36,Jesuit,false,Jesuit,llm-disambig
+36,Pac,true,Pac-12 Conference,llm-disambig
+41,Mercedes,true,Mercedes-Benz,llm-disambig
+41,Benz,true,Mercedes-Benz,llm-disambig
+41,Royce,true,Rolls-Royce,llm-disambig
+2,Fair,false,Fair,llm-disambig
+7,Sept,true,September,llm-disambig
+7,Dia,true,Day of the Dead,llm-disambig
+7,Muertos,true,Day of the Dead,llm-disambig
+12,Eliot,true,T. S. Eliot,llm-disambig
+17,Angels,true,Angels in America,llm-disambig
+22,Caesar,true,Caesar salad,llm-disambig
+22,Brits,false,Brits,llm-disambig
+27,Olympic,true,Olympic Games,llm-disambig
+27,Hoyle,true,Edmond Hoyle,llm-disambig
+27,Rubik,true,Rubik's Cube,llm-disambig
+37,Kelvin,true,"William Thomson, 1st Baron Kelvin",llm-disambig
+37,Cousteau,true,Jacques Cousteau,llm-disambig
+37,Hubble,true,Edwin Hubble,llm-disambig
+37,Ferb,true,Ferb Fletcher,llm-disambig
+8,Heloise,true,Heloise (columnist),llm-disambig
+8,Auntie,false,Auntie,llm-disambig
+8,Higgs,false,Higgs,llm-disambig
+13,Diana,true,"Diana, Princess of Wales",llm-disambig
+13,Victoria,true,Queen Victoria,llm-disambig
+13,Ginsburg,true,Ruth Bader Ginsburg,llm-disambig
+23,Korsakov,true,Nikolai Rimsky-Korsakov,llm-disambig
+28,Grimm,true,Brothers Grimm,llm-disambig
+38,Lee,true,Robert E. Lee,llm-disambig
+38,Grant,true,Ulysses S. Grant,llm-disambig
