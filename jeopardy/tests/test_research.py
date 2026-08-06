@@ -106,6 +106,35 @@ def test_render_html_has_era_selector_over_all_eras():
     assert "DATA.eras.includes(2010)" in html
 
 
+def _sample_clues_df():
+    return pd.DataFrame([
+        {"cluster_id": 0, "phrase": "Abraham Lincoln", "clue": "16th president",
+         "answer": "Abraham Lincoln", "year": 1994},
+        {"cluster_id": 0, "phrase": None, "clue": "any clue", "answer": "something", "year": 2001},
+    ])
+
+
+def test_build_research_data_embeds_sample_clues_keyed_by_cluster():
+    data = build_research_data(_tokens_df(), _eras_df(), _labels(), _sample_clues_df())
+    assert "sampleClues" in data
+    assert "0" in data["sampleClues"]
+    entry = data["sampleClues"]["0"][0]
+    assert set(entry.keys()) == {"phrase", "clue", "answer", "year"}
+
+
+def test_build_research_data_sample_clues_default_empty():
+    data = build_research_data(_tokens_df(), _eras_df(), _labels())
+    assert data["sampleClues"] == {}
+
+
+def test_render_html_has_sample_clue_controls():
+    data = build_research_data(_tokens_df(), _eras_df(), _labels(), _sample_clues_df())
+    html = render_html(data)
+    assert "sample-clue-btn" in html          # the trigger
+    assert "reveal-answer-btn" in html         # hidden-answer reveal
+    assert "sampleClues" in html               # data embedded
+
+
 def test_render_html_marks_non_studyable():
     data = build_research_data(_tokens_df(), _eras_df(), _labels())
     html = render_html(data)
