@@ -340,6 +340,18 @@ def test_apply_drops_remaps_and_default_keeps():
     assert "Grey" not in out and "Anatomy" not in out
 
 
+def test_apply_ignores_source_and_drops_relevance_rows(tmp_path):
+    # A relevance-motivated drop (source=llm-relevance) behaves like any other
+    # keep=False row: source is discarded at load and ignored on apply.
+    p = tmp_path / "d.csv"
+    p.write_text("cluster_id,phrase,keep,canonical,source\n"
+                 "0,New York City,false,New York City,llm-relevance\n")
+    decisions = load_entity_decisions(p)
+    out = apply_entity_decisions({"New York City": 12, "Charles Dickens": 30}, decisions[0])
+    assert "New York City" not in out
+    assert out["Charles Dickens"] == 30
+
+
 def test_load_entity_decisions_missing_file(tmp_path):
     assert load_entity_decisions(tmp_path / "nope.csv") == {}
 

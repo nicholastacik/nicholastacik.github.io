@@ -2853,3 +2853,521 @@ cluster_id,phrase,keep,canonical,source
 15,French,false,French,llm
 40,Feb,false,Feb,llm
 15,February,false,February,llm
+-1,American,false,American,llm-relevance
+-1,French,false,French,llm-relevance
+-1,British,false,British,llm-relevance
+-1,Greek,false,Greek,llm-relevance
+-1,English,false,English,llm-relevance
+-1,April,false,April,llm-relevance
+-1,Spanish,false,Spanish,llm-relevance
+-1,June,false,June,llm-relevance
+-1,German,false,German,llm-relevance
+-1,Italian,false,Italian,llm-relevance
+-1,July,false,July,llm-relevance
+-1,Latin,false,Latin,llm-relevance
+-1,Japanese,false,Japanese,llm-relevance
+-1,Black,false,Black,llm-relevance
+9,California,false,California,llm-relevance
+9,New York,false,New York,llm-relevance
+9,Japan,false,Japan,llm-relevance
+9,Chicago,false,Chicago,llm-relevance
+9,London,false,London,llm-relevance
+9,Texas,false,Texas,llm-relevance
+9,San Francisco,false,San Francisco,llm-relevance
+9,Seattle,false,Seattle,llm-relevance
+9,China,false,China,llm-relevance
+9,Georgia,false,Georgia,llm-relevance
+34,Euclid,false,Euclid,llm-relevance
+0,New York City,false,New York City,llm-relevance
+0,Paris,false,Paris,llm-relevance
+5,California,false,California,llm-relevance
+5,National Museum of African American History,false,National Museum of African American History,llm-relevance
+15,New York City,false,New York City,llm-relevance
+15,California,false,California,llm-relevance
+15,Oscar,false,Oscar,llm-relevance
+15,Grammy,false,Grammy,llm-relevance
+30,New York City,false,New York City,llm-relevance
+30,California,false,California,llm-relevance
+40,California,false,California,llm-relevance
+40,Paris,false,Paris,llm-relevance
+40,New York City,false,New York City,llm-relevance
+26,Civil War,false,Civil War,llm-relevance
+31,Oscar,false,Oscar,llm-relevance
+31,National Museum of African American History,false,National Museum of African American History,llm-relevance
+2,Swiss,false,Swiss,llm-relevance
+12,Charles Dickens,false,Charles Dickens,llm-relevance
+12,George Eliot,false,George Eliot,llm-relevance
+37,Dax Shepard,false,Dax Shepard,llm-relevance
+47,Oscar,false,Oscar,llm-relevance
+18,George Washington,false,George Washington,llm-relevance
+28,Monopoly,false,Monopoly,llm-relevance
+28,Mo Rocca,false,Mo Rocca,llm-relevance
+33,World War II,false,World War II,llm-relevance
+-1,America,false,America,llm-relevance
+-1,Atlanta,false,Atlanta,llm-relevance
+-1,Britain,false,Britain,llm-relevance
+-1,Broadway,false,Broadway,llm-relevance
+-1,California,false,California,llm-relevance
+-1,Chicago,false,Chicago,llm-relevance
+-1,Florida,false,Florida,llm-relevance
+-1,France,false,France,llm-relevance
+-1,India,false,India,llm-relevance
+-1,London,false,London,llm-relevance
+-1,New Mexico,false,New Mexico,llm-relevance
+-1,New York,false,New York,llm-relevance
+-1,New York City,false,New York City,llm-relevance
+-1,Paris,false,Paris,llm-relevance
+-1,South Africa,false,South Africa,llm-relevance
+-1,Texas,false,Texas,llm-relevance
+0,England,false,England,llm-relevance
+0,India,false,India,llm-relevance
+0,London,false,London,llm-relevance
+0,Mississippi,false,Mississippi,llm-relevance
+2,America,false,America,llm-relevance
+2,Australia,false,Australia,llm-relevance
+2,Boston,false,Boston,llm-relevance
+2,Britain,false,Britain,llm-relevance
+2,California,false,California,llm-relevance
+2,Canada,false,Canada,llm-relevance
+2,Chicago,false,Chicago,llm-relevance
+2,China,false,China,llm-relevance
+2,England,false,England,llm-relevance
+2,Florida,false,Florida,llm-relevance
+2,France,false,France,llm-relevance
+2,Germany,false,Germany,llm-relevance
+2,India,false,India,llm-relevance
+2,Japan,false,Japan,llm-relevance
+2,London,false,London,llm-relevance
+2,Massachusetts,false,Massachusetts,llm-relevance
+2,Mexico,false,Mexico,llm-relevance
+2,New Mexico,false,New Mexico,llm-relevance
+2,New York,false,New York,llm-relevance
+2,New York City,false,New York City,llm-relevance
+2,North America,false,North America,llm-relevance
+2,Ohio,false,Ohio,llm-relevance
+2,Paris,false,Paris,llm-relevance
+2,Scotland,false,Scotland,llm-relevance
+2,South Africa,false,South Africa,llm-relevance
+2,Texas,false,Texas,llm-relevance
+2,United States,false,United States,llm-relevance
+2,Washington,false,Washington,llm-relevance
+3,America,false,America,llm-relevance
+3,Boston,false,Boston,llm-relevance
+3,California,false,California,llm-relevance
+3,Chicago,false,Chicago,llm-relevance
+3,Detroit,false,Detroit,llm-relevance
+3,England,false,England,llm-relevance
+3,France,false,France,llm-relevance
+3,London,false,London,llm-relevance
+3,Massachusetts,false,Massachusetts,llm-relevance
+3,New Jersey,false,New Jersey,llm-relevance
+3,New York,false,New York,llm-relevance
+3,New York City,false,New York City,llm-relevance
+3,Paris,false,Paris,llm-relevance
+3,Philadelphia,false,Philadelphia,llm-relevance
+3,Texas,false,Texas,llm-relevance
+3,United States,false,United States,llm-relevance
+3,Washington,false,Washington,llm-relevance
+3,White House,false,White House,llm-relevance
+5,Chicago,false,Chicago,llm-relevance
+5,England,false,England,llm-relevance
+5,Florida,false,Florida,llm-relevance
+5,Georgia,false,Georgia,llm-relevance
+5,New York,false,New York,llm-relevance
+5,Washington,false,Washington,llm-relevance
+6,Egypt,false,Egypt,llm-relevance
+6,Israel,false,Israel,llm-relevance
+6,Jerusalem,false,Jerusalem,llm-relevance
+6,Latin,false,Latin,llm-relevance
+7,California,false,California,llm-relevance
+7,Canada,false,Canada,llm-relevance
+7,Chinese,false,Chinese,llm-relevance
+7,England,false,England,llm-relevance
+7,France,false,France,llm-relevance
+7,Mexico,false,Mexico,llm-relevance
+7,New York City,false,New York City,llm-relevance
+7,North America,false,North America,llm-relevance
+7,Spain,false,Spain,llm-relevance
+8,America,false,America,llm-relevance
+8,California,false,California,llm-relevance
+8,Egypt,false,Egypt,llm-relevance
+8,England,false,England,llm-relevance
+8,Europe,false,Europe,llm-relevance
+8,Florence,false,Florence,llm-relevance
+8,France,false,France,llm-relevance
+8,Germany,false,Germany,llm-relevance
+8,India,false,India,llm-relevance
+8,Japan,false,Japan,llm-relevance
+8,Kyoto,false,Kyoto,llm-relevance
+8,London,false,London,llm-relevance
+8,New Orleans,false,New Orleans,llm-relevance
+8,New York,false,New York,llm-relevance
+8,New York City,false,New York City,llm-relevance
+8,Paris,false,Paris,llm-relevance
+8,Scotland,false,Scotland,llm-relevance
+8,Spain,false,Spain,llm-relevance
+8,Turkey,false,Turkey,llm-relevance
+12,London,false,London,llm-relevance
+12,New England,false,New England,llm-relevance
+13,America,false,America,llm-relevance
+13,California,false,California,llm-relevance
+13,Chicago,false,Chicago,llm-relevance
+13,Florida,false,Florida,llm-relevance
+13,France,false,France,llm-relevance
+13,Israel,false,Israel,llm-relevance
+13,New York,false,New York,llm-relevance
+13,New York City,false,New York City,llm-relevance
+13,Paris,false,Paris,llm-relevance
+13,South America,false,South America,llm-relevance
+13,Texas,false,Texas,llm-relevance
+14,Alaska,false,Alaska,llm-relevance
+14,America,false,America,llm-relevance
+14,Arizona,false,Arizona,llm-relevance
+14,Asia,false,Asia,llm-relevance
+14,Australia,false,Australia,llm-relevance
+14,Brazil,false,Brazil,llm-relevance
+14,California,false,California,llm-relevance
+14,Canada,false,Canada,llm-relevance
+14,China,false,China,llm-relevance
+14,Colorado,false,Colorado,llm-relevance
+14,Ecuador,false,Ecuador,llm-relevance
+14,England,false,England,llm-relevance
+14,Europe,false,Europe,llm-relevance
+14,Florida,false,Florida,llm-relevance
+14,France,false,France,llm-relevance
+14,Georgia,false,Georgia,llm-relevance
+14,Hawaii,false,Hawaii,llm-relevance
+14,India,false,India,llm-relevance
+14,Ireland,false,Ireland,llm-relevance
+14,Japan,false,Japan,llm-relevance
+14,Kentucky,false,Kentucky,llm-relevance
+14,Madeira,false,Madeira,llm-relevance
+14,Mediterranean,false,Mediterranean,llm-relevance
+14,Mexico,false,Mexico,llm-relevance
+14,New Mexico,false,New Mexico,llm-relevance
+14,Oregon,false,Oregon,llm-relevance
+14,Roman,false,Roman,llm-relevance
+14,Romans,false,Romans,llm-relevance
+14,South Africa,false,South Africa,llm-relevance
+14,Southeast Asia,false,Southeast Asia,llm-relevance
+14,Texas,false,Texas,llm-relevance
+14,United States,false,United States,llm-relevance
+14,Washington,false,Washington,llm-relevance
+15,America,false,America,llm-relevance
+15,Beverly Hills,false,Beverly Hills,llm-relevance
+15,Boston,false,Boston,llm-relevance
+15,Broadway,false,Broadway,llm-relevance
+15,Chicago,false,Chicago,llm-relevance
+15,Philadelphia,false,Philadelphia,llm-relevance
+15,White House,false,White House,llm-relevance
+17,America,false,America,llm-relevance
+19,America,false,America,llm-relevance
+19,Broadway,false,Broadway,llm-relevance
+19,London,false,London,llm-relevance
+19,New York,false,New York,llm-relevance
+19,Paris,false,Paris,llm-relevance
+20,Britain,false,Britain,llm-relevance
+20,California,false,California,llm-relevance
+20,England,false,England,llm-relevance
+20,Europe,false,Europe,llm-relevance
+20,France,false,France,llm-relevance
+20,London,false,London,llm-relevance
+20,Rome,false,Rome,llm-relevance
+20,New England,false,New England,llm-relevance
+23,Austria,false,Austria,llm-relevance
+23,Paris,false,Paris,llm-relevance
+26,Chicago,false,Chicago,llm-relevance
+26,France,false,France,llm-relevance
+26,New York City,false,New York City,llm-relevance
+26,Paris,false,Paris,llm-relevance
+27,America,false,America,llm-relevance
+27,Australia,false,Australia,llm-relevance
+27,Brazil,false,Brazil,llm-relevance
+27,China,false,China,llm-relevance
+27,England,false,England,llm-relevance
+27,India,false,India,llm-relevance
+27,Japan,false,Japan,llm-relevance
+27,Las Vegas,false,Las Vegas,llm-relevance
+27,Park City,false,Park City,llm-relevance
+27,San Francisco,false,San Francisco,llm-relevance
+27,Vegas,false,Vegas,llm-relevance
+29,Florence,false,Florence,llm-relevance
+29,France,false,France,llm-relevance
+29,London,false,London,llm-relevance
+29,New York City,false,New York City,llm-relevance
+29,Paris,false,Paris,llm-relevance
+30,Britain,false,Britain,llm-relevance
+30,Canada,false,Canada,llm-relevance
+30,England,false,England,llm-relevance
+30,London,false,London,llm-relevance
+30,Texas,false,Texas,llm-relevance
+30,United States,false,United States,llm-relevance
+30,Virginia,false,Virginia,llm-relevance
+31,America,false,America,llm-relevance
+31,Chicago,false,Chicago,llm-relevance
+31,New York City,false,New York City,llm-relevance
+32,America,false,America,llm-relevance
+32,Asia,false,Asia,llm-relevance
+32,California,false,California,llm-relevance
+32,Canada,false,Canada,llm-relevance
+32,England,false,England,llm-relevance
+32,France,false,France,llm-relevance
+32,London,false,London,llm-relevance
+32,New York City,false,New York City,llm-relevance
+32,North America,false,North America,llm-relevance
+32,South America,false,South America,llm-relevance
+32,Texas,false,Texas,llm-relevance
+33,America,false,America,llm-relevance
+33,New York,false,New York,llm-relevance
+33,Paris,false,Paris,llm-relevance
+34,Chicago,false,Chicago,llm-relevance
+34,France,false,France,llm-relevance
+36,Boston,false,Boston,llm-relevance
+36,Florida,false,Florida,llm-relevance
+36,Indiana,false,Indiana,llm-relevance
+36,Michigan,false,Michigan,llm-relevance
+36,New England,false,New England,llm-relevance
+36,New Jersey,false,New Jersey,llm-relevance
+36,New York,false,New York,llm-relevance
+36,New York City,false,New York City,llm-relevance
+36,Ohio,false,Ohio,llm-relevance
+36,Paris,false,Paris,llm-relevance
+36,Texas,false,Texas,llm-relevance
+36,Virginia,false,Virginia,llm-relevance
+37,China,false,China,llm-relevance
+37,England,false,England,llm-relevance
+37,France,false,France,llm-relevance
+37,Germany,false,Germany,llm-relevance
+37,London,false,London,llm-relevance
+38,Chicago,false,Chicago,llm-relevance
+39,America,false,America,llm-relevance
+39,Broadway,false,Broadway,llm-relevance
+39,California,false,California,llm-relevance
+39,Canada,false,Canada,llm-relevance
+39,Chicago,false,Chicago,llm-relevance
+39,China,false,China,llm-relevance
+39,England,false,England,llm-relevance
+39,Florida,false,Florida,llm-relevance
+39,France,false,France,llm-relevance
+39,Las Vegas,false,Las Vegas,llm-relevance
+39,London,false,London,llm-relevance
+39,New York,false,New York,llm-relevance
+39,New York City,false,New York City,llm-relevance
+39,Pacific,false,Pacific,llm-relevance
+39,Paris,false,Paris,llm-relevance
+39,Texas,false,Texas,llm-relevance
+39,Virginia,false,Virginia,llm-relevance
+39,Washington,false,Washington,llm-relevance
+39,White House,false,White House,llm-relevance
+40,Atlanta,false,Atlanta,llm-relevance
+40,Chicago,false,Chicago,llm-relevance
+40,France,false,France,llm-relevance
+40,London,false,London,llm-relevance
+40,Massachusetts,false,Massachusetts,llm-relevance
+40,New York,false,New York,llm-relevance
+40,Ohio,false,Ohio,llm-relevance
+40,Texas,false,Texas,llm-relevance
+41,America,false,America,llm-relevance
+41,Atlanta,false,Atlanta,llm-relevance
+41,Australia,false,Australia,llm-relevance
+41,California,false,California,llm-relevance
+41,Chicago,false,Chicago,llm-relevance
+41,Cleveland,false,Cleveland,llm-relevance
+41,France,false,France,llm-relevance
+41,Germany,false,Germany,llm-relevance
+41,Japan,false,Japan,llm-relevance
+41,London,false,London,llm-relevance
+41,Los Angeles,false,Los Angeles,llm-relevance
+41,New York City,false,New York City,llm-relevance
+41,Ohio,false,Ohio,llm-relevance
+41,Paris,false,Paris,llm-relevance
+41,San Francisco,false,San Francisco,llm-relevance
+41,Seattle,false,Seattle,llm-relevance
+41,Washington,false,Washington,llm-relevance
+43,America,false,America,llm-relevance
+43,France,false,France,llm-relevance
+45,Boston,false,Boston,llm-relevance
+45,Bondi Beach,false,Bondi Beach,llm-relevance
+47,Canada,false,Canada,llm-relevance
+48,California,false,California,llm-relevance
+48,Canada,false,Canada,llm-relevance
+48,England,false,England,llm-relevance
+48,Europe,false,Europe,llm-relevance
+48,France,false,France,llm-relevance
+48,Great Britain,false,Great Britain,llm-relevance
+48,London,false,London,llm-relevance
+48,Rome,false,Rome,llm-relevance
+48,South Africa,false,South Africa,llm-relevance
+49,America,false,America,llm-relevance
+49,England,false,England,llm-relevance
+49,Assam,false,Assam,llm-relevance
+26,White,false,White,llm-relevance
+-1,African,false,African,llm-relevance
+-1,Australia,false,Australia,llm-relevance
+-1,Boston,false,Boston,llm-relevance
+-1,Canada,false,Canada,llm-relevance
+-1,Canadian,false,Canadian,llm-relevance
+-1,China,false,China,llm-relevance
+-1,Chinese,false,Chinese,llm-relevance
+-1,Dutch,false,Dutch,llm-relevance
+-1,England,false,England,llm-relevance
+-1,European,false,European,llm-relevance
+-1,Georgia,false,Georgia,llm-relevance
+-1,Indian,false,Indian,llm-relevance
+-1,Ireland,false,Ireland,llm-relevance
+-1,Italy,false,Italy,llm-relevance
+-1,Massachusetts,false,Massachusetts,llm-relevance
+-1,Mexico,false,Mexico,llm-relevance
+-1,Nevada,false,Nevada,llm-relevance
+-1,Pennsylvania,false,Pennsylvania,llm-relevance
+-1,Russian,false,Russian,llm-relevance
+-1,United States,false,United States,llm-relevance
+-1,Vietnam,false,Vietnam,llm-relevance
+-1,Virginia,false,Virginia,llm-relevance
+-1,Washington,false,Washington,llm-relevance
+-1,Roma,false,Roma,llm-relevance
+-1,Las Vegas,false,Las Vegas,llm-relevance
+-1,Amazon,false,Amazon,llm-relevance
+-1,According,false,According,llm-relevance
+-1,Though,false,Though,llm-relevance
+0,America,false,America,llm-relevance
+0,France,false,France,llm-relevance
+2,Alaska,false,Alaska,llm-relevance
+2,Asian,false,Asian,llm-relevance
+2,Brits,false,Brits,llm-relevance
+2,Hawaii,false,Hawaii,llm-relevance
+2,Ireland,false,Ireland,llm-relevance
+2,Manhattan,false,Manhattan,llm-relevance
+2,Navajo,false,Navajo,llm-relevance
+2,New Orleans,false,New Orleans,llm-relevance
+2,Pennsylvania,false,Pennsylvania,llm-relevance
+2,Russia,false,Russia,llm-relevance
+2,San Francisco,false,San Francisco,llm-relevance
+2,Spain,false,Spain,llm-relevance
+2,Tennessee,false,Tennessee,llm-relevance
+3,According,false,According,llm-relevance
+3,Britain,false,Britain,llm-relevance
+3,China,false,China,llm-relevance
+3,Ohio,false,Ohio,llm-relevance
+3,Pennsylvania,false,Pennsylvania,llm-relevance
+3,Russia,false,Russia,llm-relevance
+3,San Francisco,false,San Francisco,llm-relevance
+7,Alaska,false,Alaska,llm-relevance
+7,Great Britain,false,Great Britain,llm-relevance
+7,English,false,English,llm-relevance
+8,Australia,false,Australia,llm-relevance
+8,Ireland,false,Ireland,llm-relevance
+8,Italy,false,Italy,llm-relevance
+8,Rome,false,Rome,llm-relevance
+8,Venice,false,Venice,llm-relevance
+8,Chicago,false,Chicago,llm-relevance
+8,La,false,La,llm-relevance
+9,Italian,false,Italian,llm-relevance
+12,Irish,false,Irish,llm-relevance
+12,Italian,false,Italian,llm-relevance
+13,England,false,England,llm-relevance
+13,Filipino,false,Filipino,llm-relevance
+13,London,false,London,llm-relevance
+13,Russian,false,Russian,llm-relevance
+14,Africa,false,Africa,llm-relevance
+14,Arkansas,false,Arkansas,llm-relevance
+14,Costa Rica,false,Costa Rica,llm-relevance
+14,Egyptian,false,Egyptian,llm-relevance
+14,German,false,German,llm-relevance
+14,Hawaiian,false,Hawaiian,llm-relevance
+14,Holland,false,Holland,llm-relevance
+14,Italy,false,Italy,llm-relevance
+14,Louisiana,false,Louisiana,llm-relevance
+14,Massachusetts,false,Massachusetts,llm-relevance
+14,Maui,false,Maui,llm-relevance
+14,Mexican,false,Mexican,llm-relevance
+14,Michigan,false,Michigan,llm-relevance
+14,Netherlands,false,Netherlands,llm-relevance
+14,New York,false,New York,llm-relevance
+14,North America,false,North America,llm-relevance
+14,Ohio,false,Ohio,llm-relevance
+14,Panama,false,Panama,llm-relevance
+14,Russian,false,Russian,llm-relevance
+14,Scotland,false,Scotland,llm-relevance
+14,South Carolina,false,South Carolina,llm-relevance
+14,South America,false,South America,llm-relevance
+14,According,false,According,llm-relevance
+14,Despite,false,Despite,llm-relevance
+15,According,false,According,llm-relevance
+15,Though,false,Though,llm-relevance
+15,London,false,London,llm-relevance
+15,Los Angeles,false,Los Angeles,llm-relevance
+19,German,false,German,llm-relevance
+20,Completes,false,Completes,llm-relevance
+22,Canada,false,Canada,llm-relevance
+23,Spanish,false,Spanish,llm-relevance
+26,America,false,America,llm-relevance
+26,England,false,England,llm-relevance
+26,India,false,India,llm-relevance
+27,Australian,false,Australian,llm-relevance
+27,California,false,California,llm-relevance
+27,Canadian,false,Canadian,llm-relevance
+27,European,false,European,llm-relevance
+27,London,false,London,llm-relevance
+27,Scotland,false,Scotland,llm-relevance
+28,Roman,false,Roman,llm-relevance
+29,German,false,German,llm-relevance
+29,Rome,false,Rome,llm-relevance
+29,Spaniard,false,Spaniard,llm-relevance
+30,Florida,false,Florida,llm-relevance
+31,Philadelphia,false,Philadelphia,llm-relevance
+32,Arabic,false,Arabic,llm-relevance
+32,Chicago,false,Chicago,llm-relevance
+32,Maine,false,Maine,llm-relevance
+32,Paris,false,Paris,llm-relevance
+32,Swiss,false,Swiss,llm-relevance
+32,Completes,false,Completes,llm-relevance
+34,Switzerland,false,Switzerland,llm-relevance
+36,America,false,America,llm-relevance
+36,Montreal,false,Montreal,llm-relevance
+36,Ph,false,Ph,llm-relevance
+37,America,false,America,llm-relevance
+37,Cambridge,false,Cambridge,llm-relevance
+37,Paris,false,Paris,llm-relevance
+37,Sweden,false,Sweden,llm-relevance
+38,Boston,false,Boston,llm-relevance
+39,African,false,African,llm-relevance
+39,Asian,false,Asian,llm-relevance
+39,Germany,false,Germany,llm-relevance
+39,Hawaii,false,Hawaii,llm-relevance
+39,Hawaiian,false,Hawaiian,llm-relevance
+39,Irish,false,Irish,llm-relevance
+39,Japan,false,Japan,llm-relevance
+39,Mexico,false,Mexico,llm-relevance
+39,Michigan,false,Michigan,llm-relevance
+39,Pennsylvania,false,Pennsylvania,llm-relevance
+39,Philadelphia,false,Philadelphia,llm-relevance
+39,Roman,false,Roman,llm-relevance
+39,Rome,false,Rome,llm-relevance
+39,Russia,false,Russia,llm-relevance
+39,Wyoming,false,Wyoming,llm-relevance
+39,Gimme,false,Gimme,llm-relevance
+39,Proverbially,false,Proverbially,llm-relevance
+39,Tik,false,Tik,llm-relevance
+40,Arizona,false,Arizona,llm-relevance
+40,Boston,false,Boston,llm-relevance
+40,China,false,China,llm-relevance
+40,Illinois,false,Illinois,llm-relevance
+40,India,false,India,llm-relevance
+40,Israel,false,Israel,llm-relevance
+40,Mississippi,false,Mississippi,llm-relevance
+40,San Francisco,false,San Francisco,llm-relevance
+40,Soviet,false,Soviet,llm-relevance
+40,Virginia,false,Virginia,llm-relevance
+41,Europe,false,Europe,llm-relevance
+41,Greek,false,Greek,llm-relevance
+41,Latin,false,Latin,llm-relevance
+41,United States,false,United States,llm-relevance
+43,Completes,false,Completes,llm-relevance
+48,Italy,false,Italy,llm-relevance
+48,United States,false,United States,llm-relevance
+49,Indonesia,false,Indonesia,llm-relevance
+49,Japan,false,Japan,llm-relevance
+49,Madagascar,false,Madagascar,llm-relevance
+49,Norway,false,Norway,llm-relevance
+49,Washington,false,Washington,llm-relevance
