@@ -340,6 +340,18 @@ def test_apply_drops_remaps_and_default_keeps():
     assert "Grey" not in out and "Anatomy" not in out
 
 
+def test_rename_into_dropped_target_is_also_dropped():
+    counts = {"Canadian": 20, "Canada": 15, "Charles Dickens": 30}
+    decisions = {
+        "Canadian": (True, "Canada"),   # variant merges into Canada
+        "Canada": (False, "Canada"),    # ...but Canada itself is dropped (off-topic here)
+    }
+    out = apply_entity_decisions(counts, decisions)
+    assert "Canada" not in out          # not resurrected by the Canadian -> Canada rename
+    assert "Canadian" not in out
+    assert out["Charles Dickens"] == 30
+
+
 def test_apply_ignores_source_and_drops_relevance_rows(tmp_path):
     # A relevance-motivated drop (source=llm-relevance) behaves like any other
     # keep=False row: source is discarded at load and ignored on apply.

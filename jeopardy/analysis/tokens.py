@@ -150,6 +150,9 @@ def apply_entity_decisions(counts, cluster_decisions):
         if not keep:
             continue
         target = canonical if (canonical and canonical.strip()) else phrase
+        target_decision = cluster_decisions.get(target)
+        if target_decision is not None and not target_decision[0]:
+            continue  # target itself is dropped -> don't resurrect it via a rename
         out[target] = out.get(target, 0) + n
     return out
 
