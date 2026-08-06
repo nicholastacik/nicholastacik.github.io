@@ -261,6 +261,111 @@ Engine is `cabt` **module_version 1.32.3** — newer than the `1.30.1` the publi
 
 ---
 
+## 2026-08-05 — Engine runs. Search must guess the hidden information.
+
+Simulation rules accepted, engine downloaded, **first local games played.** Nearly
+every remaining risk is now retired, and one genuinely new design constraint
+surfaced.
+
+### No build step
+
+I'd flagged an unscoped C++ build as a risk. There isn't one — the SDK ships
+**prebuilt shared libraries for every platform**: `libcg.dylib` (macOS),
+`libcg.so` / `libcg-arm64.so` (Linux x86/ARM), `cg.dll` (Windows). `cg/sim.py`
+picks the right one and `ctypes` FFIs into it. The 60 C++ headers (1.3 MB, all
+under a *Competition-Use-Only* licence) are reference source, not a build target.
+Worth keeping: `CardImpl.h` is the authoritative answer to "how does this card
+actually resolve."
+
+`all_card_data()` returns exactly **1,267 entries**, independently confirming the
+card count derived from the CSV.
+
+### Speed: the variance problem is brute-forceable
+
+Random-vs-random, real ladder decklists, single core:
+
+| | random policy |
+|---|---|
+| per game | **39 ms** |
+| games/sec/core | **~25** |
+| decisions/game | 157–253 |
+
+The toy `deck.csv` (only 9 distinct cards) runs 13 ms/game; real 19–21-distinct
+decks are ~3× slower. Use real decks for all benchmarking.
+
+This reframes the measurement plan completely. I'd budgeted ~400 games per A/B
+comparison to reach ±5 points, and worried about the cost. **400 games is 16
+seconds on one core.** With real thinking agents (say 100 ms/decision × 200
+decisions = 20 s/game) it's ~2 core-hours, or minutes across the remote box. The
+statistical rigour is essentially free — there's no excuse for under-powered
+comparisons here, which is exactly the mistake the field appears to be making.
+
+### Search is fast, and enormous
+
+- `search_begin`: **0.39 ms**
+- `search_step`: **13,001 steps/sec**
+
+At the ~8 s/decision the budget allows, that's **~104,000 `search_step` calls per
+decision**. Against a median of 5 options per decision, that is a *lot* of tree.
+Full-turn sequence enumeration plus multi-turn lookahead across many sampled
+hidden-information worlds is comfortably affordable.
+
+So the field spending 182 ms/decision isn't leaving 40× on the table — the real
+multiple is far larger. Which makes `flxwld`'s loss (4 s/decision, and lost) more
+interesting, not less: with this much throughput available, spending time and still
+losing points at the evaluator or the determinization, not the search.
+
+### The design revelation: search is determinization, not simulation
+
+`search_begin` does **not** just fork the current state. Its signature demands a
+complete hypothesis about every hidden card:
+
+```python
+search_begin(agent_observation,
+             your_deck,        # your own remaining deck — you know the cards, not the order
+             your_prize,       # your 6 face-down prizes
+             opponent_deck, opponent_prize, opponent_hand,
+             opponent_active,  # only if their Active is face-down
+             manual_coin=False)
+```
+
+You cannot search without first *guessing* the hidden state. That makes this
+**Perfect-Information Monte Carlo / determinization** — the standard approach for
+imperfect-information games like Bridge and Skat: sample many consistent worlds,
+search each as if fully observable, average the results. It is not a detail of the
+API; it's the central algorithmic decision of the whole agent, and it was invisible
+from the public docs.
+
+Three consequences:
+
+1. **Your own deck order is hidden too.** You know your 60 cards because you
+   submitted them, but not the shuffle — so even your own draws must be sampled.
+   Bookkeeping (subtract everything seen) gets you an exact multiset for
+   `your_deck`, which is strictly better information than the opponent's side.
+2. **Opponent-deck inference is the edge, and the netdecking finding hands it to
+   us.** Decks are public in the next day's episode dump *and* lists are being
+   copied verbatim (`vvs` and `MissingNo.` submitted byte-identical Grimmsnarl).
+   So: mine an archetype → decklist table from the dumps, fingerprint the opponent
+   from their first few plays, and then determinize against their *actual known 60*
+   instead of a generic prior. That's close to perfect information about their deck
+   while everyone else guesses.
+3. **`manual_coin=True` makes coin flips choosable during search**, so best-case /
+   worst-case branches can be explored deliberately rather than sampled.
+
+This is now the most promising idea in the project and probably the spine of the
+Strategy report.
+
+### Small API notes
+
+- Terminal check is `state.result != -1` (`result` is the *winning player index*;
+  −1 means in progress). Getting this backwards makes every game look like an
+  instant loss.
+- `select.minCount` can be 0, so `[]` is sometimes the correct return — which
+  explains the empty `action: []` entries in the episode dumps.
+- Deck submission is signalled by `obs.select is None`, not by turn number.
+
+---
+
 ## 2026-08-05 — The real meta is Mega-era, and my archetype guesses were wrong
 
 Episodes carry the submitted decklist as a plain 60-integer action at
