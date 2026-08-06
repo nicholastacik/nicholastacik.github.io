@@ -244,9 +244,14 @@ Deadlines confirmed from the authenticated Kaggle API on 2026-08-05: Simulation
 - **Accept the Simulation competition rules** (`pokemon-tcg-ai-battle`). The API
   reports `userHasEntered: False` and downloads 403. This gates the engine, local
   play, and any ladder submission — the critical-path blocker.
-- Deck archetype: decide after mining episode dumps. Public signal points at
-  Dragapult ex, Gardevoir ex, Lucario, Charizard as ladder-dominant; the episode
-  dumps can confirm directly now that they're accessible.
+- Deck archetype: decide after a proper archetype census (mine a full day's
+  dataset, ~5,000 episodes, weighted by rating). **The press-derived guesses
+  (Dragapult/Gardevoir/Lucario/Charizard) are wrong** — none appear in 12 real
+  decklists. The pool is Mega-centric: Mega Kangaskhan ex leads the sample, with
+  Mega Lopunny/Froslass ex, Marnie's Grimmsnarl ex and an Alakazam line. Field
+  deck shape converges on 18–21 Pokémon / 32–34 Trainer / 7–10 Energy.
+- Note: our submitted deck becomes public in the next day's episode dump, so any
+  deck-building edge has a ~24h shelf life before it can be copied.
 - Trace schema: pin once the engine runs. The episode JSON format
   (`steps[i][player].observation` + `.action` + `.visualize`) is a strong
   candidate to mirror, since it's already what the ladder emits.

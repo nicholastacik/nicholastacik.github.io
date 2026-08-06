@@ -261,6 +261,54 @@ Engine is `cabt` **module_version 1.32.3** — newer than the `1.30.1` the publi
 
 ---
 
+## 2026-08-05 — The real meta is Mega-era, and my archetype guesses were wrong
+
+Episodes carry the submitted decklist as a plain 60-integer action at
+`steps[1][player].action` (step **1**, not 0 — step 0 is empty). Mapping those IDs
+through `EN_Card_Data.csv` gives complete, real decklists from the ladder.
+
+**This falsified the deck plan.** I'd written down Dragapult ex, Gardevoir ex,
+Lucario and Charizard from press coverage. **Not one of them appears in any of the
+12 decks.** Those are real-world tabletop archetypes; this pool is a different,
+Mega-centric format. What's actually here:
+
+| headline ex | decks (of 12) |
+|---|---|
+| Mega Kangaskhan ex | 4 |
+| Fezandipiti ex (utility) | 4 |
+| Mega Lopunny ex | 2 |
+| Mega Froslass ex | 2 |
+| Marnie's Grimmsnarl ex | 2 |
+| Cynthia's Garchomp ex, Latias ex, Meowth ex, Lillie's Clefairy ex, Raging Bolt ex, Ogerpon ex variants | 1 each |
+
+Plus a non-*ex* **Alakazam** (Abra → Kadabra → Alakazam + Rare Candy) line in 2
+decks. Lesson: never take deck knowledge from press coverage of a custom card pool.
+
+**Deck-shape convention.** The field clusters hard at **18–21 Pokémon / 32–34
+Trainer / 7–10 Energy**. Two informative outliers: "Where is my orbit" won on
+11/36/13 (Mega Kangaskhan, very trainer-heavy), and "James Cox & Henry Chao" lost
+on 17/27/16 running **eight different ex cards** — an unfocused toolbox pile, which
+is the classic beginner deck-building error and a nice contrast case for the post.
+
+**Consistency cards are near-universal.** `Buddy-Buddy Poffin` is in 7 of 12 decks
+at 4 copies. ACE SPEC choice (1 per deck) splits: Enriching Energy 4, Unfair Stamp
+3, Prime Catcher 2, Hero's Cape 2. That distribution is a cheap, strong prior for
+our own list.
+
+**Netdecking is rampant.** `vvs` and `MissingNo.` submitted **byte-identical**
+Marnie's Grimmsnarl decks in different episodes. Someone's list is circulating.
+Worth remembering that our submitted deck is public in the episode dumps within a
+day — anything clever we build gets copied before the deadline.
+
+**Caveat, stated plainly:** n=12 decks is a sample, not the meta. A real archetype
+census means mining a full day's dataset (~5,000 episodes) and weighting by rating.
+That's the next task once the deck decision comes up, and it's also the raw material
+for the meta-explorer figure. The `episodes-index` manifest already gives
+`episode_count`, `top_avg_score` and `median_avg_score` per day for the ladder-
+progression chart.
+
+---
+
 ## 2026-08-05 — Credentials resolved; engine still gated
 
 Credentials took two rounds. The first `~/.kaggle/kaggle.json` was a **bare API
