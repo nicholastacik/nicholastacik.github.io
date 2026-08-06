@@ -82,7 +82,7 @@ Ladder ranking is TrueSkill-style (Gaussian μ/σ).
 | Prize tempo as the evaluator's spine | PTCG is a race to six prizes. Nearly every good heuristic is a proxy for "am I taking prizes faster than they are." Anchoring the feature set here keeps it coherent rather than a bag of tricks. |
 | Time bank manager, not a per-move timeout | The limit is **10 minutes per player per game, cumulative**; exceeding it is an instant loss. That makes time a resource to *allocate*, like a chess clock — spend deeply on pivotal decisions, instantly on trivial ones. See below. |
 | Netdeck a proven archetype; do not invent a deck | Deck and policy must be co-designed — an evaluator that understands one line of play deeply beats a generic one. Archetype chosen after mining episode dumps. |
-| Seed-paired mirrored matches for all A/B testing | TCG outcomes are variance-dominated. Pairing cancels most of the luck term. See below. |
+| Seat-balanced A/B testing, with volume instead of common random numbers | TCG outcomes are variance-dominated, but **shared-shuffle pairing is impossible** — `ApiBattleStart` takes only cards and reseeds from `std::random_device`, so no two games share a shuffle (verified empirically). Seat balancing still cancels the first-player advantage exactly, and at 39 ms/game the ~400 games needed for ±5 points costs ~16 core-seconds. See below. |
 | Decision traces as the blog interface | The trace is instrumentation we need anyway ("why did it play *that*"). The replay viewer consumes the same artifact, so the post's centerpiece is a byproduct, not bolted-on work. |
 | Static precomputed replays, not a live engine | The site is Quarto → static GitHub Pages and `cabt` is a gated Python package. Nothing in the post can call the engine live. Matches the `jeopardy_ds/research/` and `montreal_events/events/` precedent. |
 
@@ -207,19 +207,29 @@ TCG outcomes are dominated by variance — mulligans, prize flips, draw order. A
 50-game A/B showing 56% is uninformative: the 95% interval on 50 games is about
 ±14 points. Reaching ±5 points needs roughly 400 games per comparison.
 
-Mitigation: **seed-paired mirrored matches.** Play every matchup twice with the
-same RNG seed and the seats/decks swapped, so both agents face the same draws
-from both sides. This cancels most of the luck term and sharply cuts the games
-needed for a given confidence. Standard in chess-engine testing, largely absent
-from Kaggle notebooks.
+**The textbook fix is unavailable.** Common random numbers — replaying the same
+shuffle for both agents, standard practice in chess-engine testing — cannot be
+done here. `ApiBattleStart(int* cards)` accepts only the decks, sets
+`config.seed = std::random_device()()`, and then overwrites the RNG with a fresh
+`std::seed_seq`. No seed parameter is exposed anywhere in the SDK. Confirmed
+empirically: eight runs of one deterministic policy gave different winners and
+decision counts.
 
-Requirements:
+What remains:
 
-- Tournament runner fanning out across the remote Linux box's cores.
-- Fixed seeds, paired mirrors, win rate reported with confidence intervals.
+- **Seat balancing.** Going first is a systematic edge, so every matchup is played
+  an equal number of times from each seat, cancelling that bias exactly. This is
+  the reachable half of pairing.
+- **Volume for the rest.** Shuffle luck must be beaten by sample size. Affordable:
+  at 39 ms/game the ~400 games for a ±5-point interval is ~16 core-seconds, and
+  the runner fans out across the remote box by process (the engine is a
+  process-global singleton, so threads are not an option).
+- **Wilson intervals, always.** Results are reported as a range with an explicit
+  "does the interval clear 50%" verdict, so an under-powered comparison looks
+  under-powered instead of persuasive.
 - A **fixed benchmark gauntlet** so progress is measured against a stable
-  yardstick, not a moving one: random agent, greedy-attack agent, the official
-  pilot agents, and our own prior versions.
+  yardstick, not a moving one: random agent, greedy-attack agent, and our own
+  prior versions.
 
 ## Layout
 
@@ -291,6 +301,9 @@ Deadlines confirmed from the authenticated Kaggle API on 2026-08-05: Simulation
   how deep it goes. This replaces "is search fast enough" as the central unknown.
 - **Trace-emission cost is still unmeasured.** Games are 39 ms; if tracing adds
   much, it must be a debug-only flag rather than always-on.
+- **No variance reduction via common random numbers** (see Measurement). Every
+  comparison must be sized with `games_for_margin` up front rather than run and
+  then interpreted hopefully.
 - 11 days is tight. Kaggle packaging and dependency constraints reliably eat a
   day.
 - Agent crashes are losses. Robustness (always return a legal fallback) is a

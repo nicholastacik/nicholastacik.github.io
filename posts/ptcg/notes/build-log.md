@@ -261,6 +261,76 @@ Engine is `cabt` **module_version 1.32.3** — newer than the `1.30.1` the publi
 
 ---
 
+## 2026-08-05 — You can't always use the textbook trick
+
+Writing the implementation plan turned up two errors that only surfaced because I
+tested the assumptions instead of coding against them. Both were load-bearing.
+
+### The variance-reduction plan was impossible
+
+The measurement design rested on **seed-paired mirrored matches** — common random
+numbers, the standard variance-reduction technique from chess-engine testing: play
+each matchup twice with the same shuffle and the seats swapped, so luck cancels.
+
+It cannot be done. `battle_start` takes no seed, and the reason is right there in
+`Api.h`:
+
+```cpp
+inline StartData ApiBattleStart(int* cards) {
+    std::random_device rd;
+    GameConfig config = {};
+    config.seed = rd();
+    ...
+    std::seed_seq seq{ rd(), rd(), rd(), rd() };
+    data->game.rng = std::mt19937(seq);
+```
+
+It seeds itself from `random_device` and then *overwrites* the RNG with a fresh
+`seed_seq`. There is no seed parameter anywhere in the exported API. Verified
+empirically before reading the header: eight runs of an identical deterministic
+policy gave different winners and decision counts (30, 163, 165, 22, 19 decisions).
+
+`Game.h` does have `if (config.seed == 0) config.seed = random_device()()`, so a
+deterministic mode exists in the engine — it just isn't reachable from Python.
+
+**What we do instead:** keep the half of pairing that is reachable — **seat
+balancing**, since going first is a real systematic edge — and beat shuffle luck
+with volume. That's affordable precisely because games are 39 ms: the ~400 games
+for a ±5-point interval is ~16 core-seconds. Every comparison gets sized up front
+with a `games_for_margin()` helper, and results always report a Wilson interval
+plus an explicit "does this clear 50%" verdict, so an under-powered result looks
+under-powered rather than persuasive.
+
+Good beat for the post: the textbook technique wasn't available, the constraint was
+in the C++ source rather than the docs, and the workaround was affordable only
+because of the earlier speed finding. Constraints compound.
+
+### The deck rule I had wrong
+
+`Api.h` also settles deck legality exactly, and I'd have shipped a bug: the 4-copy
+limit is enforced **by card name**, not card ID —
+
+```cpp
+int& count = nameCount[master.name];
+count++;
+if (count > DECK_SAME_CARD_MAX) { ... }
+```
+
+So three copies of one printing of *Ultra Ball* plus three of another printing is
+six copies of Ultra Ball and an illegal deck, even though no single card ID appears
+more than three times. My validator grouped by ID and would have called that legal.
+
+The engine's rejection codes, now known rather than guessed:
+
+| `errorType` | meaning |
+|---|---|
+| 1 | unknown card ID (not in `CardTable`) |
+| 2 | more than 4 copies of a card *name* (Basic Energy exempt) |
+| 3 | no Basic Pokémon in the deck |
+| 4 | more than one ACE SPEC |
+
+---
+
 ## 2026-08-05 — Engine runs. Search must guess the hidden information.
 
 Simulation rules accepted, engine downloaded, **first local games played.** Nearly
