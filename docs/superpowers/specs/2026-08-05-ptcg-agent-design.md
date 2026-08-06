@@ -53,9 +53,15 @@ Observation has three parts:
 Decks are CSVs of 60 card IDs, one per line, drawn from `all_card_data()`. During
 the deck-selection observation the agent returns 60 card IDs.
 
+The SDK ships **prebuilt shared libraries** — `libcg.dylib`, `libcg.so`,
+`libcg-arm64.so`, `cg.dll` — loaded via `ctypes` in `cg/sim.py`. **No build step.**
+The 60 C++ headers (1.3 MB, Competition-Use-Only licence) are reference source;
+`CardImpl.h` is the authoritative card-resolution reference.
+
 Other engine APIs: `battle_start`, `battle_select`, `battle_finish`,
-`visualize_data`, `all_card_data`, `all_attack`, and `search_begin()` /
-`search_step()` for state exploration. Local play:
+`visualize_data`, `all_card_data` (returns exactly **1,267** entries, confirming
+the pool size), `all_attack`, and `search_begin` / `search_step` / `search_end` /
+`search_release`. Local play:
 
 ```python
 env = make("cabt", configuration={"decks": [deck, deck]})
@@ -135,6 +141,63 @@ Options are typed variants. Observed frequency across 964 decisions:
 
 Types 0–6 appear in the low tens. Engine is `cabt` **module_version 1.32.3** —
 newer than the `1.30.1` pinned by `wmh/ptcg-abc`, so that pin is stale.
+
+## Search is determinization, not simulation
+
+**The single most important architectural finding**, invisible from the public
+docs. `search_begin` does not merely fork the current state — it requires a
+complete hypothesis about every hidden card:
+
+```python
+search_begin(agent_observation,
+             your_deck,        # your remaining deck: cards known, order not
+             your_prize,       # your 6 face-down prizes
+             opponent_deck, opponent_prize, opponent_hand,
+             opponent_active,  # only when their Active is face-down
+             manual_coin=False)
+```
+
+You cannot search without first guessing the hidden state. This makes the agent a
+**Perfect-Information Monte Carlo (determinization)** player: sample consistent
+worlds, search each as if observable, average. Standard for Bridge and Skat; it is
+the central algorithmic choice here, not an API detail.
+
+Consequences:
+
+1. **Own-deck bookkeeping.** We know our 60 cards (we submitted them) but not the
+   shuffle. Subtracting everything seen yields an exact multiset for `your_deck` —
+   strictly better information than we have about the opponent.
+2. **Opponent-deck inference is the competitive edge.** Decks are public in the
+   next day's episode dumps, and lists are copied verbatim (two teams submitted
+   byte-identical Grimmsnarl decks). So: mine an archetype → decklist table from
+   the dumps, fingerprint the opponent from their opening plays, then determinize
+   against their *actual known 60* rather than a generic prior. This is the
+   spine of the Strategy report.
+3. **`manual_coin=True`** makes coin flips choosable during search, enabling
+   deliberate best/worst-case branch exploration.
+
+## Verified performance
+
+Measured 2026-08-05, single core, random policy, real ladder decklists:
+
+| metric | value |
+|---|---|
+| game wall time | **39 ms** (13 ms with the 9-distinct-card sample deck) |
+| games/sec/core | **~25** |
+| decisions/game | 157–253 (random play; real agents run shorter) |
+| `search_begin` | **0.39 ms** |
+| `search_step` | **13,001 steps/sec** |
+| affordable steps per decision @ 8 s | **~104,000** |
+
+Two planning consequences:
+
+- **Statistical rigour is nearly free.** A 400-game comparison is ~16 core-seconds
+  at random speed; even at 20 s/game for thinking agents it's ~2 core-hours, or
+  minutes across the remote box. There is no excuse for under-powered A/Bs — which
+  appears to be exactly the field's mistake.
+- **Search depth is not the constraint; evaluator and determinization quality are.**
+  104k steps per decision is ample tree. Benchmark with real decks only — the
+  sample deck is 3× too fast to be representative.
 
 ## Measurement
 
@@ -221,29 +284,28 @@ Deadlines confirmed from the authenticated Kaggle API on 2026-08-05: Simulation
 
 ## Risks
 
-- **The engine is still unrun.** Schema, option taxonomy, time budget and search
-  serialization are now verified from real ladder episodes, but nothing has been
-  *executed* — the engine needs the Simulation competition's rules accepted (see
-  Open items). Unknowns that remain: the C++ build step, whether `search_step` is
-  fast enough to be worth calling, and trace-emission cost.
-- **`ptcg_engine/` is C++ headers, not Python.** `cabt` wraps a compiled core
-  (`CardImpl.h` alone is 878 KB). There is an unscoped build step. Upside: card
-  behaviour is readable source rather than inferred from card text.
+- ~~Engine unrun / unscoped build step~~ **Retired 2026-08-05.** Engine runs
+  locally from prebuilt libraries; no build step. Games and search benchmarked.
+- **Determinization quality is now the dominant risk.** Search requires guessing
+  all hidden cards, so a bad hidden-state model poisons the whole tree no matter
+  how deep it goes. This replaces "is search fast enough" as the central unknown.
+- **Trace-emission cost is still unmeasured.** Games are 39 ms; if tracing adds
+  much, it must be a debug-only flag rather than always-on.
 - 11 days is tight. Kaggle packaging and dependency constraints reliably eat a
   day.
 - Agent crashes are losses. Robustness (always return a legal fallback) is a
   correctness requirement, not polish — needs a test that fuzzes observations.
 - Card-pool rules are "based on official PTCG rules but uniquely adjusted for
   this tournament," so real-world deck knowledge may not transfer cleanly.
-- **Deep search may not pay.** The one observed agent spending real time lost. If
-  search doesn't beat greedy in the gauntlet, that is a finding to report, not a
-  failure to hide.
+- **Deep search may not pay.** The one observed agent spending real time lost. With
+  104k steps/decision affordable, a loss like that points at the evaluator or the
+  determinization rather than at search depth. If search doesn't beat greedy in the
+  gauntlet, that is a finding to report, not a failure to hide.
 
 ## Open items
 
-- **Accept the Simulation competition rules** (`pokemon-tcg-ai-battle`). The API
-  reports `userHasEntered: False` and downloads 403. This gates the engine, local
-  play, and any ladder submission — the critical-path blocker.
+- ~~Accept the Simulation competition rules~~ **Done 2026-08-05**; engine
+  downloaded to `ptcg/engine/` (gitignored, Competition-Use-Only licence).
 - Deck archetype: decide after a proper archetype census (mine a full day's
   dataset, ~5,000 episodes, weighted by rating). **The press-derived guesses
   (Dragapult/Gardevoir/Lucario/Charizard) are wrong** — none appear in 12 real
