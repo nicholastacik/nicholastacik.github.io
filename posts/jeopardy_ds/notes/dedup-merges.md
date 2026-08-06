@@ -4,6 +4,12 @@ draft: true
 
 # Entity dedup merges
 
+## era 1980, cluster -1
+- `Americans` -> `American`
+- `New York` -> `New York City`
+- `Mexico` -> `New Mexico`
+- `Africa` -> `South Africa`
+
 ## era 1980, cluster 0
 - `Dickens` -> `Charles Dickens`
 - `Charles` -> `Charles Dickens`
@@ -374,7 +380,6 @@ draft: true
 - `David` -> `Louis David`
 - `Gauguin` -> `Paul Gauguin`
 - `Rodin` -> `Auguste Rodin`
-- `Van Gogh` -> `Vincent van Gogh`
 - `Manet` -> `Edouard Manet`
 - `Degas` -> `Edgar Degas`
 - `Warhol` -> `Andy Warhol`
@@ -406,6 +411,7 @@ draft: true
 - `Homeland Security` -> `Department of Homeland Security`
 - `Agriculture` -> `Department of Agriculture`
 - `Commerce` -> `Department of Commerce`
+- `Interior` -> `Department of the Interior`
 
 ## era 1980, cluster 31
 - `Emmys` -> `Emmy`
@@ -651,6 +657,14 @@ draft: true
 - `Galapagos` -> `Galapagos Islands`
 - `Americas` -> `America`
 - `Egyptians` -> `Egyptian`
+
+## era 1990, cluster -1
+- `American` -> `American Red Cross`
+- `Americans` -> `American Red Cross`
+- `Red Cross` -> `American Red Cross`
+- `New York` -> `New York City`
+- `Mexico` -> `New Mexico`
+- `Africa` -> `South Africa`
 
 ## era 1990, cluster 0
 - `Dickens` -> `Charles Dickens`
@@ -1046,6 +1060,7 @@ draft: true
 - `Bill` -> `Bill of Rights`
 - `Homeland Security` -> `Department of Homeland Security`
 - `Agriculture` -> `Department of Agriculture`
+- `Interior` -> `Department of the Interior`
 
 ## era 1990, cluster 31
 - `Emmys` -> `Emmy`
@@ -1283,6 +1298,15 @@ draft: true
 - `Galapagos` -> `Galapagos Islands`
 - `Egyptians` -> `Egyptian`
 - `Americas` -> `America`
+
+## era 2000, cluster -1
+- `American` -> `American Red Cross`
+- `Americans` -> `American Red Cross`
+- `Red Cross` -> `American Red Cross`
+- `New York` -> `New York City`
+- `Mexico` -> `New Mexico`
+- `Africa` -> `South Africa`
+- `Vegas` -> `Las Vegas`
 
 ## era 2000, cluster 0
 - `Dickens` -> `Charles Dickens`
@@ -1622,7 +1646,6 @@ draft: true
 - `Texas` -> `Texas Hold`
 - `Vegas` -> `Las Vegas`
 - `White` -> `Charlie White`
-- `Ping` -> `Ping Hdqtrs`
 
 ## era 2000, cluster 28
 - `Christmas` -> `Christmas Carol`
@@ -1670,6 +1693,7 @@ draft: true
 - `Agriculture` -> `Department of Agriculture`
 - `Greek` -> `the Greek`
 - `New York` -> `New York City`
+- `Interior` -> `Department of the Interior`
 - `Bill` -> `Bill of Rights`
 
 ## era 2000, cluster 31
@@ -1894,6 +1918,13 @@ draft: true
 - `Darwin` -> `Charles Darwin`
 - `Egyptians` -> `Egyptian`
 - `Americas` -> `America`
+
+## era 2010, cluster -1
+- `American` -> `American Red Cross`
+- `Americans` -> `American Red Cross`
+- `Red Cross` -> `American Red Cross`
+- `Africa` -> `South Africa`
+- `World` -> `World War II`
 
 ## era 2010, cluster 0
 - `Dickens` -> `Charles Dickens`
@@ -2470,6 +2501,15 @@ draft: true
 - `America` -> `Americas`
 - `Egyptians` -> `Egyptian`
 
+## era 2020, cluster -1
+- `Americans` -> `American`
+- `New York` -> `New York City`
+- `Africa` -> `South Africa`
+- `South` -> `South Africa`
+- `Harry` -> `Harry Potter`
+- `John` -> `John Grisham`
+- `House` -> `White House`
+
 ## era 2020, cluster 0
 - `James` -> `James Joyce`
 - `Joyce` -> `James Joyce`
@@ -2497,7 +2537,6 @@ draft: true
 - `Americans` -> `Native Americans`
 - `Olympics` -> `Olympic`
 - `George` -> `George Washington`
-- `Washington` -> `George Washington`
 
 ## era 2020, cluster 3
 - `Americans` -> `American`
@@ -2688,6 +2727,7 @@ draft: true
 - `English` -> `Old English`
 - `Brits` -> `the Brits`
 - `Brit` -> `the Brits`
+- `Americans` -> `American`
 - `Christians` -> `Christian`
 - `Dutch` -> `South African of Dutch`
 - `African` -> `South African of Dutch`
@@ -2834,6 +2874,7 @@ draft: true
 - `Nixon` -> `Richard Nixon`
 - `New York` -> `New York City`
 - `Jackson` -> `Andrew Jackson`
+- `Taft` -> `William Howard Taft`
 - `Grover` -> `Grover Cleveland`
 - `Cleveland` -> `Grover Cleveland`
 - `Lincoln` -> `Abraham Lincoln`
@@ -2847,7 +2888,6 @@ draft: true
 - `Hoover` -> `Herbert Hoover`
 - `Gore` -> `Al Gore`
 - `Wilson` -> `Woodrow Wilson`
-- `William` -> `William Rufus De`
 - `Jefferson` -> `Thomas Jefferson`
 - `Carter` -> `Jimmy Carter`
 - `Franklin` -> `Franklin Delano Roosevelt`
@@ -2937,6 +2977,7 @@ draft: true
 - `Greeks` -> `Greek`
 - `John` -> `John Adams`
 - `Paine` -> `Thomas Paine`
+- `Paul` -> `Paul Sartre`
 - `George` -> `George Bernard Shaw`
 - `Hume` -> `David Hume`
 - `David` -> `David Hume`

@@ -8,6 +8,7 @@ import pandas as pd
 
 from jeopardy import config
 from jeopardy.analysis.dedup import canonicalize
+from jeopardy.analysis.misc_pool import misc_membership
 
 DEDUP_CANDIDATE_K = 150  # dedup the top-K by count per (era, cluster) before selecting top_n
 
@@ -266,6 +267,8 @@ def _write_merge_report(merges, path):
 def run_tokens(min_freq=5, top_n=25):
     clusters = pd.read_parquet(config.CATEGORY_CLUSTERS_PATH)
     clues = pd.read_parquet(config.PARQUET_PATH)
+    misc = misc_membership(clusters, config.MISC_FRACTION, config.MISC_ID)
+    clusters = pd.concat([clusters, misc], ignore_index=True)
     tokens_df, eras_df, merges = era_tokens(clusters, clues, config.ERA_CUTOFFS, min_freq, top_n)
     config.CATEGORY_TOKENS_PATH.parent.mkdir(parents=True, exist_ok=True)
     tokens_df.to_parquet(config.CATEGORY_TOKENS_PATH, index=False)
