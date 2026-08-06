@@ -92,10 +92,16 @@ def extract_phrases(text):
 
     A leading title word (e.g. "President") is dropped entirely, like a
     stopword, rather than emitted as its own phrase - it's noise, not an
-    entity, and the distinctive name that follows it survives.
+    entity, and the distinctive name that follows it survives. A capitalized
+    word immediately followed by "'t" is a contraction stem (e.g. "Don't" ->
+    "Don"), not an entity, and is skipped.
     """
+    text = text or ""
     out = []
-    for m in _PHRASE_RE.finditer(text or ""):
+    for m in _PHRASE_RE.finditer(text):
+        tail = text[m.end():m.end() + 2]
+        if tail[:1] in ("'", "’") and tail[1:2].lower() == "t":
+            continue
         phrase = _strip_leading_stopwords(m.group(0).strip())
         if phrase:
             out.append(phrase)

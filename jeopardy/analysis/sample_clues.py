@@ -69,7 +69,7 @@ def build_sample_clues(clusters_df, clues_df, decisions, k=3, general_n=25, min_
                 if phrase in resolution:
                     entity = resolution[phrase]
                     break
-            rec = {"clue": row.clue, "answer": answer, "year": int(row.year)}
+            rec = {"clue": row.clue, "answer": answer, "year": int(row.year), "category": row.category}
             if entity is not None:
                 by_entity.setdefault(entity, []).append(rec)
             general.append(rec)
@@ -81,7 +81,7 @@ def build_sample_clues(clusters_df, clues_df, decisions, k=3, general_n=25, min_
         pool = [r for r in general if (r["clue"], r["answer"]) not in seen]
         for rec in _spread(pool, general_n):
             out_rows.append({"cluster_id": int(cid), "phrase": None, **rec})
-    return pd.DataFrame(out_rows, columns=["cluster_id", "phrase", "clue", "answer", "year"])
+    return pd.DataFrame(out_rows, columns=["cluster_id", "phrase", "clue", "answer", "year", "category"])
 
 
 def run_sample_clues(min_freq=5):

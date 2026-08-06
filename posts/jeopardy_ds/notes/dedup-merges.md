@@ -18,7 +18,6 @@ draft: true
 - `Dick` -> `Moby Dick`
 - `Moby` -> `Moby Dick`
 - `Poe` -> `Edgar Allan Poe`
-- `Don` -> `Don Quixote`
 - `Faulkner` -> `William Faulkner`
 - `William` -> `William Faulkner`
 - `Steinbeck` -> `John Steinbeck`
@@ -44,7 +43,6 @@ draft: true
 - `Latin` -> `the Latin`
 - `New York` -> `New York City`
 - `Olympics` -> `Olympic`
-- `World` -> `World War II`
 - `Africa` -> `South Africa`
 - `Mexico` -> `New Mexico`
 
@@ -233,7 +231,6 @@ draft: true
 - `Pulitzer` -> `Pulitzer Prize`
 - `Oscar` -> `Oscar Wilde`
 - `Annie` -> `Annie Get Your Gun`
-- `Don` -> `Don Quixote`
 - `Sondheim` -> `Stephen Sondheim`
 - `Tony Awards` -> `Tony Award`
 
@@ -634,6 +631,7 @@ draft: true
 - `American` -> `American Idol`
 - `Black` -> `Black Eyed Peas`
 - `Hall` -> `Roll Hall of Fame`
+- `California` -> `Hotel California`
 - `Simon` -> `Paul Simon`
 
 ## era 1980, cluster 48
@@ -677,7 +675,6 @@ draft: true
 - `William` -> `William Faulkner`
 - `Poe` -> `Edgar Allan Poe`
 - `Steinbeck` -> `John Steinbeck`
-- `Don` -> `Don Quixote`
 - `Henry` -> `Henry James`
 - `Hawthorne` -> `Nathaniel Hawthorne`
 - `Eliot` -> `George Eliot`
@@ -851,6 +848,7 @@ draft: true
 - `Mexico` -> `New Mexico`
 - `Africa` -> `South Africa`
 - `Romans` -> `Roman`
+- `Indians` -> `Indian`
 
 ## era 1990, cluster 15
 - `Emmys` -> `Emmy`
@@ -880,7 +878,6 @@ draft: true
 - `Pulitzer` -> `Pulitzer Prize`
 - `Oscar` -> `Oscar Wilde`
 - `Annie` -> `Annie Get Your Gun`
-- `Don` -> `Don Quixote`
 - `Sondheim` -> `Stephen Sondheim`
 - `Tony Awards` -> `Tony Award`
 
@@ -1066,6 +1063,7 @@ draft: true
 - `New York` -> `New York City`
 - `Mary` -> `Mary Tyler Moore Show`
 - `American` -> `American Idol`
+- `Americans` -> `American Idol`
 - `House` -> `Full House`
 - `Angel` -> `Angels`
 
@@ -1073,10 +1071,10 @@ draft: true
 - `French` -> `the French`
 - `Latin` -> `the Latin`
 - `English` -> `Old English`
-- `American` -> `Native American`
-- `Americans` -> `Native American`
+- `Americans` -> `American`
 - `New York` -> `New York City`
 - `Brit` -> `Brits`
+- `South` -> `South American`
 
 ## era 1990, cluster 33
 - `Oscar` -> `Best Picture Oscar`
@@ -1249,6 +1247,7 @@ draft: true
 - `Americans` -> `American`
 - `Cleveland` -> `Cleveland Clinic`
 - `Red Cross` -> `American Red Cross`
+- `New` -> `New York`
 - `Stanford` -> `Stanford University`
 - `Carl` -> `Carl Jung`
 
@@ -1318,7 +1317,6 @@ draft: true
 - `Steinbeck` -> `John Steinbeck`
 - `Hemingway` -> `Ernest Hemingway`
 - `Poe` -> `Edgar Allan Poe`
-- `Don` -> `Don Quixote`
 - `Henry` -> `Henry James`
 - `Vonnegut` -> `Kurt Vonnegut`
 - `New York` -> `New York City`
@@ -1414,6 +1412,7 @@ draft: true
 - `Latin` -> `the Latin`
 - `Greek` -> `the Greek`
 - `New York` -> `New York City`
+- `Levi` -> `Levi Strauss`
 - `Chanel` -> `Coco Chanel`
 - `Mary` -> `Mary Jane`
 - `Dior` -> `Christian Dior`
@@ -1520,7 +1519,6 @@ draft: true
 - `Shaw` -> `George Bernard Shaw`
 - `Oscar` -> `Oscar Wilde`
 - `Pulitzer` -> `Pulitzer Prize`
-- `Don` -> `Don Quixote`
 - `August` -> `August Wilson`
 - `Sondheim` -> `Stephen Sondheim`
 - `Annie` -> `Annie Get Your Gun`
@@ -1934,7 +1932,6 @@ draft: true
 - `Austen` -> `Jane Austen`
 - `Lewis` -> `Lewis Carroll`
 - `Steinbeck` -> `John Steinbeck`
-- `Don` -> `Don Quixote`
 - `Henry` -> `Henry James`
 - `Hemingway` -> `Ernest Hemingway`
 - `Oscar` -> `Oscar Wilde`
@@ -2129,7 +2126,6 @@ draft: true
 - `George` -> `George Bernard Shaw`
 - `Shaw` -> `George Bernard Shaw`
 - `Pulitzer` -> `Pulitzer Prize`
-- `Don` -> `Don Quixote`
 - `August` -> `August Wilson`
 - `Annie` -> `Annie Get Your Gun`
 - `Mamet` -> `David Mamet`
@@ -2201,7 +2197,6 @@ draft: true
 - `Richard` -> `Richard Strauss`
 - `Liszt` -> `Franz Liszt`
 - `Symphony` -> `Symphony No`
-- `Don` -> `Don Giovanni`
 - `Elgar` -> `Edward Elgar`
 - `Figaro` -> `Marriage of Figaro`
 - `Holst` -> `Gustav Holst`
@@ -2296,7 +2291,6 @@ draft: true
 - `Emmys` -> `Emmy`
 - `New York` -> `New York City`
 - `Americans` -> `American`
-- `House` -> `House of Cards`
 - `Nine` -> `Brooklyn Nine`
 
 ## era 2010, cluster 32
@@ -2514,7 +2508,6 @@ draft: true
 - `Joyce` -> `James Joyce`
 - `Pulitzer` -> `Pulitzer Prize`
 - `George` -> `George Orwell`
-- `Don` -> `Don Quixote`
 - `Faulkner` -> `William Faulkner`
 - `William` -> `William Faulkner`
 - `Austen` -> `Jane Austen`
@@ -2546,6 +2539,7 @@ draft: true
 - `Michael` -> `Michael Douglas`
 - `Al` -> `Al Capone`
 - `Martin` -> `Martin Luther King`
+- `Bill` -> `Bill Clinton`
 
 ## era 2020, cluster 4
 - `Washington` -> `Washington Monument`
@@ -2692,7 +2686,6 @@ draft: true
 - `Pulitzer` -> `Pulitzer Prize`
 - `George` -> `George Bernard Shaw`
 - `Shaw` -> `George Bernard Shaw`
-- `Don` -> `Don Quixote`
 - `Annie` -> `Annie Get Your Gun`
 - `New York` -> `New York City`
 - `Oz` -> `Wizard of Oz`
@@ -2727,6 +2720,7 @@ draft: true
 - `English` -> `Old English`
 - `Brits` -> `the Brits`
 - `Brit` -> `the Brits`
+- `Americans` -> `American`
 - `Christians` -> `Christian`
 - `Dutch` -> `South African of Dutch`
 - `African` -> `South African of Dutch`
@@ -2758,7 +2752,6 @@ draft: true
 
 ## era 2020, cluster 23
 - `La` -> `La Scala`
-- `Don` -> `Don Giovanni`
 - `Figaro` -> `Marriage of Figaro`
 
 ## era 2020, cluster 24
@@ -2976,6 +2969,7 @@ draft: true
 - `Greeks` -> `Greek`
 - `John` -> `John Adams`
 - `Paine` -> `Thomas Paine`
+- `Paul` -> `Paul Sartre`
 - `George` -> `George Bernard Shaw`
 - `Hume` -> `David Hume`
 - `David` -> `David Hume`
