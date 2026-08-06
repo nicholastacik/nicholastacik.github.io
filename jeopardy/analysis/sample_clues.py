@@ -51,8 +51,10 @@ def build_sample_clues(clusters_df, clues_df, decisions, k=3, general_n=25, min_
     keys = ["game_id", "round", "category"]
     merged = clues_df.merge(clusters_df[keys + ["cluster_id"]], on=keys, how="inner")
     merged["year"] = pd.to_datetime(merged["air_date"]).dt.year
+    merged = merged[merged["year"].notna()]
+    base_rows = merged[merged["cluster_id"] != config.MISC_ID]
     surface = build_surface_counts(
-        list(merged["clue"].fillna("")) + list(merged["answer"].fillna(""))
+        list(base_rows["clue"].fillna("")) + list(base_rows["answer"].fillna(""))
     )
     out_rows = []
     for cid, sub in merged.groupby("cluster_id"):
@@ -61,7 +63,7 @@ def build_sample_clues(clusters_df, clues_df, decisions, k=3, general_n=25, min_
         by_entity = {}
         general = []
         for row in sub.sort_values("year").itertuples():
-            answer = row.answer or ""
+            answer = row.answer if isinstance(row.answer, str) else ""
             entity = None
             for phrase in extract_phrases(answer):
                 if phrase in resolution:

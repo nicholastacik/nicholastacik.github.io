@@ -46,3 +46,13 @@ def test_dropped_entity_gets_no_scoped_clues():
                "van Gogh": (False, "van Gogh")}}
     df = build_sample_clues(_clusters(), _clues(), decisions=dec, k=3, general_n=25, min_freq=5)
     assert df[df["phrase"] == "Vincent van Gogh"].empty
+
+
+def test_null_air_date_rows_are_dropped_not_crashing():
+    clusters = _clusters()
+    bad = _clues().iloc[[0]].copy()
+    bad["air_date"] = pd.NaT
+    clues = pd.concat([_clues(), bad], ignore_index=True)
+    df = build_sample_clues(clusters, clues, decisions={}, k=3, general_n=25, min_freq=5)
+    assert df["year"].notna().all()
+    assert df["year"].dtype.kind in ("i", "f") and (df["year"] == df["year"].astype(int)).all()
