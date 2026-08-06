@@ -212,12 +212,24 @@ presenters) and stitched the fragments back together: "Grey" + "Anatomy" → *Gr
 the pipeline only *reads*, so the render stays deterministic and I can hand-correct any call
 it gets wrong without re-running anything expensive.
 
+A second cleaning pass asked a sharper question — not just "is this a real entity?" but
+"does it belong to *this* topic?" That pulled valid-but-off-topic answers out of the wrong
+lists: "New York City" is a fine answer, but it's Geography, not **Books & Authors**, so it
+no longer clutters the authors list.
+
 ## A study tool
 
 The payoff is a lookup tool: pick a category type, see its most common (cleaned) entities,
 and jump straight to Wikipedia for each. It's live at [`research/`](research/), and it's
 filterable by era — from 1980 (all-time) up through 2020 — so you can watch a type's common
 answers shift decade by decade.
+
+Two more touches make it a study aid rather than a lookup: press **Sample clue** to draw a
+real clue from that category — highlight an answer first to be quizzed on that specific
+entity, or leave it un-highlighted for anything on the board — with the answer hidden until
+you ask for it. And a 51st list, **Misc: Hard to Classify**, gathers the categories the
+clustering was *least* sure about — the ones that sat farthest from any clean type — so the
+oddballs the other 50 lists smoothed over get a place to show themselves.
 
 ```{python}
 #| label: thumbnail
