@@ -71,6 +71,13 @@ def tokens(min_freq, top_n):
     run_tokens(min_freq=min_freq, top_n=top_n)
 
 
+@cli.command(name="sample-clues")
+def sample_clues():
+    """Build the per-(type, entity) sample-clue index for the research tool."""
+    from jeopardy.analysis.sample_clues import run_sample_clues
+    run_sample_clues()
+
+
 @cli.command()
 def research():
     """Generate the interactive research tool -> posts/jeopardy_ds/research/index.html."""
