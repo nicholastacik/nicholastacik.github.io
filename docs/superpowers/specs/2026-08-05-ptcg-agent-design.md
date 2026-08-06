@@ -26,7 +26,8 @@ debugging regardless.
 ## The environment
 
 `cabt` engine, built by the University of Tokyo's Matsuo Institute on top of
-`kaggle_environments` (pinned `1.30.1`). Not on public PyPI — the wheel and card
+`kaggle_environments` (observed `module_version` **1.32.3**). Not on public PyPI —
+the engine (C++ headers under `ptcg_engine/`) and card
 assets are distributed through the competition data page and require accepting
 the rules.
 
@@ -68,8 +69,8 @@ Ladder ranking is TrueSkill-style (Gaussian μ/σ).
 
 | Decision | Rationale |
 |---|---|
-| Heuristic evaluator first, forward search layered on second | The engine enumerates legal moves, so we never implement PTCG's rules — only *score* pre-validated options. A ~2,000-card game collapses into "rank this list," which is why rule-based agents are competitive here. Greedy ships fast and guarantees a ladder entry; search is the upgrade. |
-| Hard fallback from search → greedy | Search viability depends on `search_begin`/`search_step` ergonomics we have not run yet, and on the time budget. The fallback is not a consolation prize: the greedy-vs-search delta becomes a *measured result* in the report. |
+| Heuristic evaluator first, forward search layered on second | The engine enumerates legal moves, so we never implement PTCG's rules — only *score* pre-validated options. A 1,267-card game collapses into "rank this list," which is why rule-based agents are competitive here. Greedy ships fast and guarantees a ladder entry; search is the upgrade. |
+| Hard fallback from search → greedy | State serialization is confirmed (`search_begin_input` is a base64 state blob in every observation) and the time budget is confirmed ample, but `search_step` throughput is unrun. The fallback is not a consolation prize: the greedy-vs-search delta becomes a *measured result* in the report — especially since the one observed deep-thinking agent lost. |
 | No PPO / learned value function | No GPU, and 11 days to the Simulation deadline. A neural agent is a coin flip against a tuned heuristic on that timeline. |
 | Interpretable evaluator over marginally-stronger black box | Pokémon has said they want *transferable insight into how the game is best played*. Strategy judging rewards explicability. This also happens to be what the blog post needs — the same property serves both. |
 | Prize tempo as the evaluator's spine | PTCG is a race to six prizes. Nearly every good heuristic is a proxy for "am I taking prizes faster than they are." Anchoring the feature set here keeps it coherent rather than a bag of tricks. |
@@ -81,27 +82,59 @@ Ladder ranking is TrueSkill-style (Gaussian μ/σ).
 
 ## The time budget is a chess clock
 
-10 minutes per player per *game*, not per move. A game runs ~25 turns a side, and
-each turn is a sequence of decisions (play Supporter → attach Energy → evolve →
-retreat → attack), so expect 150–300 decision points per game — roughly 2–4
-seconds average per decision.
+**Verified 2026-08-05 against six real ladder episodes (12 agent-games, 964
+decisions).** Numbers below are measured, not estimated.
+
+Each agent gets **600 s per game**, and `remainingOverageTime` is exposed *inside
+the observation* — the agent can read its own clock and adapt depth.
+
+What the field actually spends: **median 13.5 s of 600 (2.2%)**, or 182 ms per
+decision. Decisions per agent per game run 39–153, median 74, so full budget is
+about **8 s per decision**. One agent of twelve (`flxwld`) spent 297.6 s (49.6%)
+at 4.0 s/decision — and lost that game.
 
 Two consequences:
 
-1. **Short-circuit forced moves.** When `len(options) == 1` there is nothing to
-   decide; return instantly at zero cost. Near-forced positions are similarly
-   cheap. If forced/trivial decisions are a large fraction of the total, this
-   hands most of the 10-minute bank to the ~30 decisions that actually decide the
-   game. Highest-leverage cheap win in the whole agent.
+1. **The unused clock is the opportunity.** ~98% of the budget sits idle across the
+   field. A search agent has room for roughly 40× the median competitor's thinking
+   per decision while staying inside budget. The caveat matters: the one agent
+   visibly using its budget isn't dominating, so deep search over a weak evaluator
+   is just an expensive way to be wrong. **Evaluator quality gates search depth**,
+   which is why greedy-first staging is right.
 2. **A turn is a sequence, not a move.** Playing your Supporter first constrains
    everything after it; the value of attaching Energy to a benched Pokémon only
    makes sense given a retreat planned three decisions later. Per-decision greedy
    scoring is myopic in exactly the way that loses games. Searching over the
-   turn's action *sequence* is where the strength is, and `search_begin` /
-   `search_step` exist to allow it.
+   turn's action *sequence* is where the strength is — and `search_begin_input` in
+   the observation is a base64 serialized engine state (1,938 occurrences
+   observed), so state is forkable from any decision point. **This retires the
+   spec's biggest architectural risk.**
+
+Correction to an earlier assumption: forced moves are **not** the big win. Only
+**10.8%** of decisions have a single option and 22.4% have ≤2; median is 5, tail
+out to 32. Short-circuiting forced moves is nearly free so we still do it, but it
+is a minor optimization rather than a strategy.
 
 The bank manager tracks elapsed time and degrades search depth as the bank
 depletes, with a guaranteed-cheap greedy path always available.
+
+## Decision taxonomy
+
+Options are typed variants. Observed frequency across 964 decisions:
+
+| type | payload | n | reading |
+|---|---|---|---|
+| 8 | `area, inPlayArea, inPlayIndex, index` | 1625 | attach to in-play Pokémon |
+| 7 | `index` | 1555 | plain indexed pick (hand card) |
+| 3 | `area, index, playerIndex` | 1432 | target a card in a player's area |
+| 14 | *(bare)* | 545 | pass / end |
+| 13 | `attackId` | 329 | declare attack |
+| 9 | `area, inPlayArea, inPlayIndex, index` | 288 | evolve (likely) |
+| 10 | `area, index` | 274 | — |
+| 12 | *(bare)* | 247 | done / decline |
+
+Types 0–6 appear in the low tens. Engine is `cabt` **module_version 1.32.3** —
+newer than the `1.30.1` pinned by `wmh/ptcg-abc`, so that pin is stale.
 
 ## Measurement
 
@@ -159,7 +192,7 @@ Schema to be pinned during the spike, once a real observation has been dumped.
 
 ## The post
 
-Spine: *a 2,000-card hidden-information game collapses into "rank this list" —
+Spine: *a 1,267-card hidden-information game collapses into "rank this list" —
 here is how far that gets you, and where it breaks.*
 
 Beats:
@@ -182,26 +215,38 @@ Beats:
 | Aug 16 | Simulation closes. |
 | Aug 17 – Sep 13 | Trace capture, replay viewer, post, Strategy report. |
 
-Sources disagree on the Strategy deadline (Sept 13 vs Sept 14) and on Simulation
-(Aug 16 vs Aug 17). Both are treated as the earlier date throughout; confirm
-against the competition pages once authenticated.
+Deadlines confirmed from the authenticated Kaggle API on 2026-08-05: Simulation
+**2026-08-16 23:59**, Strategy **2026-09-13 23:59**. Press reports that said Aug 17
+/ Sept 14 are wrong. Team counts: Strategy 311, Simulation 6,369.
 
 ## Risks
 
-- **Everything downstream of installing the engine is unverified.** The
-  observation schema, `search_*` ergonomics, and trace cost are inferred from
-  public docs, not run. Day 1 is a spike specifically to close this. If the
-  search API is unusable, we ship greedy and say so in the report.
+- **The engine is still unrun.** Schema, option taxonomy, time budget and search
+  serialization are now verified from real ladder episodes, but nothing has been
+  *executed* — the engine needs the Simulation competition's rules accepted (see
+  Open items). Unknowns that remain: the C++ build step, whether `search_step` is
+  fast enough to be worth calling, and trace-emission cost.
+- **`ptcg_engine/` is C++ headers, not Python.** `cabt` wraps a compiled core
+  (`CardImpl.h` alone is 878 KB). There is an unscoped build step. Upside: card
+  behaviour is readable source rather than inferred from card text.
 - 11 days is tight. Kaggle packaging and dependency constraints reliably eat a
   day.
 - Agent crashes are losses. Robustness (always return a legal fallback) is a
   correctness requirement, not polish — needs a test that fuzzes observations.
 - Card-pool rules are "based on official PTCG rules but uniquely adjusted for
   this tournament," so real-world deck knowledge may not transfer cleanly.
+- **Deep search may not pay.** The one observed agent spending real time lost. If
+  search doesn't beat greedy in the gauntlet, that is a finding to report, not a
+  failure to hide.
 
 ## Open items
 
-- Kaggle username needed to construct `~/.kaggle/kaggle.json` (the dropped file
-  contains a bare API key, not the JSON wrapper).
+- **Accept the Simulation competition rules** (`pokemon-tcg-ai-battle`). The API
+  reports `userHasEntered: False` and downloads 403. This gates the engine, local
+  play, and any ladder submission — the critical-path blocker.
 - Deck archetype: decide after mining episode dumps. Public signal points at
-  Dragapult ex, Gardevoir ex, Lucario, Charizard as ladder-dominant.
+  Dragapult ex, Gardevoir ex, Lucario, Charizard as ladder-dominant; the episode
+  dumps can confirm directly now that they're accessible.
+- Trace schema: pin once the engine runs. The episode JSON format
+  (`steps[i][player].observation` + `.action` + `.visualize`) is a strong
+  candidate to mirror, since it's already what the ladder emits.
