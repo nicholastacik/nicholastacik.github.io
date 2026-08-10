@@ -648,10 +648,10 @@
         const pick = choices[Math.floor(Math.random() * choices.length)];
         lastSampleClue = pick.clue;
         const scopeLabel = scoped
-          ? 'Answer is related to &ldquo;' + escapeHtml(selectedEntity.phrase) + '&rdquo;'
+          ? 'Answer is related to &ldquo;' + escapeHtml(selectedEntity.phrase) + '&rdquo; &middot; tap the answer again to broaden'
           : (fellBack
-              ? 'No clue for &ldquo;' + escapeHtml(selectedEntity.phrase) + '&rdquo; this era &mdash; showing another from this category'
-              : 'Any answer in this category &middot; un-highlight to broaden');
+              ? 'No clue for &ldquo;' + escapeHtml(selectedEntity.phrase) + '&rdquo; this era &mdash; showing another from this category (tap the answer again to broaden)'
+              : 'Any answer in this category');
         card.innerHTML = '<div class="sample-card">' +
           '<p class="scope">' + escapeHtml(pick.category) + ' &middot; ' + pick.year + '</p>' +
           '<p class="scope">' + scopeLabel + '</p>' +
@@ -698,6 +698,12 @@
       }
 
       async function selectEntity(entity) {
+        if (selectedEntity === entity) {
+          selectedEntity = null;
+          renderMain();
+          renderDetailEmpty();
+          return;
+        }
         selectedEntity = entity;
         renderMain();
         renderDetailLoading(entity);
