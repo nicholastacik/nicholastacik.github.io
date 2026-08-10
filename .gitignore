@@ -4,6 +4,7 @@
 __pycache__/
 .DS_Store
 .claude/settings.local.json
+.claude/worktrees/
 
 # Note: /_freeze/ is intentionally committed — it caches executed code output.
 
