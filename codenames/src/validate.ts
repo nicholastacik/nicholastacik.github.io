@@ -23,7 +23,7 @@ export function validateClue(resp: ClueResponse, state: GameState): { ok: boolea
   const clue = resp.clue.trim();
   if (clue.length === 0 || /\s|-/.test(clue)) violations.push("clue must be exactly one word");
 
-  const board = new Set(remainingWords(state).map(norm));
+  const board = new Set(state.words.map(norm));
   if (board.has(norm(clue))) violations.push("clue must not be a word on the board");
 
   if (resp.number !== resp.targets.length) violations.push("number must equal the count of targets");

@@ -31,13 +31,35 @@ describe("validateClue", () => {
     const r = validateClue({ reasoning: "", clue: "OCEAN", number: 1, targets: [notGreen] }, s);
     expect(r.ok).toBe(false);
   });
+  it("rejects a clue equal to a revealed board word", () => {
+    const s2 = createGame({ rng: rng(3) });
+    const w = s2.words[0]!;
+    s2.revealed[0] = true;
+    const r = validateClue({ reasoning: "", clue: w, number: 1, targets: aiGreens.slice(0, 1) }, s2);
+    expect(r.ok).toBe(false);
+  });
+  it("rejects a target that is an AI green but revealed", () => {
+    const s2 = createGame({ rng: rng(3) });
+    const greenIdx = s2.words.findIndex((_, i) => s2.keys.ai[i] === "green");
+    const greenWord = s2.words[greenIdx]!;
+    s2.revealed[greenIdx] = true;
+    const r = validateClue({ reasoning: "", clue: "OCEAN", number: 1, targets: [greenWord] }, s2);
+    expect(r.ok).toBe(false);
+  });
 });
 
 describe("filterGuesses", () => {
   const s = createGame({ rng: rng(3) });
   it("keeps board words (case-insensitive), drops junk + dupes", () => {
     const w0 = s.words[0]!;
-    const out = filterGuesses([w0.toLowerCase(), "NOTAWORD", w0], s);
+    const out = filterGuesses([w0.toLowerCase(), "NOTAWORD"], s);
     expect(out).toEqual([w0]);
+  });
+  it("drops revealed words", () => {
+    const s2 = createGame({ rng: rng(3) });
+    const w0 = s2.words[0]!;
+    s2.revealed[0] = true;
+    const out = filterGuesses([w0], s2);
+    expect(out).toEqual([]);
   });
 });
