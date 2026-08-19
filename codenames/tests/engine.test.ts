@@ -78,4 +78,104 @@ describe("engine", () => {
     s = guess(s, wordOfCategory(s, "bystander"));
     expect(s.status).toBe("lost");
   });
+
+  it("win condition: reaching 15 agents found", () => {
+    let s = createGame({ rng: rng(3) });
+    s.agentsFound = 14;
+    s = giveClue(s, "FINAL", 1);
+    s = guess(s, wordOfCategory(s, "green"));
+    expect(s.status).toBe("won");
+  });
+
+  it("sudden death green alternates guesser and does not decrement timer", () => {
+    let s = createGame({ rng: rng(3) });
+    s.suddenDeath = true;
+    s.phase = "awaitGuess";
+    const giverBefore = s.clueGiver;
+    const timerBefore = s.turnsRemaining;
+    s = guess(s, wordOfCategory(s, "green"));
+    expect(s.status).toBe("playing");
+    expect(s.clueGiver).not.toBe(giverBefore);
+    expect(s.turnsRemaining).toBe(timerBefore);
+  });
+
+  it("remainingWords returns all unrevealed words", () => {
+    const s = createGame({ rng: rng(3) });
+    expect(s.words.filter((_, i) => !s.revealed[i]).length).toBe(25);
+  });
+
+  it("aiGreenWordsRemaining returns unrevealed green words on AI's key", () => {
+    const s = createGame({ rng: rng(3) });
+    const aiGreen = s.words.filter((_, i) => s.keys.ai[i] === "green" && !s.revealed[i]);
+    expect(aiGreen.length).toBe(9);
+  });
+
+  it("immutability: guess does not mutate input state", () => {
+    let s = createGame({ rng: rng(3) });
+    s = giveClue(s, "TEST", 2);
+    const before = JSON.stringify(s);
+    guess(s, wordOfCategory(s, "green"));
+    const after = JSON.stringify(s);
+    expect(before).toBe(after);
+  });
+
+  it("immutability: giveClue does not mutate input state", () => {
+    const s = createGame({ rng: rng(3) });
+    const before = JSON.stringify(s);
+    giveClue(s, "TEST", 2);
+    const after = JSON.stringify(s);
+    expect(before).toBe(after);
+  });
+
+  it("immutability: endGuessing does not mutate input state", () => {
+    let s = createGame({ rng: rng(3) });
+    s = giveClue(s, "TEST", 2);
+    const before = JSON.stringify(s);
+    endGuessing(s);
+    const after = JSON.stringify(s);
+    expect(before).toBe(after);
+  });
+
+  it("giveClue during sudden death is a no-op with no history appended", () => {
+    let s = createGame({ rng: rng(3) });
+    s.suddenDeath = true;
+    const historyLenBefore = s.history.length;
+    s = giveClue(s, "NOPE", 5);
+    expect(s.suddenDeath).toBe(true);
+    expect(s.history.length).toBe(historyLenBefore);
+  });
+
+  it("giveClue when status is lost is a no-op with no history appended", () => {
+    let s = createGame({ rng: rng(3) });
+    s = giveClue(s, "OCEAN", 1);
+    s = guess(s, wordOfCategory(s, "assassin"));
+    expect(s.status).toBe("lost");
+    const historyLenBefore = s.history.length;
+    s = giveClue(s, "NOPE", 5);
+    expect(s.history.length).toBe(historyLenBefore);
+  });
+
+  it("calling guess when phase is awaitClue (no active clue) does not crash and does not reveal", () => {
+    const s = createGame({ rng: rng(3) });
+    expect(s.phase).toBe("awaitClue");
+    const revealedBefore = s.revealed.slice();
+    const result = guess(s, s.words[0]!);
+    expect(result.status).toBe("playing");
+    expect(result.revealed).toEqual(revealedBefore);
+  });
+
+  it("calling guess when status is not playing does not reveal", () => {
+    let s = createGame({ rng: rng(3) });
+    s = giveClue(s, "OCEAN", 1);
+    s = guess(s, wordOfCategory(s, "assassin"));
+    expect(s.status).toBe("lost");
+    const revealedBefore = s.revealed.slice();
+    const result = guess(s, s.words[0]!);
+    expect(result.revealed).toEqual(revealedBefore);
+  });
+
+  it("createGame sizes revealed array to words.length", () => {
+    const s = createGame({ rng: rng(3) });
+    expect(s.revealed.length).toBe(s.words.length);
+  });
 });

@@ -21,7 +21,7 @@ export function createGame(opts: {
   return {
     words,
     keys: generateKeyCardPair(rng),
-    revealed: Array(25).fill(false),
+    revealed: Array(words.length).fill(false),
     agentsFound: 0,
     turnsRemaining: START_TURNS,
     suddenDeath: false,
@@ -46,6 +46,7 @@ export function aiGreenWordsRemaining(state: GameState): string[] {
 }
 
 export function giveClue(state: GameState, clue: string, number: number): GameState {
+  if (state.status !== "playing" || state.suddenDeath === true) return state;
   const next = structuredClone(state);
   next.phase = "awaitGuess";
   next.currentClue = { word: clue, number, guessesMade: 0 };
@@ -66,9 +67,12 @@ function endTurn(state: GameState): GameState {
 }
 
 export function guess(state: GameState, word: string): GameState {
+  if (state.status !== "playing") return state;
+  if (!state.suddenDeath && state.currentClue === null) return state;
+
   const next = structuredClone(state);
   const idx = next.words.findIndex((w) => w === word);
-  if (idx < 0 || next.revealed[idx] || next.status !== "playing") return next;
+  if (idx < 0 || next.revealed[idx]) return next;
 
   const cat: Category = giverKey(next)[idx]!;
   next.revealed[idx] = true;
