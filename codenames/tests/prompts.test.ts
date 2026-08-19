@@ -24,16 +24,19 @@ describe("prompts", () => {
     s = giveClue(s, "OCEAN", 2);
     const msgs = buildGuessMessages(s);
     expect(msgs[1]!.content).toContain("OCEAN");
-    expect(msgs[1]!.content.toLowerCase()).not.toContain("assassin at"); // no key leak
+    // Category labels (assassin, bystander) only appear in system message, never in user message
+    expect(msgs[1]!.content).not.toMatch(/assassin|bystander/i); // no key-card leak
   });
 
   it("history is compact and omits reasoning", () => {
     let s = createGame({ rng: rng(3) });
     s = giveClue(s, "OCEAN", 1);
-    s = guess(s, s.words[giverKey(s).findIndex((c) => c === "green")]!);
+    const greenWord = s.words[giverKey(s).findIndex((c) => c === "green")]!;
+    s = guess(s, greenWord);
     const h = formatHistory(s);
-    expect(h).toContain("OCEAN");
-    expect(h.toLowerCase()).not.toContain("reasoning");
+    // Exact compact format: one line per turn, no reasoning fields or extra cruft
+    const expected = `human clued "OCEAN" 1 -> ${greenWord}=green`;
+    expect(h).toBe(expected);
   });
 
   it("repairMessage names the violations", () => {
