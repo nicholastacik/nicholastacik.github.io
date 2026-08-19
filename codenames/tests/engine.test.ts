@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createGame, giveClue, guess, endGuessing, giverKey } from "../src/engine";
+import { createGame, giveClue, guess, endGuessing, giverKey, remainingWords, aiGreenWordsRemaining } from "../src/engine";
 import type { GameState } from "../src/types";
 
 function rng(seed: number) {
@@ -101,13 +101,14 @@ describe("engine", () => {
 
   it("remainingWords returns all unrevealed words", () => {
     const s = createGame({ rng: rng(3) });
-    expect(s.words.filter((_, i) => !s.revealed[i]).length).toBe(25);
+    expect(remainingWords(s)).toHaveLength(25);
   });
 
   it("aiGreenWordsRemaining returns unrevealed green words on AI's key", () => {
     const s = createGame({ rng: rng(3) });
-    const aiGreen = s.words.filter((_, i) => s.keys.ai[i] === "green" && !s.revealed[i]);
-    expect(aiGreen.length).toBe(9);
+    const green = aiGreenWordsRemaining(s);
+    expect(green).toHaveLength(9);
+    expect(green.every(w => s.keys.ai[s.words.indexOf(w)] === "green")).toBe(true);
   });
 
   it("immutability: guess does not mutate input state", () => {
