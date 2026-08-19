@@ -44,4 +44,48 @@ describe("GameUI", () => {
     expect(localStorage.getItem("openai_key")).toBeNull();
     expect(sessionStorage.getItem("openai_key")).toBeNull();
   });
+
+  it("shades cells by the human keycard only when clueGiver is human, never the AI's", () => {
+    const ui = new GameUI(root, cb());
+    const s = createGame({ rng: rng(3) });
+
+    ui.render({ ...s, clueGiver: "human" });
+    const humanShaded = root.querySelectorAll(
+      ".cn-cell.shade-green, .cn-cell.shade-bystander, .cn-cell.shade-assassin"
+    );
+    // all 25 cells are unrevealed at game start, so all 25 get a shade class
+    expect(humanShaded.length).toBe(25);
+    const firstCell = root.querySelector("[data-cell]") as HTMLElement;
+    expect(firstCell.classList.contains(`shade-${s.keys.human[0]}`)).toBe(true);
+
+    ui.render({ ...s, clueGiver: "ai" });
+    const aiShaded = root.querySelectorAll(
+      ".shade-green, .shade-bystander, .shade-assassin"
+    );
+    expect(aiShaded.length).toBe(0);
+  });
+
+  it("shows a win badge when status is won", () => {
+    const ui = new GameUI(root, cb());
+    const s = createGame({ rng: rng(3) });
+    ui.render({ ...s, status: "won" });
+    expect(root.querySelector(".cn-badge-won")).not.toBeNull();
+    expect(root.textContent).toContain("YOU WIN");
+  });
+
+  it("shows a loss badge when status is lost", () => {
+    const ui = new GameUI(root, cb());
+    const s = createGame({ rng: rng(3) });
+    ui.render({ ...s, status: "lost" });
+    expect(root.querySelector(".cn-badge-lost")).not.toBeNull();
+    expect(root.textContent).toContain("YOU LOSE");
+  });
+
+  it("shows a sudden-death badge when suddenDeath is true", () => {
+    const ui = new GameUI(root, cb());
+    const s = createGame({ rng: rng(3) });
+    ui.render({ ...s, suddenDeath: true });
+    expect(root.querySelector(".cn-badge-sudden-death")).not.toBeNull();
+    expect(root.textContent).toContain("SUDDEN DEATH");
+  });
 });
