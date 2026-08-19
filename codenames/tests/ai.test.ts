@@ -41,6 +41,7 @@ describe("getAIClue", () => {
     const caller = scripted([bad, bad, bad]);
     const clue = await getAIClue(caller, s, () => {});
     expect(clue).toBeNull();
+    expect(caller.call).toHaveBeenCalledTimes(3);
   });
 
   it("passes (null) on refusal", async () => {
@@ -57,5 +58,19 @@ describe("getAIGuess", () => {
     const legal = s.words.slice(0, 2);
     const caller = scripted([ok<GuessResponse>({ reasoning: "", guesses: [...legal, "JUNK"] })]);
     expect(await getAIGuess(caller, s, () => {})).toEqual(legal);
+  });
+
+  it("returns [] on refusal", async () => {
+    let s = createGame({ rng: rng(3), firstClueGiver: "human" });
+    s = giveClue(s, "OCEAN", 2);
+    const caller = scripted([{ parsed: null, refusal: "no", finishReason: "stop" }]);
+    expect(await getAIGuess(caller, s, () => {})).toEqual([]);
+  });
+
+  it("returns [] when there is no parsed content", async () => {
+    let s = createGame({ rng: rng(3), firstClueGiver: "human" });
+    s = giveClue(s, "OCEAN", 2);
+    const caller = scripted([{ parsed: null, refusal: null, finishReason: "stop" }]);
+    expect(await getAIGuess(caller, s, () => {})).toEqual([]);
   });
 });
