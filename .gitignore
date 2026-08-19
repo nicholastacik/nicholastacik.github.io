@@ -17,3 +17,5 @@ jeopardy/data/
 # redistribution; re-fetch with `kaggle competitions download`.
 ptcg/data/
 ptcg/engine/
+
+codenames/node_modules
