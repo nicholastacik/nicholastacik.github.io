@@ -13,20 +13,25 @@ cooperative team and race to find all 15 agents before the timer runs out or an
 assassin is hit.
 
 The framing is a **"use AI in production" learning exercise**. The interesting
-engineering is not the game — it is the loop around the model call:
-**interpret → validate → repair**. What does the model return, how do you make
-that return reliable, and what do you do when it is illegal or the call fails?
+engineering is not the game — it is **getting the model to play well** (good
+clues, safe guesses) and the reliability loop around each call
+(**interpret → validate → repair**). Clue/guess quality is the intellectual
+center; the plumbing is supporting material.
 
 ### Deliverables
 
 - An interactive static page where a visitor plays Codenames Duet against an
   LLM partner, running entirely **client-side in the browser**.
-- A blog post (`posts/codenames/index.qmd`) narrating the build: the static +
-  BYOK architecture, and the interpret/validate/repair loop with real examples.
+- A blog post (`posts/codenames/index.qmd`) narrating the build: clue/guess
+  quality as the headline, backed by the static + BYOK architecture and the
+  interpret/validate/repair loop with real examples.
+- A dev-only offline eval harness that measures clue/guess quality.
 
 ### Learning goals (the "why")
 
 - Use an LLM in a real, shipped product.
+- **Get *good* clues and guesses out of the model — the intellectual center.**
+  Prompt engineering, steering away from the assassin, and measuring quality.
 - Interpret model responses reliably.
 - Handle invalid or failed responses gracefully.
 
@@ -69,12 +74,15 @@ backbone of the "interpret responses" goal, and Vite gives TS for free.
   - `src/keycards.ts` — generates a valid Duet key-card pair.
   - `src/ai.ts` — OpenAI interaction layer: prompt construction, SDK calls,
     typed response parsing.
+  - `src/prompts.ts` — versioned role-specific system prompts + few-shot
+    examples (the clue/guess-quality levers).
   - `src/validate.ts` — rule-legality checks + the bounded repair loop.
   - `src/ui.ts` — DOM rendering + event wiring (the *only* file that touches the
     DOM).
   - `src/main.ts` — wires engine ↔ ai ↔ ui together.
   - `src/words.ts` — curated word list (~400 words).
-  - `tests/` — Vitest specs.
+  - `tests/` — Vitest specs (mocked AI, no live API).
+  - `eval/` — dev-only offline eval harness (`npm run eval`, developer's key).
   - `package.json`, `vite.config.ts`, `tsconfig.json`.
 - `posts/codenames/index.qmd` — the blog write-up.
 - `posts/codenames/app/` — committed Vite `dist/` output, copied into the site
@@ -132,6 +140,29 @@ Two operations, each a single Structured-Outputs call:
 The guesser deliberately is *not* given a key card — in Duet the guesser only
 sees the board and infers meaning, exactly as a human partner would.
 
+### Context & history
+
+Every call includes the **game history**, not just current state — a clue-giver
+must avoid re-cluing already-found agents and remember what previously failed;
+a guesser needs prior clues to disambiguate. History is kept **compact**: only
+the structured facts per turn (who, clue word, number, guesses made, outcomes),
+**never** the verbose `reasoning` strings. A full 9-turn history is a few hundred
+tokens, so it does not need summarizing.
+
+Prompts are structured **cache-first**: the invariant rules + schema + few-shot
+examples come first (a stable prefix OpenAI can auto-cache), with the dynamic
+board / key-card / history appended last.
+
+### Token cost (BYOK reassurance)
+
+A typical full game is ~12 AI calls (~one per turn + sudden-death/repair extras),
+~1,600 input + ~300 output tokens per call → **~19K input + ~3.6K output per
+game**. At early-2026 pricing that is roughly **$0.005/game on a mini-class model
+(~200 games/$1)** to **~$0.08/game on a flagship model (~12 games/$1)**; prompt
+caching lowers the input side further. The dominant cost is the re-sent rules
+prompt, not history — which is why the cache-first structure above matters. (Model
+ids and exact prices are verified at build time; the token counts are stable.)
+
 ## Validation & invalid-response handling — the centerpiece
 
 Structured Outputs guarantees *schema*-valid JSON, so the malformed-text problem
@@ -176,6 +207,37 @@ reasoning / log" panel so the interpret → validate → repair loop is fully
 inspectable — this panel is also the source of the blog post's concrete
 examples.
 
+## Clue & guess quality — the intellectual center
+
+The hardest, most interesting problem is not plumbing — it is getting the model
+to *play well*: give clues that connect its own agents without pointing at the
+assassin, and guess sensibly. This is the primary "use AI in production" lesson
+and the headline of the blog post.
+
+Levers (kept in `src/prompts.ts`, versioned so changes are diffable):
+- **Role-specific system prompts** stating the objective and the danger (the
+  assassin is a hard loss; a bystander merely ends the turn).
+- **Few-shot examples** of good clues/guesses on sample boards.
+- **Reasoning-before-answer** in the schema (the `reasoning` field precedes the
+  `clue`/`guesses`) so the model "thinks" before committing — cheap quality win.
+- **Explicit risk framing** for the clue-giver: prefer covering fewer agents
+  safely over an ambitious clue that risks the assassin.
+
+These are iterated against the eval harness below rather than by vibes.
+
+## Offline eval harness
+
+A **dev-only** script (not shipped in the bundle, not run in CI) that measures
+clue/guess quality so prompt changes are judged by numbers, not vibes.
+
+- Location: `codenames/eval/`, run via `npm run eval`, using the developer's own
+  key from an env var (never committed).
+- Plays N full self-play games (AI in both roles) and/or scores clue-giving on a
+  set of fixture boards.
+- Metrics: win rate, agents found per game, **assassin-hit rate**, average
+  correct guesses per clue, illegal-clue rate, and repair-loop invocation rate.
+- Output: a small summary table feeding the blog post's quality discussion.
+
 ## UI / UX & key handling (`ui.ts`)
 
 - Standard 5×5 grid; the human's key card is visible only to the human (green /
@@ -215,10 +277,13 @@ Live API calls are never made in tests. Coverage:
 
 ## Blog post (`posts/codenames/index.qmd`)
 
-Narrates the build: the static + BYOK architecture and its honest tradeoff, and
-the interpret → validate → repair loop. The headline lesson is the reframing —
-with Structured Outputs, the model always returned valid JSON, so the real work
-was semantic legality, truncation, refusals, and rate limits, not text parsing.
+The **headline is clue/guess quality**: what makes the model play well, how it
+was steered away from the assassin, and the eval-harness numbers showing the
+improvement. Supporting material: the static + BYOK architecture and its honest
+tradeoff, the token-cost reality (dozens-to-hundreds of games per dollar), and
+the reframing of "handling responses" — with Structured Outputs the model always
+returned valid JSON, so the real plumbing was semantic legality, truncation,
+refusals, and rate limits, not text parsing.
 
 ## Decisions made (easy to revisit)
 
