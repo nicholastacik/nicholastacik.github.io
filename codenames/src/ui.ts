@@ -7,6 +7,7 @@ export interface UICallbacks {
   onEndGuessing(): void;
   onSaveKey(key: string, remember: boolean): void;
   onNewGame(): void;
+  onRetry(): void;
 }
 
 const KEY_NAME = "openai_key";
@@ -50,6 +51,8 @@ export class GameUI {
   private statusEl!: HTMLElement;
   private logEl!: HTMLElement;
   private errorEl!: HTMLElement;
+  private errorMsgEl!: HTMLElement;
+  private retryBtn!: HTMLButtonElement;
 
   constructor(root: HTMLElement, cb: UICallbacks) {
     this.root = root;
@@ -65,6 +68,16 @@ export class GameUI {
     this.errorEl = document.createElement("div");
     this.errorEl.className = "cn-error";
     this.errorEl.hidden = true;
+    this.errorMsgEl = document.createElement("span");
+    this.errorMsgEl.className = "cn-error-msg";
+    this.retryBtn = document.createElement("button");
+    this.retryBtn.type = "button";
+    this.retryBtn.textContent = "Retry";
+    this.retryBtn.className = "cn-retry";
+    this.retryBtn.hidden = true;
+    this.retryBtn.addEventListener("click", () => this.cb.onRetry());
+    this.errorEl.appendChild(this.errorMsgEl);
+    this.errorEl.appendChild(this.retryBtn);
     this.root.appendChild(this.errorEl);
 
     // Setup bar
@@ -252,10 +265,12 @@ export class GameUI {
   setError(msg: string | null): void {
     if (msg === null) {
       this.errorEl.hidden = true;
-      this.errorEl.textContent = "";
+      this.errorMsgEl.textContent = "";
+      this.retryBtn.hidden = true;
     } else {
       this.errorEl.hidden = false;
-      this.errorEl.textContent = msg;
+      this.errorMsgEl.textContent = msg;
+      this.retryBtn.hidden = false;
     }
   }
 }

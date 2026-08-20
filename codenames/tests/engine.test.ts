@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createGame, giveClue, guess, endGuessing, giverKey, remainingWords, aiGreenWordsRemaining } from "../src/engine";
+import { createGame, giveClue, guess, endGuessing, passTurn, giverKey, remainingWords, aiGreenWordsRemaining } from "../src/engine";
 import type { GameState } from "../src/types";
 
 function rng(seed: number) {
@@ -178,5 +178,48 @@ describe("engine", () => {
   it("createGame sizes revealed array to words.length", () => {
     const s = createGame({ rng: rng(3) });
     expect(s.revealed.length).toBe(s.words.length);
+  });
+
+  describe("passTurn", () => {
+    it("advances the turn: swaps clueGiver, decrements the timer, clears the clue", () => {
+      const s = createGame({ rng: rng(3), firstClueGiver: "ai" });
+      const next = passTurn(s);
+      expect(next.clueGiver).toBe("human");
+      expect(next.turnsRemaining).toBe(8);
+      expect(next.phase).toBe("awaitClue");
+      expect(next.currentClue).toBeNull();
+    });
+
+    it("sets suddenDeath when the timer hits 0", () => {
+      const s = createGame({ rng: rng(3) });
+      s.turnsRemaining = 1;
+      const next = passTurn(s);
+      expect(next.suddenDeath).toBe(true);
+    });
+
+    it("is a no-op when status is not playing", () => {
+      let s = createGame({ rng: rng(3) });
+      s = giveClue(s, "OCEAN", 1);
+      s = guess(s, wordOfCategory(s, "assassin"));
+      expect(s.status).toBe("lost");
+      const next = passTurn(s);
+      expect(next).toBe(s);
+    });
+
+    it("is a no-op when phase is not awaitClue", () => {
+      let s = createGame({ rng: rng(3) });
+      s = giveClue(s, "OCEAN", 1);
+      expect(s.phase).toBe("awaitGuess");
+      const next = passTurn(s);
+      expect(next).toBe(s);
+    });
+
+    it("does not mutate the input state", () => {
+      const s = createGame({ rng: rng(3) });
+      const before = JSON.stringify(s);
+      passTurn(s);
+      const after = JSON.stringify(s);
+      expect(before).toBe(after);
+    });
   });
 });

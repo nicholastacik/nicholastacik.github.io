@@ -5,7 +5,7 @@ import { createGame } from "../src/engine";
 function rng(seed: number) {
   return () => { seed |= 0; seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed>>>15),1|seed); t=(t+Math.imul(t ^ (t>>>7),61|t))^t; return ((t ^ (t>>>14))>>>0)/4294967296; };
 }
-const cb = () => ({ onClueSubmit: vi.fn(), onCellClick: vi.fn(), onEndGuessing: vi.fn(), onSaveKey: vi.fn(), onNewGame: vi.fn() });
+const cb = () => ({ onClueSubmit: vi.fn(), onCellClick: vi.fn(), onEndGuessing: vi.fn(), onSaveKey: vi.fn(), onNewGame: vi.fn(), onRetry: vi.fn() });
 
 describe("GameUI", () => {
   let root: HTMLElement;
@@ -87,5 +87,27 @@ describe("GameUI", () => {
     ui.render({ ...s, suddenDeath: true });
     expect(root.querySelector(".cn-badge-sudden-death")).not.toBeNull();
     expect(root.textContent).toContain("SUDDEN DEATH");
+  });
+
+  it("shows the retry button when setError is called with a message, hides it when cleared", () => {
+    const ui = new GameUI(root, cb());
+    ui.render(createGame({ rng: rng(3) }));
+    ui.setError("Rate limited — wait and retry.");
+    const retryBtn = root.querySelector(".cn-retry") as HTMLButtonElement;
+    expect(retryBtn).not.toBeNull();
+    expect(retryBtn.hidden).toBe(false);
+    expect(root.textContent).toContain("Rate limited — wait and retry.");
+
+    ui.setError(null);
+    expect(retryBtn.hidden).toBe(true);
+  });
+
+  it("clicking retry fires onRetry", () => {
+    const callbacks = cb();
+    const ui = new GameUI(root, callbacks);
+    ui.render(createGame({ rng: rng(3) }));
+    ui.setError("Oops");
+    (root.querySelector(".cn-retry") as HTMLElement).click();
+    expect(callbacks.onRetry).toHaveBeenCalled();
   });
 });
