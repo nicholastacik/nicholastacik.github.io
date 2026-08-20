@@ -97,3 +97,11 @@ export function endGuessing(state: GameState): GameState {
   if (state.status !== "playing" || state.phase !== "awaitGuess") return state;
   return endTurn(structuredClone(state));
 }
+
+// Advances the turn when a clue-giver passes without giving a clue at all
+// (only meaningful while awaiting a clue — there is nothing to "pass" once a
+// clue has been given, that's what endGuessing is for).
+export function passTurn(state: GameState): GameState {
+  if (state.status !== "playing" || state.phase !== "awaitClue") return state;
+  return endTurn(structuredClone(state));
+}

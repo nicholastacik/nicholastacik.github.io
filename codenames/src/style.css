@@ -32,11 +32,21 @@ body {
 }
 
 .cn-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
   background: #4a1f22;
   border: 1px solid var(--assassin);
   color: #f3c8c8;
   padding: 0.5rem 0.75rem;
   border-radius: 6px;
+}
+
+.cn-retry {
+  flex: 0 0 auto;
+  background: var(--assassin);
+  color: #f3c8c8;
 }
 
 .cn-setup {
