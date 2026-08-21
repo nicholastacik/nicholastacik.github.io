@@ -16,8 +16,7 @@ export interface GameState {
   keys: KeyCardPair;
   revealed: boolean[];             // 25; true once a word is covered
   agentsFound: number;             // 0..15
-  turnsRemaining: number;          // starts at 9
-  suddenDeath: boolean;
+  turnsRemaining: number;          // starts at 9; exhausting it with <15 agents found is a loss
   clueGiver: Player;               // who gives the next clue
   phase: "awaitClue" | "awaitGuess";
   currentClue: { word: string; number: number; guessesMade: number } | null;

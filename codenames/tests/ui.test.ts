@@ -81,14 +81,6 @@ describe("GameUI", () => {
     expect(root.textContent).toContain("YOU LOSE");
   });
 
-  it("shows a sudden-death badge when suddenDeath is true", () => {
-    const ui = new GameUI(root, cb());
-    const s = createGame({ rng: rng(3) });
-    ui.render({ ...s, suddenDeath: true });
-    expect(root.querySelector(".cn-badge-sudden-death")).not.toBeNull();
-    expect(root.textContent).toContain("SUDDEN DEATH");
-  });
-
   it("shows the retry button when setError is called with a message, hides it when cleared", () => {
     const ui = new GameUI(root, cb());
     ui.render(createGame({ rng: rng(3) }));
