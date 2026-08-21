@@ -1,0 +1,24 @@
+{
+  "name": "codenames-duet",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "eval": "tsx eval/run.ts"
+  },
+  "dependencies": {
+    "openai": "^7.5.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "jsdom": "^25.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.0",
+    "vite": "^5.4.0",
+    "vitest": "^2.1.0"
+  }
+}

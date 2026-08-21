@@ -1,0 +1,163 @@
+---
+title: "Playing Codenames Duet with an AI partner"
+description: "A browser game where your teammate is an LLM — and what it took to make its clues reliable."
+date: 2026-08-21
+categories: [AI, games, TypeScript]
+draft: true
+---
+
+## Play it
+
+[**Open the game →**](app/index.html) — bring your own OpenAI API key. It stays in
+your browser and is sent directly to OpenAI; it never touches a server of mine.
+
+## What this is
+
+[Codenames Duet](https://en.wikipedia.org/wiki/Codenames_(board_game)#Duet) is the
+two-player, fully-cooperative variant of Codenames: instead of two teams racing each
+other, you and a partner share the board and try to find all 15 of your agents
+together before a shared 9-turn timer runs out. Each of you sees a key card the other
+can't — so half the game is trusting a clue from someone who has information you
+don't.
+
+Here, the partner is an LLM. It takes turns being clue-giver (it can see its own key
+card, and has to describe *its* agents without touching a bystander or the assassin)
+and guesser (it sees only your clue and the board, and has to infer what you meant).
+
+## The headline: getting *good* clues, not parsing text
+
+The interesting problem here was never "get JSON out of the model." OpenAI's
+[Structured Outputs](https://platform.openai.com/docs/guides/structured-outputs) mean
+a response that matches a Zod schema is guaranteed — the model literally cannot return
+malformed JSON. The actual work was making the *content* of that JSON good: clues a
+human would find useful, and guesses that don't throw the game away on a hunch.
+
+A few things did most of the work:
+
+- **Role-specific system prompts.** Clue-giving and guessing are different jobs with
+  different failure modes, so they get separate prompts (`CLUE_SYSTEM` /
+  `GUESS_SYSTEM` in `src/prompts.ts`) rather than one prompt with a "you are either
+  the giver or the guesser" branch. The clue-giver's prompt is explicit about the
+  legality rules (one word, not on the board, count matches the target list) and
+  about *strategy*: prefer a clue that safely covers a couple of agents over an
+  ambitious one that risks pointing at a bystander or the assassin.
+- **A worked example, right in the system prompt.** Rather than describing the output
+  format abstractly, the clue prompt includes one concrete board → clue → reasoning
+  example. Cheap to write, and it does more for output quality than another paragraph
+  of rules.
+- **Reasoning before the answer.** Both schemas put a free-text `reasoning` field
+  first, ahead of `clue`/`targets` or `guesses`. Structured Outputs fills fields in
+  order, so this forces the model to work out *why* before it commits, instead of
+  pattern-matching straight to an answer and rationalizing it afterward.
+- **Steering away from the assassin explicitly**, not just implicitly through "be
+  careful." The rules block repeats it up front (the assassin ends the game
+  instantly; a bystander just burns the turn) and the strategy line names the tradeoff
+  by name, because "give a safe clue" without saying what "unsafe" costs is exactly
+  the kind of guidance a model will silently discount.
+- **Compact, cache-first prompts.** Every clue/guess request sends the same static
+  system message followed by a user message built from the current board and turn
+  history (`buildClueMessages` / `buildGuessMessages`). Nothing in the system prompt
+  changes turn-to-turn, which is what OpenAI's prompt caching needs to actually kick
+  in — and it also just keeps the prompt small.
+
+None of that is verifiable by reading the prompt, though — clue quality is an
+empirical claim, so it's measured, not asserted.
+
+### Results (from a local eval run)
+
+`eval/run.ts` plays the AI against itself — both clue-giver and guesser — for *N*
+full games and reports aggregate quality metrics: win rate, average agents found,
+how often it hit the assassin, the illegal-clue rate (before repair), and repairs per
+clue. It's a dev-only harness (`npm run eval`), never run in CI or tests, because it
+spends real OpenAI credits.
+
+To reproduce, from `codenames/`:
+
+```bash
+OPENAI_API_KEY=sk-... npm run eval -- 20
+```
+
+**To be filled in from a local run** — I haven't spent the API budget to generate
+these numbers yet, so I'm not going to make them up. When I run it, the aggregate
+table (`games`, `win rate`, `avg agents found`, `assassin rate`, `illegal clue rate`,
+`avg repairs / clue`) goes here:
+
+```
+games              :
+win rate            :
+avg agents found    :
+assassin rate        :
+illegal clue rate    :
+avg repairs / clue   :
+```
+
+## Architecture: a static site with no backend
+
+This whole project is static files served by GitHub Pages — the same as the rest of
+this site. There's no server that talks to OpenAI on the user's behalf, which means
+no server holding an API key, no server bill, and no server to maintain. It also
+means the browser calls OpenAI's API directly, which the `openai` SDK doesn't do by
+default — it's built assuming a trusted backend and refuses to run in a browser
+unless you pass `dangerouslyAllowBrowser: true`.
+
+That flag name is doing its job: it's an honest tradeoff, not a workaround. Bring
+your own key, and it stays yours — it's read into memory (optionally cached in
+`sessionStorage`, never `localStorage`, never logged), used for calls straight from
+your browser to OpenAI, and gone when the tab closes unless you asked it to
+remember. The alternative — a small proxy server that holds a shared key — would
+mean I'm paying for (and rate-limiting, and securing) everyone's games instead of
+each player paying for their own. For a hobby project, "no server" beats "my server,
+my API bill" every time.
+
+## Token cost
+
+Ballpark, a full game costs somewhere around **$0.005–$0.08**, depending on model and
+how many turns it takes to finish — call it somewhere between a dozen and a couple
+hundred games per dollar. The system prompts are static (helping prompt caching) and
+responses are capped at 1200 completion tokens, which is generous for a
+reasoning-then-answer clue or guess but not so generous the model can ramble.
+
+## Interpret → validate → repair
+
+Because Structured Outputs guarantees schema-valid JSON, "parsing the response" was
+never the hard part. The hard part was that schema-valid isn't the same as
+*legal* — the model can return perfectly well-formed JSON that breaks a game rule:
+a clue that's two words, a clue that's a word already on the board, a `number` that
+doesn't match the length of `targets`, a target that isn't actually one of its own
+remaining agents. `validateClue` in `src/validate.ts` checks all of that after the
+schema already passed.
+
+When a clue fails validation, `getAIClue` doesn't just discard it — it appends the
+bad response and a repair message (`repairMessage`, naming the specific violations)
+to the conversation and asks again, up to `MAX_REPAIRS` (2) times, before giving up
+and passing the turn. Guesses get a lighter touch: `filterGuesses` just silently
+drops any guessed word that isn't actually still on the board, since a guess can't
+break the game the way an illegal clue can.
+
+The other failure modes weren't about content at all:
+
+- **Truncation** — `finish_reason === "length"` means the model got cut off before
+  finishing the JSON. `getAIClue`/`getAIGuess` retry once rather than trying to parse
+  a half-written object.
+- **Refusals** — Structured Outputs can return a `refusal` field instead of
+  `parsed`. Treated as "pass the turn," logged, not retried.
+- **Auth and rate limits** — a 401 or 429 from the API is caught and turned into a
+  typed `LLMError` (`kind: "auth" | "rate_limit" | "network" | "other"`) so the UI can
+  show something actionable ("bad key" vs. "slow down") instead of a raw stack trace.
+
+So the pipeline is really interpret (schema, guaranteed) → validate (semantic
+legality, the actual work) → repair (bounded retry with the specific violation fed
+back), and everything below that is ordinary API-failure handling.
+
+## A design cut: no sudden death
+
+Real Codenames Duet has a sudden-death round if you run out of turns with a partial
+board: you keep going with harsher rules until someone wins or hits a bystander/the
+assassin. I cut it. Sudden death only makes sense if both players can keep playing
+normally, and the AI here has no notion of "I'm out of good clues, but I have to say
+*something* anyway" — every clue it gives already reflects its best guess about the
+current board, timer or no timer. Bolting a special extra-harsh mode onto a
+partner that doesn't have a concept of desperation would have been a lot of code to
+implement something the AI couldn't meaningfully play differently. So the rule here
+is simpler than the physical game's: run out the 9 turns without finding all 15
+agents, and it's a loss.
