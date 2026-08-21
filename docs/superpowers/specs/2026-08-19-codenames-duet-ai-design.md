@@ -116,9 +116,15 @@ State the engine tracks:
 - The 25 words and the two key cards.
 - Which cells have been revealed (and by which guess).
 - Whose turn it is (clue-giver vs. guesser alternates).
-- The **9-turn timer track** and the **sudden-death** phase when it runs out.
+- The **9-turn timer track**.
 - Terminal state: **win** (all 15 agents found) or **loss** (an assassin is
-  revealed, or the timer + sudden death end with agents remaining).
+  revealed, or the 9-turn timer is exhausted with agents still unfound).
+
+**No sudden-death phase** (decided 2026-08-21). Real Duet enters a clue-less
+sudden-death mode when the timer runs out, but our AI guesses by *interpreting a
+clue* and has no defined clue-less play, so sudden death is omitted: exhausting
+the timer with fewer than 15 agents found is simply a loss. This keeps the
+endgame well-defined and the controller simple.
 
 The engine is pure: given a state and a move, it returns the next state. No
 randomness beyond board/key-card setup (seedable for tests).

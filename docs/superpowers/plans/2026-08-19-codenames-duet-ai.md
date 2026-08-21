@@ -15,7 +15,7 @@
 - **Structured Outputs everywhere:** `client.chat.completions.parse({ ..., response_format: zodResponseFormat(Schema, "name"), max_completion_tokens })`. Read results via `choices[0].finish_reason`, `choices[0].message.refusal`, `choices[0].message.parsed`.
 - **Default model:** `DEFAULT_MODEL = "gpt-5.6"` (a GPT-5-class Structured-Outputs model per current OpenAI docs). UI-configurable; verify/upgrade the id at build time.
 - **Duet key-card contingency table** (rows = your card, cols = partner's): GG=3, GB=5, GA=1, BG=5, BB=7, BA=1, AG=1, AB=1, AA=1 → 9 green & 3 assassin per card, 15 unique agents, 1 mutual assassin.
-- **Timer:** 9 turns, then sudden death. **Win:** 15 agents found. **Lose:** assassin revealed, or a non-agent guessed in sudden death, or timer + sudden death exhausted with agents remaining.
+- **Timer:** 9 turns. **Win:** 15 agents found. **Lose:** assassin revealed, or the 9-turn timer is exhausted with fewer than 15 agents found. **No sudden-death phase** (decided 2026-08-21 — see spec; supersedes earlier task text mentioning sudden death).
 - **Pure files touch nothing else:** `engine.ts`/`keycards.ts`/`validate.ts`/`prompts.ts` are DOM- and network-free and fully unit-tested; `ui.ts` is the only DOM consumer; `ai.ts` is the only network consumer.
 - **Vite `base: "./"`** (relative paths — the app is served from a Pages subpath), **`build.outDir: "../posts/codenames/app"`**, **`emptyOutDir: true`**.
 - Commit after every task. Conventional-commit messages, scope `codenames`.
