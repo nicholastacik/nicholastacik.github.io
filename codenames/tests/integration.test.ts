@@ -107,6 +107,31 @@ describe("controller", () => {
     expect(state.currentClue?.word).toBe("OCEAN");
   });
 
+  it("retryAITurn resumes a pending AI guess turn after an LLMError from getAIGuess", async () => {
+    const { ui } = fakeUi();
+    let shouldFail = true;
+    const call = vi.fn(async (): Promise<LLMResult<any>> => {
+      if (shouldFail) { shouldFail = false; throw new LLMError("Rate limited — wait and retry.", "rate_limit"); }
+      return ok<GuessResponse>({ reasoning: "", guesses: [] });
+    });
+    const caller: LLMCaller = { call };
+    // default firstClueGiver ("human"): the human gives the clue, the AI guesses
+    const c = createController({ ui, makeCaller: () => caller, rng: rng(3) });
+
+    await c.newGame();
+    await c.submitClue("OCEAN", 1);
+
+    expect(ui.setError).toHaveBeenCalledWith("Rate limited — wait and retry.");
+    const stateAfterFailure = lastRendered(ui.render);
+    expect(stateAfterFailure.phase).toBe("awaitGuess");
+    expect(stateAfterFailure.clueGiver).toBe("human"); // human's turn's controls are still up — no forced forfeit
+
+    await c.retryAITurn();
+
+    expect(call).toHaveBeenCalledTimes(2);
+    expect(ui.setError).toHaveBeenLastCalledWith(null); // error cleared once the retry succeeds
+  });
+
   it("re-entrancy: concurrent triggers while an AI clue call is pending invoke the caller only once", async () => {
     const { ui } = fakeUi();
     const ref = createGame({ rng: rng(3), firstClueGiver: "ai" });
@@ -132,5 +157,40 @@ describe("controller", () => {
     await gamePromise;
 
     expect(call).toHaveBeenCalledTimes(1); // resolving didn't trigger any queued-up duplicate
+  });
+
+  it("a stale AI result from a previous game is discarded once a new game has started", async () => {
+    const { ui } = fakeUi();
+    let resolveFirst!: (v: LLMResult<any>) => void;
+    const firstPending = new Promise<LLMResult<any>>((res) => { resolveFirst = res; });
+    let invocation = 0;
+    // Game #1's clue fetch hangs (firstPending); game #2's clue fetch (any
+    // later invocation) resolves immediately as a refusal, so the AI simply
+    // passes — no board-specific "legal clue" bookkeeping needed for this test.
+    const call = vi.fn(async (): Promise<LLMResult<any>> => {
+      invocation++;
+      if (invocation === 1) return firstPending;
+      return { parsed: null, refusal: "no", finishReason: "stop" };
+    });
+    const caller: LLMCaller = { call: call as any };
+    const c = createController({ ui, makeCaller: () => caller, rng: rng(3), firstClueGiver: "ai" });
+
+    const firstGamePromise = c.newGame(); // game #1's AI clue turn: caller.call is now pending on firstPending
+    await c.newGame(); // starts game #2; its own AI clue turn resolves immediately (refusal -> pass)
+
+    const stateAfterGame2 = lastRendered(ui.render);
+    expect(stateAfterGame2.clueGiver).toBe("human"); // game #2's AI already passed
+    const turnsAfterGame2 = stateAfterGame2.turnsRemaining;
+
+    // now let game #1's stale call resolve
+    resolveFirst({ parsed: null, refusal: "also stale", finishReason: "stop" });
+    await firstGamePromise;
+
+    const finalState = lastRendered(ui.render);
+    // without the generation guard, this would apply a second, spurious
+    // passTurn() on top of game #2's already-passed state (decrementing the
+    // timer again and flipping clueGiver back to "ai")
+    expect(finalState.clueGiver).toBe("human");
+    expect(finalState.turnsRemaining).toBe(turnsAfterGame2);
   });
 });
