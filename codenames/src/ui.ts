@@ -228,12 +228,6 @@ export class GameUI {
     parts.push(`Agents found: ${state.agentsFound}/${TOTAL_AGENTS}`);
     this.statusEl.appendChild(document.createTextNode(parts.join(" · ")));
 
-    if (state.suddenDeath) {
-      const badge = document.createElement("span");
-      badge.className = "cn-badge cn-badge-sudden-death";
-      badge.textContent = "SUDDEN DEATH";
-      this.statusEl.appendChild(badge);
-    }
     if (state.status === "won") {
       const badge = document.createElement("span");
       badge.className = "cn-badge cn-badge-won";

@@ -69,13 +69,12 @@ describe("engine", () => {
     expect(s.phase).toBe("awaitClue");
   });
 
-  it("entering sudden death after the timer, a non-agent guess loses", () => {
+  it("exhausting the timer with fewer than 15 agents found is a loss", () => {
     let s = createGame({ rng: rng(3) });
     s.turnsRemaining = 1;               // arrange: one turn left
     s = giveClue(s, "OCEAN", 1);
-    s = endGuessing(s);                 // burns last token → sudden death
-    expect(s.suddenDeath).toBe(true);
-    s = guess(s, wordOfCategory(s, "bystander"));
+    s = endGuessing(s);                 // burns the last token
+    expect(s.turnsRemaining).toBe(0);
     expect(s.status).toBe("lost");
   });
 
@@ -85,18 +84,6 @@ describe("engine", () => {
     s = giveClue(s, "FINAL", 1);
     s = guess(s, wordOfCategory(s, "green"));
     expect(s.status).toBe("won");
-  });
-
-  it("sudden death green alternates guesser and does not decrement timer", () => {
-    let s = createGame({ rng: rng(3) });
-    s.suddenDeath = true;
-    s.phase = "awaitGuess";
-    const giverBefore = s.clueGiver;
-    const timerBefore = s.turnsRemaining;
-    s = guess(s, wordOfCategory(s, "green"));
-    expect(s.status).toBe("playing");
-    expect(s.clueGiver).not.toBe(giverBefore);
-    expect(s.turnsRemaining).toBe(timerBefore);
   });
 
   it("remainingWords returns all unrevealed words", () => {
@@ -135,15 +122,6 @@ describe("engine", () => {
     endGuessing(s);
     const after = JSON.stringify(s);
     expect(before).toBe(after);
-  });
-
-  it("giveClue during sudden death is a no-op with no history appended", () => {
-    let s = createGame({ rng: rng(3) });
-    s.suddenDeath = true;
-    const historyLenBefore = s.history.length;
-    s = giveClue(s, "NOPE", 5);
-    expect(s.suddenDeath).toBe(true);
-    expect(s.history.length).toBe(historyLenBefore);
   });
 
   it("giveClue when status is lost is a no-op with no history appended", () => {
@@ -190,11 +168,12 @@ describe("engine", () => {
       expect(next.currentClue).toBeNull();
     });
 
-    it("sets suddenDeath when the timer hits 0", () => {
+    it("sets status to lost when the timer hits 0", () => {
       const s = createGame({ rng: rng(3) });
       s.turnsRemaining = 1;
       const next = passTurn(s);
-      expect(next.suddenDeath).toBe(true);
+      expect(next.turnsRemaining).toBe(0);
+      expect(next.status).toBe("lost");
     });
 
     it("is a no-op when status is not playing", () => {

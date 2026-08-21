@@ -100,14 +100,11 @@ export function createController(deps: ControllerDeps) {
 
   async function clickCell(w: string): Promise<void> {
     if (busy) return;
-    // Ownership guard: outside sudden death, a cell click is only meaningful
-    // while the human is guessing against the AI's active clue — this also
-    // prevents a stray click from accidentally re-kicking the AI's clue turn
-    // (the old accidental click-to-retry side effect). Sudden death has no
-    // formal clue-giving step (engine.ts: giveClue no-ops once suddenDeath is
-    // true, so phase never leaves "awaitClue" again), so guessing there stays
-    // gated by guess() itself rather than by clueGiver/phase.
-    if (!state.suddenDeath && !(state.clueGiver === "ai" && state.phase === "awaitGuess")) return;
+    // Ownership guard: a cell click is only meaningful while the human is
+    // guessing against the AI's active clue — this also prevents a stray
+    // click from accidentally re-kicking the AI's clue turn (the old
+    // accidental click-to-retry side effect).
+    if (!(state.clueGiver === "ai" && state.phase === "awaitGuess")) return;
     state = guess(state, w);
     render();
     await maybeRunAIClueTurn();

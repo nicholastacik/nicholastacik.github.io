@@ -24,7 +24,6 @@ export function createGame(opts: {
     revealed: Array(words.length).fill(false),
     agentsFound: 0,
     turnsRemaining: START_TURNS,
-    suddenDeath: false,
     clueGiver: opts.firstClueGiver ?? "human",
     phase: "awaitClue",
     currentClue: null,
@@ -46,7 +45,7 @@ export function aiGreenWordsRemaining(state: GameState): string[] {
 }
 
 export function giveClue(state: GameState, clue: string, number: number): GameState {
-  if (state.status !== "playing" || state.suddenDeath === true) return state;
+  if (state.status !== "playing") return state;
   const next = structuredClone(state);
   next.phase = "awaitGuess";
   next.currentClue = { word: clue, number, guessesMade: 0 };
@@ -62,13 +61,15 @@ function endTurn(state: GameState): GameState {
   next.currentClue = null;
   next.clueGiver = next.clueGiver === "human" ? "ai" : "human";
   next.turnsRemaining -= 1;
-  if (next.turnsRemaining <= 0 && next.status === "playing") next.suddenDeath = true;
+  // Win is already detected in guess() before endTurn is ever reached, so
+  // exhausting the timer here means fewer than 15 agents were found: a loss.
+  if (next.turnsRemaining <= 0 && next.status === "playing") next.status = "lost";
   return next;
 }
 
 export function guess(state: GameState, word: string): GameState {
   if (state.status !== "playing") return state;
-  if (!state.suddenDeath && state.currentClue === null) return state;
+  if (state.currentClue === null) return state;
 
   const next = structuredClone(state);
   const idx = next.words.findIndex((w) => w === word);
@@ -83,13 +84,11 @@ export function guess(state: GameState, word: string): GameState {
   if (cat === "green") {
     next.agentsFound += 1;
     if (next.agentsFound >= TOTAL_AGENTS) { next.status = "won"; return next; }
-    if (next.suddenDeath) { next.clueGiver = next.clueGiver === "human" ? "ai" : "human"; return next; }
     next.currentClue!.guessesMade += 1;
     if (next.currentClue!.guessesMade >= next.currentClue!.number + 1) return endTurn(next);
     return next;
   }
   // bystander
-  if (next.suddenDeath) { next.status = "lost"; return next; }
   return endTurn(next);
 }
 

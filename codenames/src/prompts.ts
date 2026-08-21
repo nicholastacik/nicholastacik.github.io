@@ -49,7 +49,7 @@ export function buildClueMessages(state: GameState): ChatMessage[] {
   const user = `${boardBlock(state)}
 
 Your agents (words your partner must find from YOUR clues): ${green}
-Turns remaining: ${state.turnsRemaining}${state.suddenDeath ? " (SUDDEN DEATH)" : ""}
+Turns remaining: ${state.turnsRemaining}
 
 Game so far:
 ${formatHistory(state)}
@@ -66,7 +66,7 @@ export function buildGuessMessages(state: GameState): ChatMessage[] {
   const user = `${boardBlock(state)}
 
 Your partner's clue: "${clue.word}" for ${clue.number}.
-Turns remaining: ${state.turnsRemaining}${state.suddenDeath ? " (SUDDEN DEATH)" : ""}
+Turns remaining: ${state.turnsRemaining}
 
 Game so far:
 ${formatHistory(state)}
