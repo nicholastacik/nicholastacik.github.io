@@ -223,3 +223,30 @@ describe("controller.loadModels", () => {
     expect(ui.setError).toHaveBeenCalledWith("Invalid API key.");
   });
 });
+
+describe("controller logging (play-by-play)", () => {
+  it("logs the human's clue", async () => {
+    const { ui, logs } = fakeUi();
+    const caller: LLMCaller = { call: vi.fn(async (): Promise<LLMResult<any>> => ok<GuessResponse>({ reasoning: "", guesses: [] })) };
+    const c = createController({ ui, makeCaller: () => caller, rng: rng(3) });
+    await c.newGame();
+    await c.submitClue("OCEAN", 2);
+    expect(logs.some((l) => l.includes('You clued "OCEAN" for 2'))).toBe(true);
+  });
+
+  it("logs the human's guess and its result", async () => {
+    const { ui, logs } = fakeUi();
+    // replicate the controller's game (same seed) to find a valid AI clue target
+    const g = createGame({ rng: rng(3), firstClueGiver: "ai" });
+    const aiGreen = g.words.find((_, i) => g.keys.ai[i] === "green")!;
+    const clue: ClueResponse = { reasoning: "", clue: "ZZZCLUE", number: 1, targets: [aiGreen] };
+    const caller: LLMCaller = {
+      call: vi.fn(async (_m: any, _s: any, name: string): Promise<LLMResult<any>> =>
+        name === "clue" ? ok<ClueResponse>(clue) : ok<GuessResponse>({ reasoning: "", guesses: [] })),
+    };
+    const c = createController({ ui, makeCaller: () => caller, rng: rng(3), firstClueGiver: "ai" });
+    await c.newGame();          // AI gives its clue → now the human guesses
+    await c.clickCell(aiGreen); // human guesses the AI's agent
+    expect(logs.some((l) => l.startsWith(`You guessed ${aiGreen} →`))).toBe(true);
+  });
+});

@@ -1,4 +1,4 @@
-import type { GameState, Player } from "./types";
+import type { Category, GameState, Player } from "./types";
 import { createGame, giveClue, guess, endGuessing as engineEndGuessing, passTurn } from "./engine";
 import { getAIClue, getAIGuess, LLMError, type LLMCaller, type Logger } from "./ai";
 
@@ -41,6 +41,26 @@ export function createController(deps: ControllerDeps) {
 
   function render(): void {
     ui.render(state);
+  }
+
+  // --- play-by-play logging (bottom panel) ---
+  function guessLabel(cat: Category): string {
+    return cat === "green" ? "✓ agent" : cat === "assassin" ? "☠ assassin" : "bystander (turn over)";
+  }
+  function outcomesLen(): number {
+    return state.history[state.history.length - 1]?.outcomes.length ?? 0;
+  }
+  // Log the most recent guess's result, but only if a guess was actually
+  // recorded (a no-op guess leaves history unchanged — don't re-log an old one).
+  function logGuessResult(who: string, word: string, beforeLen: number): void {
+    const turn = state.history[state.history.length - 1];
+    if (turn && turn.outcomes.length > beforeLen) {
+      log(`${who} guessed ${word} → ${guessLabel(turn.outcomes[turn.outcomes.length - 1]!)}`);
+    }
+  }
+  function logEndState(): void {
+    if (state.status === "won") log("🎉 All 15 agents found — you win!");
+    else if (state.status === "lost") log("💥 Game over.");
   }
 
   function isAIsClueTurn(): boolean {
@@ -91,9 +111,12 @@ export function createController(deps: ControllerDeps) {
       if (gen !== generation) return; // stale: a new game started meanwhile
       for (const word of words) {
         if (state.phase !== "awaitGuess" || state.status !== "playing") break;
+        const beforeLen = outcomesLen();
         state = guess(state, word);
+        logGuessResult("AI", word, beforeLen);
         render();
       }
+      logEndState();
     } catch (e) {
       if (gen !== generation) return; // stale: don't surface a dead game's error
       if (e instanceof LLMError) { ui.setError(e.message); return; }
@@ -116,6 +139,7 @@ export function createController(deps: ControllerDeps) {
 
   async function submitClue(w: string, n: number): Promise<void> {
     if (busy) return;
+    log(`You clued "${w}" for ${n}.`);
     state = giveClue(state, w, n);
     render();
 
@@ -130,8 +154,11 @@ export function createController(deps: ControllerDeps) {
     // click from accidentally re-kicking the AI's clue turn (the old
     // accidental click-to-retry side effect).
     if (!(state.clueGiver === "ai" && state.phase === "awaitGuess")) return;
+    const beforeLen = outcomesLen();
     state = guess(state, w);
+    logGuessResult("You", w, beforeLen);
     render();
+    logEndState();
     await maybeRunAIClueTurn();
   }
 

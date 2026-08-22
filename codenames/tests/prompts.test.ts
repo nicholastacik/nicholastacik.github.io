@@ -28,6 +28,15 @@ describe("prompts", () => {
     expect(msgs[1]!.content).not.toMatch(/assassin|bystander/i); // no key-card leak
   });
 
+  it("guesser system prompt makes the bonus (N+1) guess conservative", () => {
+    let s = createGame({ rng: rng(3), firstClueGiver: "human" });
+    s = giveClue(s, "OCEAN", 2);
+    const sys = buildGuessMessages(s)[0]!.content.toLowerCase();
+    expect(sys).toContain("bonus");
+    expect(sys).toMatch(/earlier clue/);
+    expect(sys).toContain("stop after the clue's number");
+  });
+
   it("history is compact and omits reasoning", () => {
     let s = createGame({ rng: rng(3) });
     s = giveClue(s, "OCEAN", 1);
