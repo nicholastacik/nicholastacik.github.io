@@ -16,26 +16,35 @@ export class LLMError extends Error {
 }
 
 // Map an OpenAI SDK error to our typed LLMError. Shared by every network call.
-function toLLMError(e: any): LLMError {
+export function toLLMError(e: any): LLMError {
   const status = e?.status ?? e?.response?.status;
+  const msg: string = e?.message ?? "";
   if (status === 401) return new LLMError("Invalid API key.", "auth");
   if (status === 429) return new LLMError("Rate limited — wait and retry.", "rate_limit");
+  // Model doesn't support Structured Outputs (json_schema) — the picker filters
+  // most of these out, but a Custom pick (or a preview model) can still hit it.
+  if (status === 400 && /response_format|json_schema|structured output/i.test(msg))
+    return new LLMError(
+      "This model can’t return the structured responses this game needs. Pick a different model (a gpt-4o / gpt-4.1 / gpt-5 / o-series model).",
+      "other",
+    );
   if (e?.name === "APIConnectionError" || e instanceof TypeError)
     return new LLMError("Network error reaching OpenAI.", "network");
-  return new LLMError(e?.message ?? "Unknown OpenAI error.", "other");
+  return new LLMError(msg || "Unknown OpenAI error.", "other");
 }
 
-// Keep only chat-capable model ids from a raw /v1/models listing — the endpoint
-// returns embeddings, audio, image, moderation, etc. with no capability flags,
-// so we filter by id convention. Best-effort: it can't perfectly know which
-// models support Structured Outputs, so a stray incompatible pick just surfaces
-// an LLMError on use (handled). "Custom…" remains the escape hatch either way.
-// Deduped and sorted. Pure (unit-tested).
+// Keep only models suitable for this game from a raw /v1/models listing. The
+// endpoint returns embeddings, audio, image, moderation, etc. with no
+// capability flags, so we filter by id convention. INCLUDE is restricted to
+// families known to support Structured Outputs (json_schema) — which this game
+// requires — so non-SO models (gpt-3.5, gpt-4-turbo, legacy gpt-4, search
+// previews) stay out of the picker instead of 400-ing on use. Still best-effort
+// (e.g. o1-mini / some previews may not support SO); a stray pick surfaces a
+// clear error (see toLLMError) and "Custom…" remains the escape hatch. Deduped
+// and sorted. Pure (unit-tested).
 export function filterChatModels(ids: string[]): string[] {
-  // Note: "search" is intentionally NOT excluded (gpt-4o-search-preview is a
-  // real chat model); "deep-research" is excluded (async, not chat.completions).
-  const EXCLUDE = /embedding|whisper|tts|audio|realtime|transcribe|image|dall-e|moderation|deep-research|instruct|davinci|babbage/i;
-  const INCLUDE = /^(gpt-|o\d|chatgpt)/i;
+  const EXCLUDE = /embedding|whisper|tts|audio|realtime|transcribe|image|dall-e|moderation|deep-research|search|instruct|davinci|babbage/i;
+  const INCLUDE = /^(gpt-4o|gpt-4\.1|gpt-5|o[1-9]|chatgpt-4o)/i;
   const kept = new Set<string>();
   for (const id of ids) {
     if (INCLUDE.test(id) && !EXCLUDE.test(id)) kept.add(id);
