@@ -30,6 +30,10 @@ export function toLLMError(e: any): LLMError {
     );
   if (e?.name === "APIConnectionError" || e instanceof TypeError)
     return new LLMError("Network error reaching OpenAI.", "network");
+  // parse() throws LengthFinishReasonError when the model was cut off before it
+  // finished the JSON (common on reasoning models if the token budget is tight).
+  if (e?.name === "LengthFinishReasonError" || /length limit was reached/i.test(msg))
+    return new LLMError("The model ran out of output room before finishing. Try again, or pick a lighter model.", "other");
   return new LLMError(msg || "Unknown OpenAI error.", "other");
 }
 
@@ -67,7 +71,7 @@ export class OpenAICaller implements LLMCaller {
         model: this.opts.model,
         messages,
         response_format: zodResponseFormat(schema as any, name),
-        max_completion_tokens: 1200,
+        max_completion_tokens: MAX_OUTPUT_TOKENS,
       });
       const choice = completion.choices[0]!;
       return {
@@ -93,16 +97,19 @@ export async function listChatModels(apiKey: string): Promise<string[]> {
   }
 }
 
+// Generous output budget. Reasoning models (gpt-5.x, o-series) spend hidden
+// reasoning tokens that ALSO count against this cap, so a small value (e.g.
+// 1200) truncates before the JSON is produced — the SDK's parse() then throws
+// LengthFinishReasonError. Our actual JSON output is tiny (~a few hundred
+// tokens); this ceiling only needs to leave room for reasoning.
+const MAX_OUTPUT_TOKENS = 8192;
+
 const MAX_REPAIRS = 2;
 
 export async function getAIClue(caller: LLMCaller, state: GameState, log: Logger): Promise<ClueResponse | null> {
   const messages = buildClueMessages(state);
   for (let attempt = 0; attempt <= MAX_REPAIRS; attempt++) {
-    let res = await caller.call(messages, ClueSchema, "clue");
-    if (res.finishReason === "length") {
-      log("AI clue was cut off (truncated); retrying once.");
-      res = await caller.call(messages, ClueSchema, "clue");
-    }
+    const res = await caller.call(messages, ClueSchema, "clue");
     if (res.refusal) { log(`AI refused to clue: ${res.refusal}. Passing.`); return null; }
     if (!res.parsed) { log("AI returned no clue content. Passing."); return null; }
 
@@ -119,11 +126,7 @@ export async function getAIClue(caller: LLMCaller, state: GameState, log: Logger
 
 export async function getAIGuess(caller: LLMCaller, state: GameState, log: Logger): Promise<string[]> {
   const messages = buildGuessMessages(state);
-  let res = await caller.call(messages, GuessSchema, "guess");
-  if (res.finishReason === "length") {
-    log("AI guess was cut off; retrying once.");
-    res = await caller.call(messages, GuessSchema, "guess");
-  }
+  const res = await caller.call(messages, GuessSchema, "guess");
   if (res.refusal) { log(`AI refused to guess: ${res.refusal}. Passing.`); return []; }
   if (!res.parsed) { log("AI returned no guesses. Passing."); return []; }
 
