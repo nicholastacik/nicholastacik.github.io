@@ -87,10 +87,43 @@ body {
   white-space: nowrap;
 }
 
-.cn-note {
-  font-size: 0.78rem;
+.cn-privacy {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.6rem 0.85rem;
+  font-size: 0.8rem;
   color: var(--muted);
-  margin: 0;
+}
+
+.cn-privacy > summary {
+  cursor: pointer;
+  color: var(--text);
+  font-weight: 600;
+  font-size: 0.82rem;
+}
+
+.cn-privacy ul {
+  margin: 0.5rem 0 0.25rem;
+  padding-left: 1.1rem;
+}
+
+.cn-privacy li {
+  margin: 0.25rem 0;
+  line-height: 1.4;
+}
+
+.cn-privacy a {
+  color: var(--accent);
+}
+
+.cn-privacy-tip {
+  margin: 0.4rem 0 0;
+  color: var(--text);
+}
+
+.cn-clear-key {
+  color: var(--muted);
 }
 
 .cn-status {
