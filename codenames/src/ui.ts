@@ -76,6 +76,34 @@ export class GameUI {
   // A visible, plain-language explanation of exactly what happens to the key,
   // plus a link to the source and the safest-usage tip. Built with textContent
   // (no innerHTML) to keep the page free of injection surface.
+  // Collapsible "How to play" panel — the Duet rules as this game implements
+  // them (incl. our simplifications). Default collapsed; built with textContent.
+  private buildRulesPanel(): HTMLElement {
+    const panel = document.createElement("details");
+    panel.className = "cn-rules";
+
+    const summary = document.createElement("summary");
+    summary.textContent = "How to play";
+    panel.appendChild(summary);
+
+    const list = document.createElement("ul");
+    const rules = [
+      "You and the AI are partners (cooperative). Together, find all 15 agents before the 9-turn timer runs out.",
+      "You each see a different key card. Turn on “Show my key card” to shade the board with yours: green = your agents, tan = bystanders, dark = assassins.",
+      "Take turns: one partner gives a one-word clue + a number; the other clicks cells to guess.",
+      "A guess is judged by the clue-giver’s card: green = agent found (keep guessing), bystander = turn ends, assassin = you both lose instantly.",
+      "You may guess up to the clue’s number + 1 — that extra guess is meant for an agent left over from an earlier clue.",
+      "Win: all 15 agents found. Lose: hit an assassin, or the 9-turn timer runs out with agents still hidden.",
+    ];
+    for (const text of rules) {
+      const li = document.createElement("li");
+      li.textContent = text;
+      list.appendChild(li);
+    }
+    panel.appendChild(list);
+    return panel;
+  }
+
   private buildPrivacyPanel(): HTMLElement {
     const panel = document.createElement("details");
     panel.className = "cn-privacy";
@@ -221,6 +249,7 @@ export class GameUI {
     setupBar.appendChild(newGameBtn);
     this.root.appendChild(setupBar);
 
+    this.root.appendChild(this.buildRulesPanel());
     this.root.appendChild(this.buildPrivacyPanel());
 
     // Status line
