@@ -161,6 +161,19 @@ describe("GameUI", () => {
     expect(callbacks.onLoadModels).toHaveBeenCalled();
   });
 
+  it("shows a collapsible rules panel covering the key mechanics", () => {
+    const ui = new GameUI(root, cb());
+    ui.render(createGame({ rng: rng(3) }));
+    const panel = root.querySelector("details.cn-rules") as HTMLDetailsElement;
+    expect(panel).not.toBeNull();
+    expect(panel.open).toBe(false); // collapsed by default
+    expect(panel.querySelector("summary")!.textContent).toMatch(/how to play/i);
+    const text = panel.textContent!.toLowerCase();
+    expect(text).toContain("15 agents");
+    expect(text).toContain("assassin");
+    expect(text).toContain("number + 1");
+  });
+
   it("shows a privacy panel explaining key handling, with a source link", () => {
     const ui = new GameUI(root, cb());
     ui.render(createGame({ rng: rng(3) }));
