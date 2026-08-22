@@ -16,7 +16,11 @@ export interface ControllerDeps {
   makeCaller: (key: string, model: string) => LLMCaller;
   listModels?: (key: string) => Promise<string[]>;
   rng?: () => number;
+  // Fixed first clue-giver (overrides the coin flip). Mainly for tests.
   firstClueGiver?: Player;
+  // Decides who clues first each new game when firstClueGiver is unset:
+  // true → human, false → AI. Defaults to a 50/50 flip. Injectable for tests.
+  coinFlip?: () => boolean;
 }
 
 export function createController(deps: ControllerDeps) {
@@ -132,7 +136,10 @@ export function createController(deps: ControllerDeps) {
 
   async function newGame(): Promise<void> {
     generation += 1;
-    state = createGame({ rng: deps.rng, firstClueGiver: deps.firstClueGiver });
+    const flip = deps.coinFlip ?? (() => Math.random() < 0.5);
+    const first: Player = deps.firstClueGiver ?? (flip() ? "human" : "ai");
+    state = createGame({ rng: deps.rng, firstClueGiver: first });
+    log(first === "human" ? "New game — you give the first clue." : "New game — the AI gives the first clue.");
     render();
     await maybeRunAIClueTurn();
   }
