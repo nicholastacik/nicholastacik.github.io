@@ -8,10 +8,12 @@ export interface UICallbacks {
   onSaveKey(key: string, remember: boolean): void;
   onNewGame(): void;
   onRetry(): void;
+  onLoadModels(): void;
 }
 
 const KEY_NAME = "openai_key";
 const DEFAULT_MODEL = "gpt-5.6";
+const CUSTOM_MODEL = "__custom__";
 
 export function readSavedKey(): string {
   return sessionStorage.getItem(KEY_NAME) ?? "";
@@ -41,7 +43,8 @@ export class GameUI {
   private cb: UICallbacks;
 
   private keyInput!: HTMLInputElement;
-  private modelInput!: HTMLInputElement;
+  private modelSelect!: HTMLSelectElement;
+  private modelCustomInput!: HTMLInputElement;
   private rememberInput!: HTMLInputElement;
   private gridEl!: HTMLElement;
   private clueBarEl!: HTMLElement;
@@ -146,10 +149,24 @@ export class GameUI {
     this.keyInput.autocomplete = "off";
     this.keyInput.value = readSavedKey();
 
-    this.modelInput = document.createElement("input");
-    this.modelInput.type = "text";
-    this.modelInput.className = "cn-model-input";
-    this.modelInput.value = DEFAULT_MODEL;
+    this.modelSelect = document.createElement("select");
+    this.modelSelect.className = "cn-model-select";
+    this.modelSelect.title = "Model";
+    this.modelCustomInput = document.createElement("input");
+    this.modelCustomInput.type = "text";
+    this.modelCustomInput.className = "cn-model-custom";
+    this.modelCustomInput.placeholder = "model id";
+    this.modelCustomInput.hidden = true;
+    this.setModels([]); // seed with the default + "Custom…"
+    this.modelSelect.addEventListener("change", () => {
+      this.modelCustomInput.hidden = this.modelSelect.value !== CUSTOM_MODEL;
+    });
+
+    const loadModelsBtn = document.createElement("button");
+    loadModelsBtn.type = "button";
+    loadModelsBtn.textContent = "Load my models";
+    loadModelsBtn.className = "cn-load-models";
+    loadModelsBtn.addEventListener("click", () => this.cb.onLoadModels());
 
     const rememberLabel = document.createElement("label");
     rememberLabel.className = "cn-remember-label";
@@ -178,7 +195,9 @@ export class GameUI {
     newGameBtn.addEventListener("click", () => this.cb.onNewGame());
 
     setupBar.appendChild(this.keyInput);
-    setupBar.appendChild(this.modelInput);
+    setupBar.appendChild(this.modelSelect);
+    setupBar.appendChild(this.modelCustomInput);
+    setupBar.appendChild(loadModelsBtn);
     setupBar.appendChild(rememberLabel);
     setupBar.appendChild(saveKeyBtn);
     setupBar.appendChild(clearKeyBtn);
@@ -307,8 +326,36 @@ export class GameUI {
     this.logEl.appendChild(entry);
   }
 
+  // Populate the model dropdown with the user's available models (from their
+  // account), keeping a "Custom…" escape hatch. Preserves the current choice
+  // when still available, else falls back to the default, else the first model.
+  setModels(ids: string[]): void {
+    const prev = this.getModel(); // preserve the current choice where possible
+    const options = ids.length ? ids : [DEFAULT_MODEL];
+
+    this.modelSelect.replaceChildren(); // clearing a select we own (no innerHTML)
+    for (const id of options) {
+      const opt = document.createElement("option");
+      opt.value = id;
+      opt.textContent = id;
+      this.modelSelect.appendChild(opt);
+    }
+    const customOpt = document.createElement("option");
+    customOpt.value = CUSTOM_MODEL;
+    customOpt.textContent = "Custom…";
+    this.modelSelect.appendChild(customOpt);
+
+    if (options.includes(prev)) this.modelSelect.value = prev;
+    else if (options.includes(DEFAULT_MODEL)) this.modelSelect.value = DEFAULT_MODEL;
+    else this.modelSelect.value = options[0]!;
+    this.modelCustomInput.hidden = this.modelSelect.value !== CUSTOM_MODEL;
+  }
+
   getModel(): string {
-    return this.modelInput.value.trim() || DEFAULT_MODEL;
+    if (this.modelSelect.value === CUSTOM_MODEL) {
+      return this.modelCustomInput.value.trim() || DEFAULT_MODEL;
+    }
+    return this.modelSelect.value || DEFAULT_MODEL;
   }
 
   getKey(): string {

@@ -61,7 +61,8 @@ body {
 }
 
 .cn-setup input[type="password"],
-.cn-setup input[type="text"].cn-model-input {
+.cn-setup input[type="text"].cn-model-custom,
+.cn-setup select.cn-model-select {
   background: var(--bg);
   border: 1px solid var(--border);
   color: var(--text);
@@ -74,8 +75,9 @@ body {
   min-width: 140px;
 }
 
-.cn-model-input {
-  flex: 0 1 140px;
+.cn-model-select,
+.cn-model-custom {
+  flex: 0 1 160px;
 }
 
 .cn-remember-label {
@@ -296,7 +298,8 @@ button:hover {
     align-items: stretch;
   }
   .cn-key-input,
-  .cn-model-input {
+  .cn-model-select,
+  .cn-model-custom {
     flex: 1 1 auto;
   }
 }
