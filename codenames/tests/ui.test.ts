@@ -5,7 +5,7 @@ import { createGame } from "../src/engine";
 function rng(seed: number) {
   return () => { seed |= 0; seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed>>>15),1|seed); t=(t+Math.imul(t ^ (t>>>7),61|t))^t; return ((t ^ (t>>>14))>>>0)/4294967296; };
 }
-const cb = () => ({ onClueSubmit: vi.fn(), onCellClick: vi.fn(), onEndGuessing: vi.fn(), onSaveKey: vi.fn(), onNewGame: vi.fn(), onRetry: vi.fn() });
+const cb = () => ({ onClueSubmit: vi.fn(), onCellClick: vi.fn(), onEndGuessing: vi.fn(), onSaveKey: vi.fn(), onNewGame: vi.fn(), onRetry: vi.fn(), onLoadModels: vi.fn() });
 
 describe("GameUI", () => {
   let root: HTMLElement;
@@ -118,6 +118,41 @@ describe("GameUI", () => {
     expect(keyInput.value).toBe("");
     expect(sessionStorage.getItem("openai_key")).toBeNull();
     expect(localStorage.getItem("openai_key")).toBeNull();
+  });
+
+  it("setModels populates the dropdown and getModel returns the selected model", () => {
+    const ui = new GameUI(root, cb());
+    ui.render(createGame({ rng: rng(3) }));
+    ui.setModels(["gpt-4o", "gpt-4o-mini", "o3"]);
+    const select = root.querySelector(".cn-model-select") as HTMLSelectElement;
+    const values = Array.from(select.options).map((o) => o.value);
+    expect(values).toContain("gpt-4o");
+    expect(values).toContain("o3");
+    expect(values).toContain("__custom__"); // Custom escape hatch always present
+    select.value = "o3";
+    expect(ui.getModel()).toBe("o3");
+  });
+
+  it("selecting Custom reveals a text box and getModel returns the typed value", () => {
+    const ui = new GameUI(root, cb());
+    ui.render(createGame({ rng: rng(3) }));
+    ui.setModels(["gpt-4o"]);
+    const select = root.querySelector(".cn-model-select") as HTMLSelectElement;
+    const custom = root.querySelector(".cn-model-custom") as HTMLInputElement;
+    expect(custom.hidden).toBe(true);
+    select.value = "__custom__";
+    select.dispatchEvent(new Event("change"));
+    expect(custom.hidden).toBe(false);
+    custom.value = "gpt-5.9-preview";
+    expect(ui.getModel()).toBe("gpt-5.9-preview");
+  });
+
+  it("the Load-models button fires onLoadModels", () => {
+    const callbacks = cb();
+    const ui = new GameUI(root, callbacks);
+    ui.render(createGame({ rng: rng(3) }));
+    (root.querySelector(".cn-load-models") as HTMLElement).click();
+    expect(callbacks.onLoadModels).toHaveBeenCalled();
   });
 
   it("shows a privacy panel explaining key handling, with a source link", () => {

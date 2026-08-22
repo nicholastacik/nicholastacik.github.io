@@ -8,11 +8,13 @@ export interface ControllerUI {
   getKey(): string;
   getModel(): string;
   setError(msg: string | null): void;
+  setModels?(ids: string[]): void;
 }
 
 export interface ControllerDeps {
   ui: ControllerUI;
   makeCaller: (key: string, model: string) => LLMCaller;
+  listModels?: (key: string) => Promise<string[]>;
   rng?: () => number;
   firstClueGiver?: Player;
 }
@@ -157,12 +159,30 @@ export function createController(deps: ControllerDeps) {
     await maybeRunAIClueTurn();
   }
 
-  return { newGame, submitClue, clickCell, endGuessing, retryAITurn };
+  // Fetch the models this key can access and populate the picker. Independent
+  // of the game turn loop (a read-only account call), so it doesn't use the
+  // AI-turn busy guard.
+  async function loadModels(): Promise<void> {
+    if (!deps.listModels || !ui.setModels) return;
+    const key = ui.getKey();
+    if (!key) { ui.setError("Enter your API key first, then load models."); return; }
+    try {
+      ui.setError(null);
+      const models = await deps.listModels(key);
+      ui.setModels(models);
+      if (models.length === 0) ui.setError("No compatible chat models found for this key.");
+    } catch (e) {
+      if (e instanceof LLMError) ui.setError(e.message);
+      else throw e;
+    }
+  }
+
+  return { newGame, submitClue, clickCell, endGuessing, retryAITurn, loadModels };
 }
 
 // at bottom of main.ts — real app wiring (not exercised by jsdom tests)
 import { GameUI } from "./ui";
-import { OpenAICaller } from "./ai";
+import { OpenAICaller, listChatModels } from "./ai";
 import "./style.css";
 
 if (typeof document !== "undefined" && document.getElementById("app")) {
@@ -175,10 +195,12 @@ if (typeof document !== "undefined" && document.getElementById("app")) {
     onSaveKey: () => {},
     onNewGame: () => controller.newGame(),
     onRetry: () => controller.retryAITurn(),
+    onLoadModels: () => controller.loadModels(),
   });
   controller = createController({
     ui,
     makeCaller: (key, model) => new OpenAICaller({ apiKey: key, model }),
+    listModels: (key) => listChatModels(key),
   });
   controller.newGame();
 }

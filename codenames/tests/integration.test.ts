@@ -194,3 +194,32 @@ describe("controller", () => {
     expect(finalState.turnsRemaining).toBe(turnsAfterGame2);
   });
 });
+
+describe("controller.loadModels", () => {
+  it("populates models from the account", async () => {
+    const setModels = vi.fn();
+    const ui = { render: vi.fn(), log: vi.fn(), getKey: () => "sk-x", getModel: () => "gpt-4o", setError: vi.fn(), setModels };
+    const listModels = vi.fn(async () => ["gpt-4o", "o3"]);
+    const c = createController({ ui, makeCaller: () => ({ call: vi.fn() }), listModels, rng: rng(3) });
+    await c.loadModels();
+    expect(listModels).toHaveBeenCalledWith("sk-x");
+    expect(setModels).toHaveBeenCalledWith(["gpt-4o", "o3"]);
+  });
+
+  it("asks for a key when none is entered (no network call)", async () => {
+    const ui = { render: vi.fn(), log: vi.fn(), getKey: () => "", getModel: () => "gpt-4o", setError: vi.fn(), setModels: vi.fn() };
+    const listModels = vi.fn(async () => [] as string[]);
+    const c = createController({ ui, makeCaller: () => ({ call: vi.fn() }), listModels, rng: rng(3) });
+    await c.loadModels();
+    expect(listModels).not.toHaveBeenCalled();
+    expect(ui.setError).toHaveBeenCalled();
+  });
+
+  it("surfaces an LLMError (e.g. bad key) via setError", async () => {
+    const ui = { render: vi.fn(), log: vi.fn(), getKey: () => "sk-bad", getModel: () => "gpt-4o", setError: vi.fn(), setModels: vi.fn() };
+    const listModels = vi.fn(async () => { throw new LLMError("Invalid API key.", "auth"); });
+    const c = createController({ ui, makeCaller: () => ({ call: vi.fn() }), listModels, rng: rng(3) });
+    await c.loadModels();
+    expect(ui.setError).toHaveBeenCalledWith("Invalid API key.");
+  });
+});
