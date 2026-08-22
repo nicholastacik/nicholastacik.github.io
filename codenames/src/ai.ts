@@ -15,6 +15,29 @@ export class LLMError extends Error {
   }
 }
 
+// Map an OpenAI SDK error to our typed LLMError. Shared by every network call.
+function toLLMError(e: any): LLMError {
+  const status = e?.status ?? e?.response?.status;
+  if (status === 401) return new LLMError("Invalid API key.", "auth");
+  if (status === 429) return new LLMError("Rate limited — wait and retry.", "rate_limit");
+  if (e?.name === "APIConnectionError" || e instanceof TypeError)
+    return new LLMError("Network error reaching OpenAI.", "network");
+  return new LLMError(e?.message ?? "Unknown OpenAI error.", "other");
+}
+
+// Keep only chat-capable model ids from a raw /v1/models listing — the endpoint
+// returns embeddings, audio, image, moderation, etc. with no capability flags,
+// so we filter by id convention. Deduped and sorted. Pure (unit-tested).
+export function filterChatModels(ids: string[]): string[] {
+  const EXCLUDE = /embedding|whisper|tts|audio|realtime|transcribe|image|dall-e|moderation|search|instruct|davinci|babbage/i;
+  const INCLUDE = /^(gpt-|o\d|chatgpt)/i;
+  const kept = new Set<string>();
+  for (const id of ids) {
+    if (INCLUDE.test(id) && !EXCLUDE.test(id)) kept.add(id);
+  }
+  return [...kept].sort();
+}
+
 export interface LLMCaller {
   call<T>(messages: ChatMessage[], schema: z.ZodType<T>, name: string): Promise<LLMResult<T>>;
 }
@@ -39,13 +62,20 @@ export class OpenAICaller implements LLMCaller {
         finishReason: choice.finish_reason,
       };
     } catch (e: any) {
-      const status = e?.status ?? e?.response?.status;
-      if (status === 401) throw new LLMError("Invalid API key.", "auth");
-      if (status === 429) throw new LLMError("Rate limited — wait and retry.", "rate_limit");
-      if (e?.name === "APIConnectionError" || e instanceof TypeError)
-        throw new LLMError("Network error reaching OpenAI.", "network");
-      throw new LLMError(e?.message ?? "Unknown OpenAI error.", "other");
+      throw toLLMError(e);
     }
+  }
+}
+
+// Fetch the chat models this key can access, for the model picker. Throws
+// LLMError (e.g. auth on a bad key) so the caller can surface it.
+export async function listChatModels(apiKey: string): Promise<string[]> {
+  const client = new OpenAI({ apiKey, dangerouslyAllowBrowser: true });
+  try {
+    const page = await client.models.list();
+    return filterChatModels(page.data.map((m) => m.id));
+  } catch (e: any) {
+    throw toLLMError(e);
   }
 }
 
