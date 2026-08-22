@@ -30,7 +30,7 @@ describe("controller", () => {
     const { ui, logs } = fakeUi();
     // AI guesser returns the first remaining board word
     const caller: LLMCaller = { call: vi.fn(async (): Promise<LLMResult<any>> => ok<GuessResponse>({ reasoning: "", guesses: [] })) };
-    const c = createController({ ui, makeCaller: () => caller, rng: rng(3) });
+    const c = createController({ ui, makeCaller: () => caller, rng: rng(3), firstClueGiver: "human" });
     await c.newGame();
     await c.submitClue("OCEAN", 1);
     expect(ui.render).toHaveBeenCalled();
@@ -116,8 +116,8 @@ describe("controller", () => {
       return ok<GuessResponse>({ reasoning: "", guesses: [] });
     });
     const caller: LLMCaller = { call };
-    // default firstClueGiver ("human"): the human gives the clue, the AI guesses
-    const c = createController({ ui, makeCaller: () => caller, rng: rng(3) });
+    // human clues first, the AI guesses
+    const c = createController({ ui, makeCaller: () => caller, rng: rng(3), firstClueGiver: "human" });
 
     await c.newGame();
     await c.submitClue("OCEAN", 1);
@@ -229,7 +229,7 @@ describe("controller logging (play-by-play)", () => {
   it("logs the human's clue", async () => {
     const { ui, logs } = fakeUi();
     const caller: LLMCaller = { call: vi.fn(async (): Promise<LLMResult<any>> => ok<GuessResponse>({ reasoning: "", guesses: [] })) };
-    const c = createController({ ui, makeCaller: () => caller, rng: rng(3) });
+    const c = createController({ ui, makeCaller: () => caller, rng: rng(3), firstClueGiver: "human" });
     await c.newGame();
     await c.submitClue("OCEAN", 2);
     expect(logs.some((l) => l.includes('You clued "OCEAN" for 2'))).toBe(true);
@@ -272,5 +272,31 @@ describe("controller guess logging is leak-free", () => {
     // the bystander guess ends the turn; the second guess is never made or logged
     expect(logs.some((l) => l.startsWith(`AI guessed ${bystander} →`))).toBe(true);
     expect(logs.some((l) => l.startsWith(`AI guessed ${other}`))).toBe(false);
+  });
+});
+
+describe("controller first-player coin flip", () => {
+  it("uses the coin flip to pick who clues first when firstClueGiver is unset", async () => {
+    // heads → human clues first (awaitClue, human)
+    {
+      const { ui } = fakeUi();
+      const caller: LLMCaller = { call: vi.fn() };
+      const c = createController({ ui, makeCaller: () => caller, rng: rng(3), coinFlip: () => true });
+      await c.newGame();
+      const s = lastRendered(ui.render);
+      expect(s.clueGiver).toBe("human");
+      expect(s.phase).toBe("awaitClue");
+      expect(caller.call).not.toHaveBeenCalled(); // human's turn: no AI call yet
+    }
+    // tails → AI clues first (it immediately fetches a clue)
+    {
+      const { ui } = fakeUi();
+      const caller: LLMCaller = {
+        call: vi.fn(async (): Promise<LLMResult<any>> => ({ parsed: null, refusal: "pass", finishReason: "stop" })),
+      };
+      const c = createController({ ui, makeCaller: () => caller, rng: rng(3), coinFlip: () => false });
+      await c.newGame();
+      expect(caller.call).toHaveBeenCalled(); // AI's turn: it fetched a clue
+    }
   });
 });
