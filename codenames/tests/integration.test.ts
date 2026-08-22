@@ -35,8 +35,9 @@ describe("controller", () => {
     await c.submitClue("OCEAN", 1);
     expect(ui.render).toHaveBeenCalled();
     expect((caller.call as any)).toHaveBeenCalled();
-    // getAIGuess always logs a summary line, even for an empty guess list
-    expect(logs).toContain("AI will guess: (nothing).");
+    // the human clue is logged; the AI's intended guess list is NOT (leak-free)
+    expect(logs.some((l) => l.includes('You clued "OCEAN" for 1'))).toBe(true);
+    expect(logs.some((l) => l.startsWith("AI will guess"))).toBe(false);
   });
 
   it("AI clue turn: a legal AI clue is applied and rendered", async () => {
@@ -248,5 +249,28 @@ describe("controller logging (play-by-play)", () => {
     await c.newGame();          // AI gives its clue → now the human guesses
     await c.clickCell(aiGreen); // human guesses the AI's agent
     expect(logs.some((l) => l.startsWith(`You guessed ${aiGreen} →`))).toBe(true);
+  });
+});
+
+describe("controller guess logging is leak-free", () => {
+  it("logs only guesses actually made; a later un-made guess never appears", async () => {
+    // replicate the controller's game (human clues → guesses checked vs HUMAN card)
+    const g = createGame({ rng: rng(3), firstClueGiver: "human" });
+    const bystander = g.words.find((_, i) => g.keys.human[i] === "bystander")!;
+    const other = g.words.find((w) => w !== bystander)!; // must NOT be logged (never guessed)
+    const { ui, logs } = fakeUi();
+    const caller: LLMCaller = {
+      // guess call → the two guesses; the follow-up AI clue call → refuse (pass)
+      call: vi.fn(async (_m: any, _s: any, name: string): Promise<LLMResult<any>> =>
+        name === "guess"
+          ? ok<GuessResponse>({ reasoning: "", guesses: [bystander, other] })
+          : { parsed: null, refusal: "pass", finishReason: "stop" }),
+    };
+    const c = createController({ ui, makeCaller: () => caller, rng: rng(3), firstClueGiver: "human" });
+    await c.newGame();
+    await c.submitClue("OCEAN", 2);
+    // the bystander guess ends the turn; the second guess is never made or logged
+    expect(logs.some((l) => l.startsWith(`AI guessed ${bystander} →`))).toBe(true);
+    expect(logs.some((l) => l.startsWith(`AI guessed ${other}`))).toBe(false);
   });
 });
