@@ -60,6 +60,61 @@ export class GameUI {
     this.buildSkeleton();
   }
 
+  // Wipe the key from the input and from session storage. Closing the tab also
+  // clears it, but this gives an explicit, immediate "it's gone" action.
+  private clearKey(): void {
+    this.keyInput.value = "";
+    this.rememberInput.checked = false;
+    saveKey("", false); // removes it from sessionStorage
+  }
+
+  // A visible, plain-language explanation of exactly what happens to the key,
+  // plus a link to the source and the safest-usage tip. Built with textContent
+  // (no innerHTML) to keep the page free of injection surface.
+  private buildPrivacyPanel(): HTMLElement {
+    const panel = document.createElement("details");
+    panel.className = "cn-privacy";
+    panel.open = true;
+
+    const summary = document.createElement("summary");
+    summary.textContent = "Your key & your privacy";
+    panel.appendChild(summary);
+
+    const list = document.createElement("ul");
+    const bullets = [
+      "Your key stays in your browser. It is sent only to OpenAI (api.openai.com) over HTTPS — never to this site, which has no server.",
+      "It is not saved unless you tick “Save key”, and even then only for this browser tab (gone when you close it). It is never written to long-term storage and never logged.",
+      "This page loads no third-party scripts — only its own code.",
+    ];
+    for (const text of bullets) {
+      const li = document.createElement("li");
+      li.textContent = text;
+      list.appendChild(li);
+    }
+
+    // Open-source bullet with an inline link so the claims are verifiable.
+    const sourceLi = document.createElement("li");
+    sourceLi.appendChild(document.createTextNode("Don’t trust — verify: it’s open source. "));
+    const link = document.createElement("a");
+    link.href = "https://github.com/nicholastacik/nicholastacik.github.io/tree/main/codenames";
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = "View the source";
+    sourceLi.appendChild(link);
+    sourceLi.appendChild(document.createTextNode(", or watch the Network tab: the key rides only on requests to api.openai.com."));
+    list.appendChild(sourceLi);
+
+    panel.appendChild(list);
+
+    const tip = document.createElement("p");
+    tip.className = "cn-privacy-tip";
+    tip.textContent =
+      "Tip: create a dedicated OpenAI key with a low spending limit for this, and revoke it when you’re done — then even a worst-case leak costs pennies.";
+    panel.appendChild(tip);
+
+    return panel;
+  }
+
   private buildSkeleton(): void {
     this.root.innerHTML = "";
     this.root.classList.add("cn-app");
@@ -110,6 +165,12 @@ export class GameUI {
       this.cb.onSaveKey(this.getKey(), this.rememberInput.checked);
     });
 
+    const clearKeyBtn = document.createElement("button");
+    clearKeyBtn.type = "button";
+    clearKeyBtn.textContent = "Clear key";
+    clearKeyBtn.className = "cn-clear-key";
+    clearKeyBtn.addEventListener("click", () => this.clearKey());
+
     const newGameBtn = document.createElement("button");
     newGameBtn.type = "button";
     newGameBtn.textContent = "New game";
@@ -120,13 +181,11 @@ export class GameUI {
     setupBar.appendChild(this.modelInput);
     setupBar.appendChild(rememberLabel);
     setupBar.appendChild(saveKeyBtn);
+    setupBar.appendChild(clearKeyBtn);
     setupBar.appendChild(newGameBtn);
     this.root.appendChild(setupBar);
 
-    const note = document.createElement("p");
-    note.className = "cn-note";
-    note.textContent = "Your key stays in this browser and is sent directly to OpenAI (dangerouslyAllowBrowser).";
-    this.root.appendChild(note);
+    this.root.appendChild(this.buildPrivacyPanel());
 
     // Status line
     this.statusEl = document.createElement("div");

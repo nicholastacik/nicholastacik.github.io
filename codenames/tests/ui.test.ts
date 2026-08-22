@@ -102,4 +102,35 @@ describe("GameUI", () => {
     (root.querySelector(".cn-retry") as HTMLElement).click();
     expect(callbacks.onRetry).toHaveBeenCalled();
   });
+
+  it("Clear key wipes the input and removes the key from sessionStorage", () => {
+    const ui = new GameUI(root, cb());
+    ui.render(createGame({ rng: rng(3) }));
+    const keyInput = root.querySelector(".cn-key-input") as HTMLInputElement;
+    keyInput.value = "sk-secret";
+    saveKey("sk-secret", true); // simulate a remembered key sitting in sessionStorage
+    expect(sessionStorage.getItem("openai_key")).toBe("sk-secret");
+
+    const clearBtn = root.querySelector(".cn-clear-key") as HTMLButtonElement;
+    expect(clearBtn).not.toBeNull();
+    clearBtn.click();
+
+    expect(keyInput.value).toBe("");
+    expect(sessionStorage.getItem("openai_key")).toBeNull();
+    expect(localStorage.getItem("openai_key")).toBeNull();
+  });
+
+  it("shows a privacy panel explaining key handling, with a source link", () => {
+    const ui = new GameUI(root, cb());
+    ui.render(createGame({ rng: rng(3) }));
+    const panel = root.querySelector(".cn-privacy");
+    expect(panel).not.toBeNull();
+    const text = panel!.textContent!.toLowerCase();
+    expect(text).toContain("only to openai"); // sent only to OpenAI
+    expect(text).toContain("never"); // not saved/logged claims
+    const link = panel!.querySelector("a") as HTMLAnchorElement;
+    expect(link).not.toBeNull();
+    expect(link.getAttribute("href")).toContain("github.com");
+    expect(link.getAttribute("rel")).toContain("noopener");
+  });
 });
