@@ -49,6 +49,7 @@ describe("controller", () => {
     const c = createController({ ui, makeCaller: () => caller, rng: rng(3), firstClueGiver: "ai" });
 
     await c.newGame();
+    await c.requestAIClue(); // human requests the AI's opening clue
 
     expect(caller.call).toHaveBeenCalled();
     const state = lastRendered(ui.render);
@@ -65,6 +66,7 @@ describe("controller", () => {
     const c = createController({ ui, makeCaller: () => caller, rng: rng(3), firstClueGiver: "ai" });
 
     await c.newGame();
+    await c.requestAIClue(); // AI is asked for a clue but refuses → passes
 
     expect(ui.render).toHaveBeenCalled();
     const state = lastRendered(ui.render);
@@ -81,6 +83,7 @@ describe("controller", () => {
     const c = createController({ ui, makeCaller: () => caller, rng: rng(3), firstClueGiver: "ai" });
 
     await c.newGame();
+    await c.requestAIClue(); // the AI clue fetch fails
 
     expect(ui.setError).toHaveBeenCalledWith("Invalid API key.");
   });
@@ -99,6 +102,7 @@ describe("controller", () => {
     const c = createController({ ui, makeCaller: () => caller, rng: rng(3), firstClueGiver: "ai" });
 
     await c.newGame();
+    await c.requestAIClue(); // first attempt fails
     expect(ui.setError).toHaveBeenCalledWith("Rate limited — wait and retry.");
 
     await c.retryAITurn();
@@ -145,7 +149,8 @@ describe("controller", () => {
     const caller: LLMCaller = { call: call as any };
     const c = createController({ ui, makeCaller: () => caller, rng: rng(3), firstClueGiver: "ai" });
 
-    const gamePromise = c.newGame(); // kicks off the AI clue turn; caller.call is now pending
+    await c.newGame();
+    const cluePromise = c.requestAIClue(); // kicks off the AI clue turn; caller.call is now pending
     // fire several human-triggered entry points while the call is in flight
     const p1 = c.clickCell("WHATEVER");
     const p2 = c.endGuessing();
@@ -155,7 +160,7 @@ describe("controller", () => {
     expect(call).toHaveBeenCalledTimes(1); // still just the one in-flight call
 
     resolveCall(ok<ClueResponse>(clueResp));
-    await gamePromise;
+    await cluePromise;
 
     expect(call).toHaveBeenCalledTimes(1); // resolving didn't trigger any queued-up duplicate
   });
@@ -176,8 +181,10 @@ describe("controller", () => {
     const caller: LLMCaller = { call: call as any };
     const c = createController({ ui, makeCaller: () => caller, rng: rng(3), firstClueGiver: "ai" });
 
-    const firstGamePromise = c.newGame(); // game #1's AI clue turn: caller.call is now pending on firstPending
-    await c.newGame(); // starts game #2; its own AI clue turn resolves immediately (refusal -> pass)
+    await c.newGame();                          // game #1 (AI first)
+    const firstGamePromise = c.requestAIClue(); // game #1's AI clue fetch: pending on firstPending
+    await c.newGame();                          // start game #2 (abandons game #1's in-flight call)
+    await c.requestAIClue();                    // game #2's AI clue resolves immediately (refusal -> pass)
 
     const stateAfterGame2 = lastRendered(ui.render);
     expect(stateAfterGame2.clueGiver).toBe("human"); // game #2's AI already passed
@@ -246,7 +253,8 @@ describe("controller logging (play-by-play)", () => {
         name === "clue" ? ok<ClueResponse>(clue) : ok<GuessResponse>({ reasoning: "", guesses: [] })),
     };
     const c = createController({ ui, makeCaller: () => caller, rng: rng(3), firstClueGiver: "ai" });
-    await c.newGame();          // AI gives its clue → now the human guesses
+    await c.newGame();
+    await c.requestAIClue();    // AI gives its clue → now the human guesses
     await c.clickCell(aiGreen); // human guesses the AI's agent
     expect(logs.some((l) => l.startsWith(`You guessed ${aiGreen} →`))).toBe(true);
   });
@@ -288,7 +296,8 @@ describe("controller first-player coin flip", () => {
       expect(s.phase).toBe("awaitClue");
       expect(caller.call).not.toHaveBeenCalled(); // human's turn: no AI call yet
     }
-    // tails → AI clues first (it immediately fetches a clue)
+    // tails → AI clues first: it's the AI's clue turn, awaiting the human's
+    // "Get the AI's clue" click (no auto-fetch)
     {
       const { ui } = fakeUi();
       const caller: LLMCaller = {
@@ -296,7 +305,12 @@ describe("controller first-player coin flip", () => {
       };
       const c = createController({ ui, makeCaller: () => caller, rng: rng(3), coinFlip: () => false });
       await c.newGame();
-      expect(caller.call).toHaveBeenCalled(); // AI's turn: it fetched a clue
+      const s = lastRendered(ui.render);
+      expect(s.clueGiver).toBe("ai");
+      expect(s.phase).toBe("awaitClue");
+      expect(caller.call).not.toHaveBeenCalled(); // not until the human clicks "Get the AI's clue"
+      await c.requestAIClue();
+      expect(caller.call).toHaveBeenCalled();
     }
   });
 });

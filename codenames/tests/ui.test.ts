@@ -5,7 +5,7 @@ import { createGame } from "../src/engine";
 function rng(seed: number) {
   return () => { seed |= 0; seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed>>>15),1|seed); t=(t+Math.imul(t ^ (t>>>7),61|t))^t; return ((t ^ (t>>>14))>>>0)/4294967296; };
 }
-const cb = () => ({ onClueSubmit: vi.fn(), onCellClick: vi.fn(), onEndGuessing: vi.fn(), onSaveKey: vi.fn(), onNewGame: vi.fn(), onRetry: vi.fn(), onLoadModels: vi.fn() });
+const cb = () => ({ onClueSubmit: vi.fn(), onCellClick: vi.fn(), onEndGuessing: vi.fn(), onSaveKey: vi.fn(), onNewGame: vi.fn(), onRetry: vi.fn(), onGetClue: vi.fn(), onLoadModels: vi.fn() });
 
 describe("GameUI", () => {
   let root: HTMLElement;
@@ -159,6 +159,24 @@ describe("GameUI", () => {
     ui.render(createGame({ rng: rng(3) }));
     (root.querySelector(".cn-load-models") as HTMLElement).click();
     expect(callbacks.onLoadModels).toHaveBeenCalled();
+  });
+
+  it("shows 'Get the AI's clue' only on the AI's clue turn, and it fires onGetClue", () => {
+    const callbacks = cb();
+    const ui = new GameUI(root, callbacks);
+    const s = createGame({ rng: rng(3) });
+
+    // human's clue turn → button hidden
+    ui.render({ ...s, clueGiver: "human", phase: "awaitClue" });
+    let btn = root.querySelector(".cn-get-clue") as HTMLButtonElement;
+    expect(btn.hidden).toBe(true);
+
+    // AI's clue turn → button shown, and clicking it requests the clue
+    ui.render({ ...s, clueGiver: "ai", phase: "awaitClue" });
+    btn = root.querySelector(".cn-get-clue") as HTMLButtonElement;
+    expect(btn.hidden).toBe(false);
+    btn.click();
+    expect(callbacks.onGetClue).toHaveBeenCalled();
   });
 
   it("shows a collapsible rules panel covering the key mechanics", () => {
