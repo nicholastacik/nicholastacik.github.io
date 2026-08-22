@@ -27,9 +27,14 @@ function toLLMError(e: any): LLMError {
 
 // Keep only chat-capable model ids from a raw /v1/models listing — the endpoint
 // returns embeddings, audio, image, moderation, etc. with no capability flags,
-// so we filter by id convention. Deduped and sorted. Pure (unit-tested).
+// so we filter by id convention. Best-effort: it can't perfectly know which
+// models support Structured Outputs, so a stray incompatible pick just surfaces
+// an LLMError on use (handled). "Custom…" remains the escape hatch either way.
+// Deduped and sorted. Pure (unit-tested).
 export function filterChatModels(ids: string[]): string[] {
-  const EXCLUDE = /embedding|whisper|tts|audio|realtime|transcribe|image|dall-e|moderation|search|instruct|davinci|babbage/i;
+  // Note: "search" is intentionally NOT excluded (gpt-4o-search-preview is a
+  // real chat model); "deep-research" is excluded (async, not chat.completions).
+  const EXCLUDE = /embedding|whisper|tts|audio|realtime|transcribe|image|dall-e|moderation|deep-research|instruct|davinci|babbage/i;
   const INCLUDE = /^(gpt-|o\d|chatgpt)/i;
   const kept = new Set<string>();
   for (const id of ids) {

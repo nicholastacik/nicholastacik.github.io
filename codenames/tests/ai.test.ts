@@ -78,18 +78,20 @@ describe("getAIGuess", () => {
 describe("filterChatModels", () => {
   it("keeps chat models, drops non-chat, dedupes and sorts", () => {
     const raw = [
-      "gpt-4o", "gpt-4o", "o3", "chatgpt-4o-latest", "gpt-4o-mini",
+      "gpt-4o", "gpt-4o", "o3", "chatgpt-4o-latest", "gpt-4o-mini", "gpt-4o-search-preview",
       "text-embedding-3-small", "whisper-1", "tts-1", "dall-e-3",
       "omni-moderation-latest", "gpt-4o-realtime-preview", "gpt-3.5-turbo-instruct",
+      "o3-deep-research",
     ];
     const out = filterChatModels(raw);
-    // kept
-    for (const m of ["gpt-4o", "o3", "chatgpt-4o-latest", "gpt-4o-mini"]) {
+    // kept (incl. search-preview, which is a real chat model)
+    for (const m of ["gpt-4o", "o3", "chatgpt-4o-latest", "gpt-4o-mini", "gpt-4o-search-preview"]) {
       expect(out).toContain(m);
     }
-    // dropped (non-chat, realtime, instruct)
+    // dropped (non-chat, realtime, instruct, async deep-research)
     for (const m of ["text-embedding-3-small", "whisper-1", "tts-1", "dall-e-3",
-      "omni-moderation-latest", "gpt-4o-realtime-preview", "gpt-3.5-turbo-instruct"]) {
+      "omni-moderation-latest", "gpt-4o-realtime-preview", "gpt-3.5-turbo-instruct",
+      "o3-deep-research"]) {
       expect(out).not.toContain(m);
     }
     // deduped + sorted

@@ -330,7 +330,7 @@ export class GameUI {
   // account), keeping a "Custom…" escape hatch. Preserves the current choice
   // when still available, else falls back to the default, else the first model.
   setModels(ids: string[]): void {
-    const prev = this.modelSelect ? this.getModel() : DEFAULT_MODEL;
+    const prev = this.getModel(); // preserve the current choice where possible
     const options = ids.length ? ids : [DEFAULT_MODEL];
 
     this.modelSelect.replaceChildren(); // clearing a select we own (no innerHTML)
