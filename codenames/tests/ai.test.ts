@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { getAIClue, getAIGuess, type LLMCaller, type LLMResult } from "../src/ai";
+import { getAIClue, getAIGuess, filterChatModels, type LLMCaller, type LLMResult } from "../src/ai";
 import { createGame, giveClue } from "../src/engine";
 import type { ClueResponse, GuessResponse } from "../src/validate";
 
@@ -72,5 +72,30 @@ describe("getAIGuess", () => {
     s = giveClue(s, "OCEAN", 2);
     const caller = scripted([{ parsed: null, refusal: null, finishReason: "stop" }]);
     expect(await getAIGuess(caller, s, () => {})).toEqual([]);
+  });
+});
+
+describe("filterChatModels", () => {
+  it("keeps chat models, drops non-chat, dedupes and sorts", () => {
+    const raw = [
+      "gpt-4o", "gpt-4o", "o3", "chatgpt-4o-latest", "gpt-4o-mini", "gpt-4o-search-preview",
+      "text-embedding-3-small", "whisper-1", "tts-1", "dall-e-3",
+      "omni-moderation-latest", "gpt-4o-realtime-preview", "gpt-3.5-turbo-instruct",
+      "o3-deep-research",
+    ];
+    const out = filterChatModels(raw);
+    // kept (incl. search-preview, which is a real chat model)
+    for (const m of ["gpt-4o", "o3", "chatgpt-4o-latest", "gpt-4o-mini", "gpt-4o-search-preview"]) {
+      expect(out).toContain(m);
+    }
+    // dropped (non-chat, realtime, instruct, async deep-research)
+    for (const m of ["text-embedding-3-small", "whisper-1", "tts-1", "dall-e-3",
+      "omni-moderation-latest", "gpt-4o-realtime-preview", "gpt-3.5-turbo-instruct",
+      "o3-deep-research"]) {
+      expect(out).not.toContain(m);
+    }
+    // deduped + sorted
+    expect(out.filter((m) => m === "gpt-4o").length).toBe(1);
+    expect([...out]).toEqual([...out].sort());
   });
 });
