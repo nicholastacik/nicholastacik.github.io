@@ -45,24 +45,30 @@ describe("GameUI", () => {
     expect(sessionStorage.getItem("openai_key")).toBeNull();
   });
 
-  it("shades cells by the human keycard only when clueGiver is human, never the AI's", () => {
+  it("shades by the human key card (never the AI's); guessing shows it only when opted in", () => {
     const ui = new GameUI(root, cb());
     const s = createGame({ rng: rng(3) });
+    // a cell where the two cards differ, to prove we shade the HUMAN's card
+    const i = s.keys.human.findIndex((c, idx) => c !== s.keys.ai[idx]);
+    expect(i).toBeGreaterThanOrEqual(0);
 
+    // giving a clue: always shaded by the human card
     ui.render({ ...s, clueGiver: "human" });
-    const humanShaded = root.querySelectorAll(
-      ".cn-cell.shade-green, .cn-cell.shade-bystander, .cn-cell.shade-assassin"
-    );
-    // all 25 cells are unrevealed at game start, so all 25 get a shade class
-    expect(humanShaded.length).toBe(25);
-    const firstCell = root.querySelector("[data-cell]") as HTMLElement;
-    expect(firstCell.classList.contains(`shade-${s.keys.human[0]}`)).toBe(true);
+    let cells = root.querySelectorAll("[data-cell]");
+    expect((cells[i] as HTMLElement).classList.contains(`shade-${s.keys.human[i]}`)).toBe(true);
 
+    // guessing with "Show my key card" ON (default): shaded by the HUMAN card, not the AI's
     ui.render({ ...s, clueGiver: "ai" });
-    const aiShaded = root.querySelectorAll(
-      ".shade-green, .shade-bystander, .shade-assassin"
-    );
-    expect(aiShaded.length).toBe(0);
+    cells = root.querySelectorAll("[data-cell]");
+    expect((cells[i] as HTMLElement).classList.contains(`shade-${s.keys.human[i]}`)).toBe(true);
+    expect((cells[i] as HTMLElement).classList.contains(`shade-${s.keys.ai[i]}`)).toBe(false);
+
+    // guessing with the toggle OFF: no shading at all
+    const toggle = root.querySelector(".cn-showkey") as HTMLInputElement;
+    toggle.checked = false;
+    toggle.dispatchEvent(new Event("change")); // re-renders the last state (clueGiver "ai")
+    const shaded = root.querySelectorAll(".shade-green, .shade-bystander, .shade-assassin");
+    expect(shaded.length).toBe(0);
   });
 
   it("shows a win badge when status is won", () => {
