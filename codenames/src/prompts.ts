@@ -26,9 +26,18 @@ clue "FRUIT", number 2, targets ["APPLE","ORANGE"].`;
 export const GUESS_SYSTEM = `${RULES}
 
 Your job now: your partner gave a one-word clue and a number. Choose which words on
-the board they most likely mean, RANKED best-first, at most number+1 guesses. You do
-NOT know the key card — infer from the clue. Put your thinking in "reasoning" first,
-then list "guesses" (exact board words). Stop early rather than risk a wild guess.`;
+the board they most likely mean, RANKED best-first. You do NOT know the key card —
+infer from the clue. Put your thinking in "reasoning" first, then list "guesses"
+(exact board words).
+
+How many to guess:
+- The number is how many words THIS clue points to. Guess those, most-confident first.
+- You may make ONE extra "bonus" guess (number+1 total), but ONLY use it for an agent
+  you are confident was pointed at by an EARLIER clue and left unfound — never to
+  gamble on a loose association with the current clue.
+- If you have no such confident leftover, STOP after the clue's number.
+- A wrong guess ends the turn, and the assassin loses the game outright — so caution
+  beats greed. When unsure, guess fewer.`;
 
 export function formatHistory(state: GameState): string {
   if (state.history.length === 0) return "(no turns yet)";
@@ -71,7 +80,7 @@ Turns remaining: ${state.turnsRemaining}
 Game so far:
 ${formatHistory(state)}
 
-Make your guesses now (best first, at most ${clue.number + 1}).`;
+Make your guesses now: up to ${clue.number} for this clue, best-first — plus a ${clue.number + 1}th bonus guess ONLY if you're confident about an agent left over from an earlier clue.`;
   return [
     { role: "system", content: GUESS_SYSTEM },
     { role: "user", content: user },
