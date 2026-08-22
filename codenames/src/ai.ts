@@ -132,6 +132,9 @@ export async function getAIGuess(caller: LLMCaller, state: GameState, log: Logge
 
   const legal = filterGuesses(res.parsed.guesses, state);
   if (legal.length < res.parsed.guesses.length) log("Dropped guesses that were not on the board.");
-  log(`AI will guess: ${legal.join(", ") || "(nothing)"}.`);
+  // NOTE: do NOT log the intended guess list here — guesses are applied one at a
+  // time and the turn can end early, so logging the whole list would reveal words
+  // the AI never actually guessed (an information leak). The controller logs each
+  // guess as it is applied instead.
   return legal;
 }
