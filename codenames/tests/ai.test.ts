@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { getAIClue, getAIGuess, filterChatModels, type LLMCaller, type LLMResult } from "../src/ai";
+import { getAIClue, getAIGuess, filterChatModels, toLLMError, type LLMCaller, type LLMResult } from "../src/ai";
 import { createGame, giveClue } from "../src/engine";
 import type { ClueResponse, GuessResponse } from "../src/validate";
 
@@ -78,18 +78,20 @@ describe("getAIGuess", () => {
 describe("filterChatModels", () => {
   it("keeps chat models, drops non-chat, dedupes and sorts", () => {
     const raw = [
-      "gpt-4o", "gpt-4o", "o3", "chatgpt-4o-latest", "gpt-4o-mini", "gpt-4o-search-preview",
+      "gpt-4o", "gpt-4o", "gpt-4o-mini", "gpt-4.1", "gpt-5.6", "o3", "chatgpt-4o-latest",
+      "gpt-3.5-turbo", "gpt-4-turbo", "gpt-4", "gpt-4o-search-preview",
       "text-embedding-3-small", "whisper-1", "tts-1", "dall-e-3",
       "omni-moderation-latest", "gpt-4o-realtime-preview", "gpt-3.5-turbo-instruct",
       "o3-deep-research",
     ];
     const out = filterChatModels(raw);
-    // kept (incl. search-preview, which is a real chat model)
-    for (const m of ["gpt-4o", "o3", "chatgpt-4o-latest", "gpt-4o-mini", "gpt-4o-search-preview"]) {
+    // kept: Structured-Outputs-capable families only
+    for (const m of ["gpt-4o", "gpt-4o-mini", "gpt-4.1", "gpt-5.6", "o3", "chatgpt-4o-latest"]) {
       expect(out).toContain(m);
     }
-    // dropped (non-chat, realtime, instruct, async deep-research)
-    for (const m of ["text-embedding-3-small", "whisper-1", "tts-1", "dall-e-3",
+    // dropped: non-SO models (3.5, gpt-4-turbo, legacy gpt-4, search preview) and non-chat
+    for (const m of ["gpt-3.5-turbo", "gpt-4-turbo", "gpt-4", "gpt-4o-search-preview",
+      "text-embedding-3-small", "whisper-1", "tts-1", "dall-e-3",
       "omni-moderation-latest", "gpt-4o-realtime-preview", "gpt-3.5-turbo-instruct",
       "o3-deep-research"]) {
       expect(out).not.toContain(m);
@@ -97,5 +99,25 @@ describe("filterChatModels", () => {
     // deduped + sorted
     expect(out.filter((m) => m === "gpt-4o").length).toBe(1);
     expect([...out]).toEqual([...out].sort());
+  });
+});
+
+describe("toLLMError", () => {
+  it("maps 401 to auth and 429 to rate_limit", () => {
+    expect(toLLMError({ status: 401 }).kind).toBe("auth");
+    expect(toLLMError({ status: 429 }).kind).toBe("rate_limit");
+  });
+
+  it("maps a 400 structured-outputs-unsupported error to a helpful message", () => {
+    const e = { status: 400, message: "Invalid parameter: 'response_format' of type 'json_schema' is not supported with this model." };
+    const mapped = toLLMError(e);
+    expect(mapped.kind).toBe("other");
+    expect(mapped.message).toMatch(/pick a different model/i);
+    expect(mapped.message).not.toContain("response_format"); // friendly, not the raw 400
+  });
+
+  it("maps a connection error to network, and falls back to other", () => {
+    expect(toLLMError({ name: "APIConnectionError" }).kind).toBe("network");
+    expect(toLLMError({ status: 500, message: "boom" }).kind).toBe("other");
   });
 });
