@@ -120,4 +120,11 @@ describe("toLLMError", () => {
     expect(toLLMError({ name: "APIConnectionError" }).kind).toBe("network");
     expect(toLLMError({ status: 500, message: "boom" }).kind).toBe("other");
   });
+
+  it("maps a truncation (LengthFinishReasonError) to a clear out-of-room message", () => {
+    const byName = toLLMError({ name: "LengthFinishReasonError" });
+    expect(byName.message).toMatch(/ran out of output room/i);
+    const byMsg = toLLMError({ message: "Could not parse response content as the length limit was reached" });
+    expect(byMsg.message).toMatch(/ran out of output room/i);
+  });
 });
