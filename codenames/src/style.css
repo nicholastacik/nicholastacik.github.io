@@ -89,7 +89,8 @@ body {
   white-space: nowrap;
 }
 
-.cn-privacy {
+.cn-privacy,
+.cn-rules {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -98,19 +99,22 @@ body {
   color: var(--muted);
 }
 
-.cn-privacy > summary {
+.cn-privacy > summary,
+.cn-rules > summary {
   cursor: pointer;
   color: var(--text);
   font-weight: 600;
   font-size: 0.82rem;
 }
 
-.cn-privacy ul {
+.cn-privacy ul,
+.cn-rules ul {
   margin: 0.5rem 0 0.25rem;
   padding-left: 1.1rem;
 }
 
-.cn-privacy li {
+.cn-privacy li,
+.cn-rules li {
   margin: 0.25rem 0;
   line-height: 1.4;
 }
