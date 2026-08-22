@@ -98,7 +98,9 @@ export function createController(deps: ControllerDeps) {
       if (e instanceof LLMError) ui.setError(e.message);
       else throw e;
     } finally {
-      busy = false;
+      // Only clear the guard if this call still belongs to the current game —
+      // a call superseded by newGame() must not unlock the new game's turn.
+      if (gen === generation) busy = false;
     }
   }
 
@@ -126,22 +128,33 @@ export function createController(deps: ControllerDeps) {
       if (e instanceof LLMError) { ui.setError(e.message); return; }
       throw e;
     } finally {
-      busy = false;
+      // Only clear the guard if this call still belongs to the current game —
+      // a call superseded by newGame() must not unlock the new game's turn.
+      if (gen === generation) busy = false;
     }
   }
 
-  async function maybeRunAIClueTurn(): Promise<void> {
+  // The AI's clue turn is NOT run automatically — the human triggers it with the
+  // "Get the AI's clue" button (requestAIClue), so the turn flow is explicit and
+  // no API call fires without a click. (The AI's *guessing* stays automatic: it's
+  // the direct result of the human submitting a clue.)
+  async function requestAIClue(): Promise<void> {
+    if (busy) return;
     if (isAIsClueTurn()) await runAIClueTurn();
   }
 
   async function newGame(): Promise<void> {
     generation += 1;
+    busy = false; // abandon any in-flight AI call from the previous game (its result is discarded by the generation guard)
     const flip = deps.coinFlip ?? (() => Math.random() < 0.5);
     const first: Player = deps.firstClueGiver ?? (flip() ? "human" : "ai");
     state = createGame({ rng: deps.rng, firstClueGiver: first });
-    log(first === "human" ? "New game — you give the first clue." : "New game — the AI gives the first clue.");
+    log(
+      first === "human"
+        ? "New game — you give the first clue."
+        : 'New game — the AI gives the first clue. Click "Get the AI\'s clue".',
+    );
     render();
-    await maybeRunAIClueTurn();
   }
 
   async function submitClue(w: string, n: number): Promise<void> {
@@ -149,31 +162,25 @@ export function createController(deps: ControllerDeps) {
     log(`You clued "${w}" for ${n}.`);
     state = giveClue(state, w, n);
     render();
-
     await runAIGuessTurn();
-    await maybeRunAIClueTurn();
   }
 
   async function clickCell(w: string): Promise<void> {
     if (busy) return;
     // Ownership guard: a cell click is only meaningful while the human is
-    // guessing against the AI's active clue — this also prevents a stray
-    // click from accidentally re-kicking the AI's clue turn (the old
-    // accidental click-to-retry side effect).
+    // guessing against the AI's active clue.
     if (!(state.clueGiver === "ai" && state.phase === "awaitGuess")) return;
     const beforeLen = outcomesLen();
     state = guess(state, w);
     logGuessResult("You", w, beforeLen);
     render();
     logEndState();
-    await maybeRunAIClueTurn();
   }
 
   async function endGuessing(): Promise<void> {
     if (busy) return;
     state = engineEndGuessing(state);
     render();
-    await maybeRunAIClueTurn();
   }
 
   // Resumes whichever AI action is currently pending after it failed with an
@@ -187,10 +194,7 @@ export function createController(deps: ControllerDeps) {
       await runAIClueTurn();
     } else if (isAIsGuessPending()) {
       await runAIGuessTurn();
-    } else {
-      return;
     }
-    await maybeRunAIClueTurn();
   }
 
   // Fetch the models this key can access and populate the picker. Independent
@@ -211,7 +215,7 @@ export function createController(deps: ControllerDeps) {
     }
   }
 
-  return { newGame, submitClue, clickCell, endGuessing, retryAITurn, loadModels };
+  return { newGame, submitClue, clickCell, endGuessing, retryAITurn, requestAIClue, loadModels };
 }
 
 // at bottom of main.ts — real app wiring (not exercised by jsdom tests)
@@ -229,6 +233,7 @@ if (typeof document !== "undefined" && document.getElementById("app")) {
     onSaveKey: () => {},
     onNewGame: () => controller.newGame(),
     onRetry: () => controller.retryAITurn(),
+    onGetClue: () => controller.requestAIClue(),
     onLoadModels: () => controller.loadModels(),
   });
   controller = createController({

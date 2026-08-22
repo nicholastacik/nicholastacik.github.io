@@ -5,6 +5,7 @@ export interface UICallbacks {
   onClueSubmit(word: string, num: number): void;
   onCellClick(word: string): void;
   onEndGuessing(): void;
+  onGetClue(): void;
   onSaveKey(key: string, remember: boolean): void;
   onNewGame(): void;
   onRetry(): void;
@@ -53,6 +54,7 @@ export class GameUI {
   private clueWordInput!: HTMLInputElement;
   private clueNumInput!: HTMLInputElement;
   private endGuessingBtn!: HTMLButtonElement;
+  private getClueBtn!: HTMLButtonElement;
   private statusEl!: HTMLElement;
   private logEl!: HTMLElement;
   private errorEl!: HTMLElement;
@@ -298,6 +300,15 @@ export class GameUI {
     this.endGuessingBtn.addEventListener("click", () => this.cb.onEndGuessing());
     this.root.appendChild(this.endGuessingBtn);
 
+    // Shown on the AI's clue turn: the human explicitly requests the AI's clue.
+    this.getClueBtn = document.createElement("button");
+    this.getClueBtn.type = "button";
+    this.getClueBtn.textContent = "Get the AI's clue";
+    this.getClueBtn.className = "cn-get-clue";
+    this.getClueBtn.hidden = true;
+    this.getClueBtn.addEventListener("click", () => this.cb.onGetClue());
+    this.root.appendChild(this.getClueBtn);
+
     // AI log panel
     const logPanel = document.createElement("div");
     logPanel.className = "cn-log-panel";
@@ -348,6 +359,10 @@ export class GameUI {
     // End guessing visibility
     const showEndGuessing = state.phase === "awaitGuess" && state.clueGiver === "human" && state.status === "playing";
     this.endGuessingBtn.hidden = !showEndGuessing;
+
+    // "Get the AI's clue" shows on the AI's clue turn (human triggers the fetch).
+    const showGetClue = state.phase === "awaitClue" && state.clueGiver === "ai" && state.status === "playing";
+    this.getClueBtn.hidden = !showGetClue;
 
     // Status line
     this.statusEl.innerHTML = "";
