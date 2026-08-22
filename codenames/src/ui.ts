@@ -46,6 +46,8 @@ export class GameUI {
   private modelSelect!: HTMLSelectElement;
   private modelCustomInput!: HTMLInputElement;
   private rememberInput!: HTMLInputElement;
+  private showKeyInput!: HTMLInputElement;
+  private lastState: GameState | null = null;
   private gridEl!: HTMLElement;
   private clueBarEl!: HTMLElement;
   private clueWordInput!: HTMLInputElement;
@@ -175,6 +177,20 @@ export class GameUI {
     rememberLabel.appendChild(this.rememberInput);
     rememberLabel.appendChild(document.createTextNode(" Save key (session only)"));
 
+    // Your OWN key card is always yours to see in Duet; show it during guessing
+    // too (it correlates with the AI's clues). Toggle off to guess "blind".
+    const showKeyLabel = document.createElement("label");
+    showKeyLabel.className = "cn-remember-label";
+    this.showKeyInput = document.createElement("input");
+    this.showKeyInput.type = "checkbox";
+    this.showKeyInput.className = "cn-showkey";
+    this.showKeyInput.checked = true;
+    this.showKeyInput.addEventListener("change", () => {
+      if (this.lastState) this.render(this.lastState);
+    });
+    showKeyLabel.appendChild(this.showKeyInput);
+    showKeyLabel.appendChild(document.createTextNode(" Show my key card"));
+
     const saveKeyBtn = document.createElement("button");
     saveKeyBtn.type = "button";
     saveKeyBtn.textContent = "Save key";
@@ -199,6 +215,7 @@ export class GameUI {
     setupBar.appendChild(this.modelCustomInput);
     setupBar.appendChild(loadModelsBtn);
     setupBar.appendChild(rememberLabel);
+    setupBar.appendChild(showKeyLabel);
     setupBar.appendChild(saveKeyBtn);
     setupBar.appendChild(clearKeyBtn);
     setupBar.appendChild(newGameBtn);
@@ -265,10 +282,14 @@ export class GameUI {
   }
 
   render(state: GameState): void {
+    this.lastState = state; // remembered so the "show my key card" toggle can re-render
     // Grid
     this.gridEl.innerHTML = "";
     const revealedCats = revealedCategories(state);
-    const shadeKey = state.clueGiver === "human" ? state.keys.human : null;
+    // Shade by the HUMAN's own key card only — never the AI's. Always shown while
+    // the human gives a clue; while the human guesses, shown iff they opted in.
+    const showOwnKey = state.clueGiver === "human" || this.showKeyInput.checked;
+    const shadeKey = showOwnKey ? state.keys.human : null;
 
     state.words.forEach((word, i) => {
       const btn = document.createElement("button");
