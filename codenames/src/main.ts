@@ -50,13 +50,12 @@ export function createController(deps: ControllerDeps) {
   }
 
   // --- play-by-play logging (bottom panel) ---
-  // Colored circles match the board shading: green agent, tan/yellow bystander,
-  // black assassin. Word kept alongside for clarity/accessibility.
+  // Emoji matches the card badge. Word kept alongside for clarity/accessibility.
   function guessLabel(cat: Category): string {
     return cat === "green"
-      ? "🟢 agent"
+      ? "✅ agent"
       : cat === "assassin"
-        ? "⚫ assassin"
+        ? "❌ assassin"
         : "🟡 bystander (turn over)";
   }
   function outcomesLen(): number {
