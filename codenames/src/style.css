@@ -172,6 +172,7 @@ body {
 }
 
 .cn-cell {
+  position: relative;
   aspect-ratio: 1.4 / 1;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -211,6 +212,15 @@ body {
 
 .cn-cell.revealed {
   opacity: 0.55;
+}
+
+.cn-cell-badge {
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  font-size: 0.7rem;
+  line-height: 1;
+  pointer-events: none;
 }
 
 .cn-cell.revealed.cat-green {
