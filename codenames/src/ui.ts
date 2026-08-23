@@ -33,6 +33,19 @@ function catEmoji(cat: Category): string {
   return cat === "green" ? "✅" : cat === "assassin" ? "❌" : "🟡";
 }
 
+// One clear line describing whose move it is, shown above the board.
+function turnHeadline(state: GameState): string {
+  if (state.status === "won") return "🎉 You win!";
+  if (state.status === "lost") return "💥 Game over";
+  const c = state.currentClue;
+  if (state.clueGiver === "ai") {
+    return state.phase === "awaitClue"
+      ? "The AI's turn — get its clue"
+      : `Your guess — clue “${c?.word}” for ${c?.number}`;
+  }
+  return state.phase === "awaitClue" ? "Your turn — give a clue" : "The AI is guessing…";
+}
+
 function revealedCategories(state: GameState): Map<string, Category> {
   const map = new Map<string, Category>();
   for (const turn of state.history as HistoryTurn[]) {
@@ -62,6 +75,7 @@ export class GameUI {
   private clueNumInput!: HTMLInputElement;
   private endGuessingBtn!: HTMLButtonElement;
   private getClueBtn!: HTMLButtonElement;
+  private turnMainEl!: HTMLElement;
   private statusEl!: HTMLElement;
   private logEl!: HTMLElement;
   private errorEl!: HTMLElement;
@@ -116,7 +130,6 @@ export class GameUI {
   private buildPrivacyPanel(): HTMLElement {
     const panel = document.createElement("details");
     panel.className = "cn-privacy";
-    panel.open = true;
 
     const summary = document.createElement("summary");
     summary.textContent = "Your key & your privacy";
@@ -161,6 +174,24 @@ export class GameUI {
     this.root.innerHTML = "";
     this.root.classList.add("cn-app");
 
+    // --- Top bar: title + New game (always visible, the game-over action too) ---
+    const topbar = document.createElement("header");
+    topbar.className = "cn-topbar";
+    const title = document.createElement("h1");
+    title.className = "cn-title";
+    title.appendChild(document.createTextNode("Codenames "));
+    const titleAccent = document.createElement("span");
+    titleAccent.textContent = "Duet";
+    title.appendChild(titleAccent);
+    const newGameBtn = document.createElement("button");
+    newGameBtn.type = "button";
+    newGameBtn.textContent = "New game";
+    newGameBtn.className = "cn-new-game";
+    newGameBtn.addEventListener("click", () => this.cb.onNewGame());
+    topbar.appendChild(title);
+    topbar.appendChild(newGameBtn);
+    this.root.appendChild(topbar);
+
     // Error banner
     this.errorEl = document.createElement("div");
     this.errorEl.className = "cn-error";
@@ -177,7 +208,14 @@ export class GameUI {
     this.errorEl.appendChild(this.retryBtn);
     this.root.appendChild(this.errorEl);
 
-    // Setup bar
+    // --- Settings (collapsed once a key is saved; open for first-time players) ---
+    const settings = document.createElement("details");
+    settings.className = "cn-settings";
+    settings.open = !readSavedKey();
+    const settingsSummary = document.createElement("summary");
+    settingsSummary.textContent = "⚙ Settings — key, model, seed";
+    settings.appendChild(settingsSummary);
+
     const setupBar = document.createElement("div");
     setupBar.className = "cn-setup";
 
@@ -262,12 +300,6 @@ export class GameUI {
     clearKeyBtn.className = "cn-clear-key";
     clearKeyBtn.addEventListener("click", () => this.clearKey());
 
-    const newGameBtn = document.createElement("button");
-    newGameBtn.type = "button";
-    newGameBtn.textContent = "New game";
-    newGameBtn.className = "cn-new-game";
-    newGameBtn.addEventListener("click", () => this.cb.onNewGame());
-
     setupBar.appendChild(this.keyInput);
     setupBar.appendChild(this.modelSelect);
     setupBar.appendChild(this.modelCustomInput);
@@ -278,23 +310,31 @@ export class GameUI {
     setupBar.appendChild(seedLabel);
     setupBar.appendChild(saveKeyBtn);
     setupBar.appendChild(clearKeyBtn);
-    setupBar.appendChild(newGameBtn);
-    this.root.appendChild(setupBar);
+    settings.appendChild(setupBar);
+    this.root.appendChild(settings);
 
-    this.root.appendChild(this.buildRulesPanel());
-    this.root.appendChild(this.buildPrivacyPanel());
-
-    // Status line
+    // --- Turn header: the single "whose move is it" banner above the board ---
+    const turn = document.createElement("div");
+    turn.className = "cn-turn";
+    this.turnMainEl = document.createElement("div");
+    this.turnMainEl.className = "cn-turn-main";
     this.statusEl = document.createElement("div");
     this.statusEl.className = "cn-status";
-    this.root.appendChild(this.statusEl);
+    turn.appendChild(this.turnMainEl);
+    turn.appendChild(this.statusEl);
+    this.root.appendChild(turn);
 
-    // Grid
+    // --- Board: the centerpiece ---
     this.gridEl = document.createElement("div");
     this.gridEl.className = "cn-grid";
     this.root.appendChild(this.gridEl);
 
-    // Clue bar
+    this.root.appendChild(this.buildLegend());
+
+    // --- Action row: exactly one primary control shows per turn state ---
+    const action = document.createElement("div");
+    action.className = "cn-action";
+
     this.clueBarEl = document.createElement("div");
     this.clueBarEl.className = "cn-clue-bar";
     this.clueWordInput = document.createElement("input");
@@ -303,7 +343,7 @@ export class GameUI {
     this.clueWordInput.className = "cn-clue-word";
     this.clueNumInput = document.createElement("input");
     this.clueNumInput.type = "number";
-    this.clueNumInput.min = "0";
+    this.clueNumInput.min = "1";
     this.clueNumInput.placeholder = "#";
     this.clueNumInput.className = "cn-clue-num";
     const clueSubmitBtn = document.createElement("button");
@@ -319,36 +359,66 @@ export class GameUI {
     this.clueBarEl.appendChild(this.clueNumInput);
     this.clueBarEl.appendChild(clueSubmitBtn);
     this.clueBarEl.hidden = true;
-    this.root.appendChild(this.clueBarEl);
+    action.appendChild(this.clueBarEl);
 
-    // End guessing button
+    // Shown on the AI's clue turn: the human explicitly requests the AI's clue.
+    this.getClueBtn = document.createElement("button");
+    this.getClueBtn.type = "button";
+    this.getClueBtn.textContent = "Get the AI's clue";
+    this.getClueBtn.className = "cn-get-clue cn-primary";
+    this.getClueBtn.hidden = true;
+    this.getClueBtn.addEventListener("click", () => this.cb.onGetClue());
+    action.appendChild(this.getClueBtn);
+
     this.endGuessingBtn = document.createElement("button");
     this.endGuessingBtn.type = "button";
     this.endGuessingBtn.textContent = "End guessing";
     this.endGuessingBtn.className = "cn-end-guessing";
     this.endGuessingBtn.hidden = true;
     this.endGuessingBtn.addEventListener("click", () => this.cb.onEndGuessing());
-    this.root.appendChild(this.endGuessingBtn);
+    action.appendChild(this.endGuessingBtn);
 
-    // Shown on the AI's clue turn: the human explicitly requests the AI's clue.
-    this.getClueBtn = document.createElement("button");
-    this.getClueBtn.type = "button";
-    this.getClueBtn.textContent = "Get the AI's clue";
-    this.getClueBtn.className = "cn-get-clue";
-    this.getClueBtn.hidden = true;
-    this.getClueBtn.addEventListener("click", () => this.cb.onGetClue());
-    this.root.appendChild(this.getClueBtn);
+    this.root.appendChild(action);
 
-    // AI log panel
-    const logPanel = document.createElement("div");
+    // --- Reference (collapsed) ---
+    this.root.appendChild(this.buildRulesPanel());
+    this.root.appendChild(this.buildPrivacyPanel());
+
+    // --- Game log: secondary, collapsible drawer ---
+    const logPanel = document.createElement("details");
     logPanel.className = "cn-log-panel";
+    logPanel.open = true;
+    const logSummary = document.createElement("summary");
     const logTitle = document.createElement("h3");
     logTitle.textContent = "Game log";
+    logSummary.appendChild(logTitle);
+    logPanel.appendChild(logSummary);
     this.logEl = document.createElement("div");
     this.logEl.className = "cn-log";
-    logPanel.appendChild(logTitle);
     logPanel.appendChild(this.logEl);
     this.root.appendChild(logPanel);
+  }
+
+  // A small key for the board shading colors — they're meaningful but not
+  // self-explanatory.
+  private buildLegend(): HTMLElement {
+    const legend = document.createElement("div");
+    legend.className = "cn-legend";
+    const items: Array<[Category, string]> = [
+      ["green", "your agent"],
+      ["bystander", "bystander"],
+      ["assassin", "assassin"],
+    ];
+    for (const [cat, label] of items) {
+      const item = document.createElement("span");
+      item.className = "cn-legend-item";
+      const swatch = document.createElement("span");
+      swatch.className = `cn-legend-swatch cat-${cat}`;
+      item.appendChild(swatch);
+      item.appendChild(document.createTextNode(` ${label}`));
+      legend.appendChild(item);
+    }
+    return legend;
   }
 
   render(state: GameState): void {
@@ -401,12 +471,14 @@ export class GameUI {
     const showGetClue = state.phase === "awaitClue" && state.clueGiver === "ai" && state.status === "playing";
     this.getClueBtn.hidden = !showGetClue;
 
+    // Turn header — one clear line for whose move it is
+    this.turnMainEl.textContent = turnHeadline(state);
+
     // Status line
     this.statusEl.innerHTML = "";
-    const parts: string[] = [];
-    parts.push(`Turns remaining: ${state.turnsRemaining}`);
-    parts.push(`Agents found: ${state.agentsFound}/${TOTAL_AGENTS}`);
-    this.statusEl.appendChild(document.createTextNode(parts.join(" · ")));
+    this.statusEl.appendChild(
+      document.createTextNode(`Agents ${state.agentsFound}/${TOTAL_AGENTS} · ${state.turnsRemaining} turns left`),
+    );
 
     if (state.status === "won") {
       const badge = document.createElement("span");
