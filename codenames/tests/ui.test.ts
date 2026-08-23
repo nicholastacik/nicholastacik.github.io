@@ -5,7 +5,7 @@ import { createGame } from "../src/engine";
 function rng(seed: number) {
   return () => { seed |= 0; seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed>>>15),1|seed); t=(t+Math.imul(t ^ (t>>>7),61|t))^t; return ((t ^ (t>>>14))>>>0)/4294967296; };
 }
-const cb = () => ({ onClueSubmit: vi.fn(), onCellClick: vi.fn(), onEndGuessing: vi.fn(), onNewGame: vi.fn(), onRetry: vi.fn(), onGetClue: vi.fn(), onLoadModels: vi.fn() });
+const cb = () => ({ onClueSubmit: vi.fn(), onPassClue: vi.fn(), onCellClick: vi.fn(), onEndGuessing: vi.fn(), onNewGame: vi.fn(), onRetry: vi.fn(), onGetClue: vi.fn(), onLoadModels: vi.fn() });
 
 describe("GameUI", () => {
   let root: HTMLElement;
@@ -250,6 +250,26 @@ describe("GameUI", () => {
     expect((cells[1] as HTMLElement).querySelector(".cn-cell-badge")!.textContent).toBe("❌");
     // an unrevealed cell has no badge
     expect((cells[2] as HTMLElement).querySelector(".cn-cell-badge")).toBeNull();
+  });
+
+  it("shows Pass only on your clue turn, fires onPassClue, and headlines when all your agents are found", () => {
+    const callbacks = cb();
+    const ui = new GameUI(root, callbacks);
+    const s = createGame({ rng: rng(3) });
+    const pass = () => root.querySelector(".cn-pass-clue") as HTMLButtonElement;
+
+    ui.render({ ...s, clueGiver: "human", phase: "awaitClue" });
+    expect(pass().hidden).toBe(false);
+    ui.render({ ...s, clueGiver: "ai", phase: "awaitClue" }); // AI's clue turn
+    expect(pass().hidden).toBe(true);
+
+    // headline hint when all the human's agents are already found
+    const revealed = s.revealed.slice();
+    s.keys.human.forEach((c, i) => { if (c === "green") revealed[i] = true; });
+    ui.render({ ...s, revealed, clueGiver: "human", phase: "awaitClue" });
+    expect(root.querySelector(".cn-turn-main")!.textContent).toMatch(/pass/i);
+    pass().click();
+    expect(callbacks.onPassClue).toHaveBeenCalled();
   });
 
   it("shows a collapsible rules panel covering the key mechanics", () => {
