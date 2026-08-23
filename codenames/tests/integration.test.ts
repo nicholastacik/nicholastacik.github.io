@@ -314,3 +314,39 @@ describe("controller first-player coin flip", () => {
     }
   });
 });
+
+describe("controller log UX (clear, thinking, debug)", () => {
+  it("clears the log on new game and logs 'thinking' during the AI's guess turn", async () => {
+    const logs: string[] = [];
+    let cleared = 0;
+    const ui = {
+      render: vi.fn(), log: (l: string) => logs.push(l), getKey: () => "sk", getModel: () => "m",
+      setError: vi.fn(), clearLog: () => { cleared++; logs.length = 0; }, isDebug: () => false,
+    };
+    const caller: LLMCaller = { call: vi.fn(async (): Promise<LLMResult<any>> => ok<GuessResponse>({ reasoning: "", guesses: [] })) };
+    const c = createController({ ui, makeCaller: () => caller, rng: rng(3), firstClueGiver: "human" });
+    await c.newGame();
+    expect(cleared).toBe(1);
+    await c.submitClue("OCEAN", 1);
+    expect(logs.some((l) => l.includes("thinking about your clue"))).toBe(true);
+  });
+
+  it("debug mode logs the AI's intended clue targets", async () => {
+    const g = createGame({ rng: rng(3), firstClueGiver: "ai" });
+    const aiGreen = g.words.find((_, i) => g.keys.ai[i] === "green")!;
+    const clue: ClueResponse = { reasoning: "", clue: "ZZZCLUE", number: 1, targets: [aiGreen] };
+    const logs: string[] = [];
+    const ui = {
+      render: vi.fn(), log: (l: string) => logs.push(l), getKey: () => "sk", getModel: () => "m",
+      setError: vi.fn(), clearLog: () => { logs.length = 0; }, isDebug: () => true,
+    };
+    const caller: LLMCaller = {
+      call: vi.fn(async (_m: any, _s: any, name: string): Promise<LLMResult<any>> =>
+        name === "clue" ? ok<ClueResponse>(clue) : ok<GuessResponse>({ reasoning: "", guesses: [] })),
+    };
+    const c = createController({ ui, makeCaller: () => caller, rng: rng(3), firstClueGiver: "ai" });
+    await c.newGame();
+    await c.requestAIClue();
+    expect(logs.some((l) => l.includes("🐛") && l.includes(aiGreen))).toBe(true);
+  });
+});
