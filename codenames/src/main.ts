@@ -9,6 +9,8 @@ export interface ControllerUI {
   getModel(): string;
   setError(msg: string | null): void;
   setModels?(ids: string[]): void;
+  clearLog?(): void;
+  isDebug?(): boolean;
 }
 
 export interface ControllerDeps {
@@ -82,6 +84,7 @@ export function createController(deps: ControllerDeps) {
     busy = true;
     try {
       ui.setError(null);
+      log("The AI is thinking of a clue…");
       const clue = await getAIClue(caller(), state, log);
       if (gen !== generation) return; // stale: a new game started meanwhile
       if (clue === null) {
@@ -92,6 +95,7 @@ export function createController(deps: ControllerDeps) {
         return;
       }
       state = giveClue(state, clue.clue, clue.number);
+      if (ui.isDebug?.()) log(`🐛 AI wants you to find: ${clue.targets.join(", ")}`);
       render();
     } catch (e) {
       if (gen !== generation) return; // stale: don't surface a dead game's error
@@ -113,8 +117,10 @@ export function createController(deps: ControllerDeps) {
     busy = true;
     try {
       ui.setError(null);
+      log("The AI is thinking about your clue…");
       const words = await getAIGuess(caller(), state, log);
       if (gen !== generation) return; // stale: a new game started meanwhile
+      if (ui.isDebug?.()) log(`🐛 AI intends to guess: ${words.join(", ") || "(nothing)"}`);
       for (const word of words) {
         if (state.phase !== "awaitGuess" || state.status !== "playing") break;
         const beforeLen = outcomesLen();
@@ -146,6 +152,7 @@ export function createController(deps: ControllerDeps) {
   async function newGame(): Promise<void> {
     generation += 1;
     busy = false; // abandon any in-flight AI call from the previous game (its result is discarded by the generation guard)
+    ui.clearLog?.(); // fresh log each game
     const flip = deps.coinFlip ?? (() => Math.random() < 0.5);
     const first: Player = deps.firstClueGiver ?? (flip() ? "human" : "ai");
     state = createGame({ rng: deps.rng, firstClueGiver: first });
