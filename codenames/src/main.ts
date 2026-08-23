@@ -1,5 +1,6 @@
 import type { Category, GameState, Player } from "./types";
 import { createGame, giveClue, guess, endGuessing as engineEndGuessing, passTurn, makeRng } from "./engine";
+import { validateHumanClue } from "./validate";
 import { getAIClue, getAIGuess, LLMError, type LLMCaller, type Logger } from "./ai";
 
 export interface ControllerUI {
@@ -194,6 +195,12 @@ export function createController(deps: ControllerDeps) {
 
   async function submitClue(w: string, n: number): Promise<void> {
     if (busy) return;
+    const check = validateHumanClue(w, n, state);
+    if (!check.ok) {
+      ui.setError(`Illegal clue: ${check.violations.join("; ")}.`);
+      return;
+    }
+    ui.setError(null);
     log(`You clued "${w}" for ${n}.`);
     state = giveClue(state, w, n);
     render();
@@ -265,7 +272,6 @@ if (typeof document !== "undefined" && document.getElementById("app")) {
     onClueSubmit: (w, n) => controller.submitClue(w, n),
     onCellClick: (w) => controller.clickCell(w),
     onEndGuessing: () => controller.endGuessing(),
-    onSaveKey: () => {},
     onNewGame: () => controller.newGame(),
     onRetry: () => controller.retryAITurn(),
     onGetClue: () => controller.requestAIClue(),

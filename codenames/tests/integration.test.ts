@@ -401,3 +401,25 @@ describe("controller: AI stops guessing + seeds", () => {
     expect(String(setSeed.mock.calls[0]![0]).length).toBeGreaterThan(0);
   });
 });
+
+describe("controller rejects illegal human clues", () => {
+  it("a multi-word or board-word or non-positive clue is refused (no turn taken)", async () => {
+    const g = createGame({ rng: rng(3), firstClueGiver: "human" });
+    const boardWord = g.words[0]!;
+    const { ui } = fakeUi();
+    const caller: LLMCaller = { call: vi.fn() };
+    const c = createController({ ui, makeCaller: () => caller, rng: rng(3), firstClueGiver: "human" });
+    await c.newGame();
+
+    await c.submitClue("TWO WORDS", 1);
+    expect(ui.setError).toHaveBeenCalled();
+    await c.submitClue(boardWord, 1);   // clue is on the board
+    await c.submitClue("OCEAN", 0);     // non-positive number
+    // none of these advanced the game or called the AI
+    expect(caller.call).not.toHaveBeenCalled();
+    const s = lastRendered(ui.render);
+    expect(s.phase).toBe("awaitClue");
+    expect(s.clueGiver).toBe("human");
+    expect(s.history).toHaveLength(0);
+  });
+});

@@ -37,13 +37,16 @@ async function playOneGame(apiKey: string, model: string): Promise<GameResult> {
       }
     } else if (state.phase === "awaitGuess") {
       const words = await getAIGuess(caller, state, log);
-      if (words.length === 0) {
+      for (const word of words) {
+        if (state.phase !== "awaitGuess" || state.status !== "playing") break;
+        state = guess(state, word);
+      }
+      // Mirror the controller: the returned list IS how many the AI chose to
+      // guess. If the turn didn't already end (wrong guess / number+1 cap / win),
+      // the AI has stopped — end the turn so eval matches real gameplay instead
+      // of re-asking for guesses on the same clue.
+      if (state.status === "playing" && state.phase === "awaitGuess") {
         state = endGuessing(state);
-      } else {
-        for (const word of words) {
-          if (state.phase !== "awaitGuess" || state.status !== "playing") break;
-          state = guess(state, word);
-        }
       }
     }
   }

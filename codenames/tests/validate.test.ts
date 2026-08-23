@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validateClue, filterGuesses } from "../src/validate";
+import { validateClue, filterGuesses, validateHumanClue } from "../src/validate";
 import { createGame } from "../src/engine";
 
 function rng(seed: number) {
@@ -61,5 +61,23 @@ describe("filterGuesses", () => {
     s2.revealed[0] = true;
     const out = filterGuesses([w0], s2);
     expect(out).toEqual([]);
+  });
+});
+
+describe("validateHumanClue", () => {
+  const s = createGame({ rng: rng(3) });
+  it("accepts a legal one-word, positive-number clue", () => {
+    expect(validateHumanClue("OCEAN", 2, s).ok).toBe(true);
+  });
+  it("rejects a multi-word clue", () => {
+    expect(validateHumanClue("DEEP SEA", 1, s).ok).toBe(false);
+  });
+  it("rejects a clue that is a board word", () => {
+    expect(validateHumanClue(s.words[0]!.toLowerCase(), 1, s).ok).toBe(false);
+  });
+  it("rejects a non-positive or non-integer number", () => {
+    expect(validateHumanClue("OCEAN", 0, s).ok).toBe(false);
+    expect(validateHumanClue("OCEAN", -3, s).ok).toBe(false);
+    expect(validateHumanClue("OCEAN", 1.5, s).ok).toBe(false);
   });
 });
