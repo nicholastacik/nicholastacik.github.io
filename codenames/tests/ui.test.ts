@@ -179,6 +179,39 @@ describe("GameUI", () => {
     expect(callbacks.onGetClue).toHaveBeenCalled();
   });
 
+  it("shows 'End guessing' only while YOU are guessing (the AI gave the clue)", () => {
+    const ui = new GameUI(root, cb());
+    const s = createGame({ rng: rng(3) });
+    const btn = () => root.querySelector(".cn-end-guessing") as HTMLButtonElement;
+
+    ui.render({ ...s, clueGiver: "ai", phase: "awaitGuess", currentClue: { word: "X", number: 1, guessesMade: 0 } });
+    expect(btn().hidden).toBe(false); // your guessing turn
+
+    ui.render({ ...s, clueGiver: "human", phase: "awaitGuess" }); // AI is guessing — not your control
+    expect(btn().hidden).toBe(true);
+    ui.render({ ...s, clueGiver: "human", phase: "awaitClue" }); // your clue turn
+    expect(btn().hidden).toBe(true);
+  });
+
+  it("labels the log 'Game log' and clearLog empties it", () => {
+    const ui = new GameUI(root, cb());
+    ui.render(createGame({ rng: rng(3) }));
+    expect(root.querySelector(".cn-log-panel h3")!.textContent).toBe("Game log");
+    ui.log("one");
+    ui.log("two");
+    expect(root.querySelectorAll(".cn-log-line").length).toBe(2);
+    ui.clearLog();
+    expect(root.querySelectorAll(".cn-log-line").length).toBe(0);
+  });
+
+  it("isDebug reflects the debug checkbox (off by default)", () => {
+    const ui = new GameUI(root, cb());
+    ui.render(createGame({ rng: rng(3) }));
+    expect(ui.isDebug()).toBe(false);
+    (root.querySelector(".cn-debug") as HTMLInputElement).checked = true;
+    expect(ui.isDebug()).toBe(true);
+  });
+
   it("shows a collapsible rules panel covering the key mechanics", () => {
     const ui = new GameUI(root, cb());
     ui.render(createGame({ rng: rng(3) }));

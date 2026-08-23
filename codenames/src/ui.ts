@@ -48,6 +48,7 @@ export class GameUI {
   private modelCustomInput!: HTMLInputElement;
   private rememberInput!: HTMLInputElement;
   private showKeyInput!: HTMLInputElement;
+  private debugInput!: HTMLInputElement;
   private lastState: GameState | null = null;
   private gridEl!: HTMLElement;
   private clueBarEl!: HTMLElement;
@@ -219,7 +220,16 @@ export class GameUI {
       if (this.lastState) this.render(this.lastState);
     });
     showKeyLabel.appendChild(this.showKeyInput);
-    showKeyLabel.appendChild(document.createTextNode(" Show my key card"));
+    showKeyLabel.appendChild(document.createTextNode(" Show my key card (while guessing)"));
+
+    // Debug: surface the AI's private intentions in the log (spoilers). Off by default.
+    const debugLabel = document.createElement("label");
+    debugLabel.className = "cn-remember-label";
+    this.debugInput = document.createElement("input");
+    this.debugInput.type = "checkbox";
+    this.debugInput.className = "cn-debug";
+    debugLabel.appendChild(this.debugInput);
+    debugLabel.appendChild(document.createTextNode(" Debug (show AI intentions)"));
 
     const saveKeyBtn = document.createElement("button");
     saveKeyBtn.type = "button";
@@ -246,6 +256,7 @@ export class GameUI {
     setupBar.appendChild(loadModelsBtn);
     setupBar.appendChild(rememberLabel);
     setupBar.appendChild(showKeyLabel);
+    setupBar.appendChild(debugLabel);
     setupBar.appendChild(saveKeyBtn);
     setupBar.appendChild(clearKeyBtn);
     setupBar.appendChild(newGameBtn);
@@ -313,7 +324,7 @@ export class GameUI {
     const logPanel = document.createElement("div");
     logPanel.className = "cn-log-panel";
     const logTitle = document.createElement("h3");
-    logTitle.textContent = "AI log";
+    logTitle.textContent = "Game log";
     this.logEl = document.createElement("div");
     this.logEl.className = "cn-log";
     logPanel.appendChild(logTitle);
@@ -356,8 +367,9 @@ export class GameUI {
     const showClueBar = state.phase === "awaitClue" && state.clueGiver === "human" && state.status === "playing";
     this.clueBarEl.hidden = !showClueBar;
 
-    // End guessing visibility
-    const showEndGuessing = state.phase === "awaitGuess" && state.clueGiver === "human" && state.status === "playing";
+    // End guessing visibility — shown while YOU are guessing (the AI gave the
+    // clue), so you can stop before spending all your guesses.
+    const showEndGuessing = state.phase === "awaitGuess" && state.clueGiver === "ai" && state.status === "playing";
     this.endGuessingBtn.hidden = !showEndGuessing;
 
     // "Get the AI's clue" shows on the AI's clue turn (human triggers the fetch).
@@ -385,10 +397,23 @@ export class GameUI {
   }
 
   log(line: string): void {
+    // Keep the view pinned to the newest entry, but only if the user is already
+    // at the bottom — so scrolling up to read history isn't yanked back down.
+    const atBottom =
+      this.logEl.scrollHeight - this.logEl.scrollTop - this.logEl.clientHeight < 4;
     const entry = document.createElement("div");
     entry.className = "cn-log-line";
     entry.textContent = line;
     this.logEl.appendChild(entry);
+    if (atBottom) this.logEl.scrollTop = this.logEl.scrollHeight;
+  }
+
+  clearLog(): void {
+    this.logEl.replaceChildren();
+  }
+
+  isDebug(): boolean {
+    return this.debugInput.checked;
   }
 
   // Populate the model dropdown with the user's available models (from their
