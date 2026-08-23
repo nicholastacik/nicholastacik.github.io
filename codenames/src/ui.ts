@@ -28,6 +28,11 @@ export function saveKey(key: string, remember: boolean): void {
 
 // Build a word -> revealed category map from history, so covered cells can be
 // shaded correctly regardless of whose keycard was in play when guessed.
+// Small badge emoji for a revealed cell's category (matches the log labels).
+function catEmoji(cat: Category): string {
+  return cat === "green" ? "✅" : cat === "assassin" ? "❌" : "🟡";
+}
+
 function revealedCategories(state: GameState): Map<string, Category> {
   const map = new Map<string, Category>();
   for (const turn of state.history as HistoryTurn[]) {
@@ -353,7 +358,13 @@ export class GameUI {
       if (revealed) {
         btn.classList.add("revealed");
         const cat = revealedCats.get(word);
-        if (cat) btn.classList.add(`cat-${cat}`);
+        if (cat) {
+          btn.classList.add(`cat-${cat}`);
+          const badge = document.createElement("span");
+          badge.className = "cn-cell-badge";
+          badge.textContent = catEmoji(cat);
+          btn.appendChild(badge); // corner badge (word text stays centered)
+        }
         btn.disabled = true;
       } else if (shadeKey) {
         btn.classList.add(`shade-${shadeKey[i]}`);

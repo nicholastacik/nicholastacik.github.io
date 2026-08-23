@@ -212,6 +212,26 @@ describe("GameUI", () => {
     expect(ui.isDebug()).toBe(true);
   });
 
+  it("puts a category badge (✅ agent / ❌ assassin) on revealed cells", () => {
+    const ui = new GameUI(root, cb());
+    const s = createGame({ rng: rng(3) });
+    const w0 = s.words[0]!;
+    const w1 = s.words[1]!;
+    const revealed = s.revealed.slice();
+    revealed[0] = true;
+    revealed[1] = true;
+    ui.render({
+      ...s,
+      revealed,
+      history: [{ clueGiver: "ai", clue: "X", number: 2, guesses: [w0, w1], outcomes: ["green", "assassin"] }],
+    });
+    const cells = root.querySelectorAll("[data-cell]");
+    expect((cells[0] as HTMLElement).querySelector(".cn-cell-badge")!.textContent).toBe("✅");
+    expect((cells[1] as HTMLElement).querySelector(".cn-cell-badge")!.textContent).toBe("❌");
+    // an unrevealed cell has no badge
+    expect((cells[2] as HTMLElement).querySelector(".cn-cell-badge")).toBeNull();
+  });
+
   it("shows a collapsible rules panel covering the key mechanics", () => {
     const ui = new GameUI(root, cb());
     ui.render(createGame({ rng: rng(3) }));
