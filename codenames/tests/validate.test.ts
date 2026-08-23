@@ -81,3 +81,23 @@ describe("validateHumanClue", () => {
     expect(validateHumanClue("OCEAN", 1.5, s).ok).toBe(false);
   });
 });
+
+describe("clue vs board-word substring rule", () => {
+  const s = createGame({ rng: rng(3) });
+  const longWord = s.words.find((w) => w.length >= 5)!;
+  const aiGreen = s.words.find((_, i) => s.keys.ai[i] === "green")!;
+
+  it("validateClue rejects a clue contained in a board word (HERO/SUPERHERO case)", () => {
+    const sub = longWord.slice(0, 4); // a proper substring of a board word
+    expect(validateClue({ reasoning: "", clue: sub, number: 1, targets: [aiGreen] }, s).ok).toBe(false);
+  });
+
+  it("validateHumanClue rejects a substring AND a superstring of a board word", () => {
+    expect(validateHumanClue(longWord.slice(0, 4), 1, s).ok).toBe(false); // clue inside a board word
+    expect(validateHumanClue(`${s.words[0]}ING`, 1, s).ok).toBe(false);   // clue contains a board word
+  });
+
+  it("still accepts a clue unrelated to any board word", () => {
+    expect(validateHumanClue("OCEAN", 2, s).ok).toBe(true);
+  });
+});

@@ -18,13 +18,26 @@ export type GuessResponse = z.infer<typeof GuessSchema>;
 
 const norm = (w: string) => w.trim().toUpperCase();
 
+// A clue is illegal if it's a board word, is contained in one, or contains one
+// (e.g. HERO with SUPERHERO on the board). Returns the conflicting board word,
+// or null. Board words are all >= 3 chars, so this won't fire on trivial overlaps.
+function boardWordConflict(clue: string, state: GameState): string | null {
+  const c = norm(clue);
+  if (c.length === 0) return null;
+  for (const w of state.words) {
+    const b = norm(w);
+    if (c === b || c.includes(b) || b.includes(c)) return w;
+  }
+  return null;
+}
+
 export function validateClue(resp: ClueResponse, state: GameState): { ok: boolean; violations: string[] } {
   const violations: string[] = [];
   const clue = resp.clue.trim();
   if (clue.length === 0 || /\s|-/.test(clue)) violations.push("clue must be exactly one word");
 
-  const board = new Set(state.words.map(norm));
-  if (board.has(norm(clue))) violations.push("clue must not be a word on the board");
+  const conflict = boardWordConflict(clue, state);
+  if (conflict) violations.push(`clue must not be, contain, or be part of a board word (conflicts with "${conflict}")`);
 
   if (resp.number !== resp.targets.length) violations.push("number must equal the count of targets");
 
@@ -48,7 +61,8 @@ export function validateHumanClue(
   const violations: string[] = [];
   const c = clue.trim();
   if (c.length === 0 || /\s|-/.test(c)) violations.push("the clue must be exactly one word");
-  if (new Set(state.words.map(norm)).has(norm(c))) violations.push("the clue can't be a word on the board");
+  const conflict = boardWordConflict(c, state);
+  if (conflict) violations.push(`the clue can't be, contain, or be part of a board word (conflicts with "${conflict}")`);
   if (!Number.isInteger(num) || num < 1) violations.push("the number must be a whole number of at least 1");
   return { ok: violations.length === 0, violations };
 }
