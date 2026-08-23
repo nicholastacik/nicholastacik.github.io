@@ -12,7 +12,8 @@ export const CLUE_SYSTEM = `${RULES}
 Your job now: give ONE single-word clue and a NUMBER for the agents you want your
 partner to guess. Rules for a legal clue:
 - exactly one word, no spaces or hyphens;
-- must NOT be any word currently on the board;
+- must NOT be any word on the board, nor contained in one, nor contain one
+  (e.g. do NOT clue "HERO" if SUPERHERO is on the board);
 - the NUMBER must equal how many target words you list.
 
 Strategy: prefer a SAFE clue that connects a few of your agents over an ambitious
