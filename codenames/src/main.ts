@@ -1,5 +1,5 @@
 import type { Category, GameState, Player } from "./types";
-import { createGame, giveClue, guess, endGuessing as engineEndGuessing, passTurn } from "./engine";
+import { createGame, giveClue, guess, endGuessing as engineEndGuessing, passTurn, makeRng } from "./engine";
 import { getAIClue, getAIGuess, LLMError, type LLMCaller, type Logger } from "./ai";
 
 export interface ControllerUI {
@@ -11,6 +11,8 @@ export interface ControllerUI {
   setModels?(ids: string[]): void;
   clearLog?(): void;
   isDebug?(): boolean;
+  getSeed?(): string;
+  setSeed?(seed: string): void;
 }
 
 export interface ControllerDeps {
@@ -133,6 +135,15 @@ export function createController(deps: ControllerDeps) {
         logGuessResult("AI", word, beforeLen);
         render();
       }
+      // The AI's returned list IS how many it chose to guess. If the turn didn't
+      // already end (a wrong guess / the number+1 cap / a win), the AI has
+      // decided to stop — end its guessing turn so play advances (otherwise the
+      // game would stall with no visible control).
+      if (state.status === "playing" && state.phase === "awaitGuess") {
+        log("The AI stops guessing.");
+        state = engineEndGuessing(state);
+        render();
+      }
       logEndState();
     } catch (e) {
       if (gen !== generation) return; // stale: don't surface a dead game's error
@@ -158,13 +169,25 @@ export function createController(deps: ControllerDeps) {
     generation += 1;
     busy = false; // abandon any in-flight AI call from the previous game (its result is discarded by the generation guard)
     ui.clearLog?.(); // fresh log each game
-    const flip = deps.coinFlip ?? (() => Math.random() < 0.5);
+
+    // Seed: use what's entered, else generate one and show it — so every game
+    // is reproducible (same seed → same board + first player). deps.rng (tests)
+    // takes precedence and skips seeding entirely.
+    let seed = (ui.getSeed?.() ?? "").trim();
+    if (!deps.rng && !seed) {
+      seed = String(Math.floor(Math.random() * 1e9));
+      ui.setSeed?.(seed);
+    }
+    const rng = deps.rng ?? (seed ? makeRng(seed) : undefined);
+
+    const flip = deps.coinFlip ?? (rng ? () => rng() < 0.5 : () => Math.random() < 0.5);
     const first: Player = deps.firstClueGiver ?? (flip() ? "human" : "ai");
-    state = createGame({ rng: deps.rng, firstClueGiver: first });
+    state = createGame({ rng, firstClueGiver: first });
+    if (seed) log(`New game (seed: ${seed}).`);
     log(
       first === "human"
-        ? "New game — you give the first clue."
-        : 'New game — the AI gives the first clue. Click "Get the AI\'s clue".',
+        ? "You give the first clue."
+        : 'The AI gives the first clue. Click "Get the AI\'s clue".',
     );
     render();
   }
