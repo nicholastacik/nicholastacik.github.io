@@ -37,6 +37,22 @@ export function validateClue(resp: ClueResponse, state: GameState): { ok: boolea
   return { ok: violations.length === 0, violations };
 }
 
+// Validate a clue the HUMAN typed against the same rules the AI's clues obey:
+// exactly one word, not a word on the board, and a positive whole number.
+// (No target check — the human doesn't declare targets.)
+export function validateHumanClue(
+  clue: string,
+  num: number,
+  state: GameState,
+): { ok: boolean; violations: string[] } {
+  const violations: string[] = [];
+  const c = clue.trim();
+  if (c.length === 0 || /\s|-/.test(c)) violations.push("the clue must be exactly one word");
+  if (new Set(state.words.map(norm)).has(norm(c))) violations.push("the clue can't be a word on the board");
+  if (!Number.isInteger(num) || num < 1) violations.push("the number must be a whole number of at least 1");
+  return { ok: violations.length === 0, violations };
+}
+
 export function filterGuesses(guesses: string[], state: GameState): string[] {
   const canonical = new Map(remainingWords(state).map((w) => [norm(w), w]));
   const out: string[] = [];
