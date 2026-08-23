@@ -350,3 +350,54 @@ describe("controller log UX (clear, thinking, debug)", () => {
     expect(logs.some((l) => l.includes("🐛") && l.includes(aiGreen))).toBe(true);
   });
 });
+
+describe("controller: AI stops guessing + seeds", () => {
+  it("ends the AI's guessing turn when it stops early, so play advances (no stall)", async () => {
+    const g = createGame({ rng: rng(3), firstClueGiver: "human" });
+    const humanGreens = g.words.filter((_, i) => g.keys.human[i] === "green").slice(0, 2);
+    const { ui } = fakeUi();
+    const caller: LLMCaller = {
+      call: vi.fn(async (_m: any, _s: any, name: string): Promise<LLMResult<any>> =>
+        name === "guess"
+          ? ok<GuessResponse>({ reasoning: "", guesses: humanGreens }) // exactly 2, then stops
+          : { parsed: null, refusal: "pass", finishReason: "stop" }),
+    };
+    const c = createController({ ui, makeCaller: () => caller, rng: rng(3), firstClueGiver: "human" });
+    await c.newGame();
+    await c.submitClue("OCEAN", 2);
+    const s = lastRendered(ui.render);
+    expect(s.agentsFound).toBe(2);   // both guessed correctly
+    expect(s.clueGiver).toBe("ai");  // turn advanced (was stuck at human/awaitGuess before the fix)
+    expect(s.phase).toBe("awaitClue");
+  });
+
+  it("a given seed reproduces the same board; a different seed differs", async () => {
+    const mkUi = (seed: string) => ({
+      render: vi.fn(), log: vi.fn(), getKey: () => "", getModel: () => "m",
+      setError: vi.fn(), getSeed: () => seed, setSeed: vi.fn(),
+    });
+    const dummyCaller = () => ({ call: vi.fn() });
+
+    const ui1 = mkUi("compare-123");
+    await createController({ ui: ui1, makeCaller: dummyCaller }).newGame();
+    const ui2 = mkUi("compare-123");
+    await createController({ ui: ui2, makeCaller: dummyCaller }).newGame();
+    const words1 = lastRendered(ui1.render).words;
+    expect(lastRendered(ui2.render).words).toEqual(words1);
+
+    const ui3 = mkUi("different-seed");
+    await createController({ ui: ui3, makeCaller: dummyCaller }).newGame();
+    expect(lastRendered(ui3.render).words).not.toEqual(words1);
+  });
+
+  it("generates and displays a seed when none is entered", async () => {
+    const setSeed = vi.fn();
+    const ui = {
+      render: vi.fn(), log: vi.fn(), getKey: () => "", getModel: () => "m",
+      setError: vi.fn(), getSeed: () => "", setSeed,
+    };
+    await createController({ ui, makeCaller: () => ({ call: vi.fn() }) }).newGame();
+    expect(setSeed).toHaveBeenCalled();
+    expect(String(setSeed.mock.calls[0]![0]).length).toBeGreaterThan(0);
+  });
+});

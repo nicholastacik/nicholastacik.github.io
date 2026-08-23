@@ -54,6 +54,7 @@ export class GameUI {
   private rememberInput!: HTMLInputElement;
   private showKeyInput!: HTMLInputElement;
   private debugInput!: HTMLInputElement;
+  private seedInput!: HTMLInputElement;
   private lastState: GameState | null = null;
   private gridEl!: HTMLElement;
   private clueBarEl!: HTMLElement;
@@ -236,6 +237,17 @@ export class GameUI {
     debugLabel.appendChild(this.debugInput);
     debugLabel.appendChild(document.createTextNode(" Debug (show AI intentions)"));
 
+    // Seed: set it to reproduce a board (for comparing agents); leave blank for
+    // a random game (the seed used is filled in so you can replay it).
+    const seedLabel = document.createElement("label");
+    seedLabel.className = "cn-remember-label";
+    this.seedInput = document.createElement("input");
+    this.seedInput.type = "text";
+    this.seedInput.className = "cn-seed";
+    this.seedInput.placeholder = "random";
+    seedLabel.appendChild(document.createTextNode("Seed "));
+    seedLabel.appendChild(this.seedInput);
+
     const saveKeyBtn = document.createElement("button");
     saveKeyBtn.type = "button";
     saveKeyBtn.textContent = "Save key";
@@ -262,6 +274,7 @@ export class GameUI {
     setupBar.appendChild(rememberLabel);
     setupBar.appendChild(showKeyLabel);
     setupBar.appendChild(debugLabel);
+    setupBar.appendChild(seedLabel);
     setupBar.appendChild(saveKeyBtn);
     setupBar.appendChild(clearKeyBtn);
     setupBar.appendChild(newGameBtn);
@@ -425,6 +438,14 @@ export class GameUI {
 
   isDebug(): boolean {
     return this.debugInput.checked;
+  }
+
+  getSeed(): string {
+    return this.seedInput.value.trim();
+  }
+
+  setSeed(seed: string): void {
+    this.seedInput.value = seed;
   }
 
   // Populate the model dropdown with the user's available models (from their
