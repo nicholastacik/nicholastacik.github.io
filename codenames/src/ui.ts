@@ -6,7 +6,7 @@ export interface UICallbacks {
   onCellClick(word: string): void;
   onEndGuessing(): void;
   onGetClue(): void;
-  onSaveKey(key: string, remember: boolean): void;
+  // NOTE: no onSaveKey — key persistence is handled inside GameUI (saveKey/clearKey).
   onNewGame(): void;
   onRetry(): void;
   onLoadModels(): void;
@@ -251,9 +251,10 @@ export class GameUI {
     const saveKeyBtn = document.createElement("button");
     saveKeyBtn.type = "button";
     saveKeyBtn.textContent = "Save key";
-    saveKeyBtn.addEventListener("click", () => {
-      this.cb.onSaveKey(this.getKey(), this.rememberInput.checked);
-    });
+    saveKeyBtn.className = "cn-save-key";
+    // Persist directly here (a UI/storage concern) — mirrors clearKey(). The old
+    // onSaveKey callback was wired to a no-op in the app, so the button did nothing.
+    saveKeyBtn.addEventListener("click", () => saveKey(this.getKey(), this.rememberInput.checked));
 
     const clearKeyBtn = document.createElement("button");
     clearKeyBtn.type = "button";

@@ -5,7 +5,7 @@ import { createGame } from "../src/engine";
 function rng(seed: number) {
   return () => { seed |= 0; seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed>>>15),1|seed); t=(t+Math.imul(t ^ (t>>>7),61|t))^t; return ((t ^ (t>>>14))>>>0)/4294967296; };
 }
-const cb = () => ({ onClueSubmit: vi.fn(), onCellClick: vi.fn(), onEndGuessing: vi.fn(), onSaveKey: vi.fn(), onNewGame: vi.fn(), onRetry: vi.fn(), onGetClue: vi.fn(), onLoadModels: vi.fn() });
+const cb = () => ({ onClueSubmit: vi.fn(), onCellClick: vi.fn(), onEndGuessing: vi.fn(), onNewGame: vi.fn(), onRetry: vi.fn(), onGetClue: vi.fn(), onLoadModels: vi.fn() });
 
 describe("GameUI", () => {
   let root: HTMLElement;
@@ -107,6 +107,26 @@ describe("GameUI", () => {
     ui.setError("Oops");
     (root.querySelector(".cn-retry") as HTMLElement).click();
     expect(callbacks.onRetry).toHaveBeenCalled();
+  });
+
+  it("the Save key button persists to sessionStorage only when 'remember' is checked", () => {
+    sessionStorage.clear();
+    const ui = new GameUI(root, cb());
+    ui.render(createGame({ rng: rng(3) }));
+    const keyInput = root.querySelector(".cn-key-input") as HTMLInputElement;
+    const remember = root.querySelectorAll(".cn-remember-label input")[0] as HTMLInputElement; // "Save key (session only)"
+    const saveBtn = root.querySelector(".cn-save-key") as HTMLButtonElement;
+
+    keyInput.value = "sk-remember-me";
+    remember.checked = false;
+    saveBtn.click();
+    expect(sessionStorage.getItem("openai_key")).toBeNull(); // not saved when unchecked
+
+    remember.checked = true;
+    saveBtn.click();
+    expect(sessionStorage.getItem("openai_key")).toBe("sk-remember-me");
+    expect(localStorage.getItem("openai_key")).toBeNull(); // never localStorage
+    sessionStorage.clear();
   });
 
   it("Clear key wipes the input and removes the key from sessionStorage", () => {

@@ -113,9 +113,10 @@ my API bill" every time.
 
 Ballpark, a full game costs somewhere around **$0.005–$0.08**, depending on model and
 how many turns it takes to finish — call it somewhere between a dozen and a couple
-hundred games per dollar. The system prompts are static (helping prompt caching) and
-responses are capped at 1200 completion tokens, which is generous for a
-reasoning-then-answer clue or guess but not so generous the model can ramble.
+hundred games per dollar (reasoning models cost more, since you pay for the hidden
+thinking). The system prompts are static (helping prompt caching) and responses are
+capped at 8192 completion tokens — high because reasoning models spend hidden
+reasoning tokens against that same budget, while the actual JSON answer is tiny.
 
 ## Interpret → validate → repair
 
@@ -136,9 +137,12 @@ break the game the way an illegal clue can.
 
 The other failure modes weren't about content at all:
 
-- **Truncation** — `finish_reason === "length"` means the model got cut off before
-  finishing the JSON. `getAIClue`/`getAIGuess` retry once rather than trying to parse
-  a half-written object.
+- **Truncation** — if the model gets cut off before finishing the JSON, the SDK's
+  `parse()` throws (there's no half-object to hand back). Reasoning models made this
+  real: their hidden thinking counts against the token budget, so a too-small cap
+  truncates before the answer. The fix is mostly prevention — a generous 8192-token
+  budget — and if it still happens it's mapped to a typed `LLMError` and surfaced in
+  the UI with a Retry button rather than silently retried.
 - **Refusals** — Structured Outputs can return a `refusal` field instead of
   `parsed`. Treated as "pass the turn," logged, not retried.
 - **Auth and rate limits** — a 401 or 429 from the API is caught and turned into a
