@@ -69,12 +69,17 @@ body {
 
 .cn-setup input[type="password"],
 .cn-setup input[type="text"].cn-model-custom,
+.cn-setup input[type="text"].cn-seed,
 .cn-setup select.cn-model-select {
   background: var(--bg);
   border: 1px solid var(--border);
   color: var(--text);
   border-radius: 6px;
   padding: 0.4rem 0.5rem;
+}
+
+.cn-seed {
+  width: 7rem;
 }
 
 .cn-key-input {

@@ -3,6 +3,28 @@ import { TOTAL_AGENTS, START_TURNS } from "./types";
 import { WORDS } from "./words";
 import { generateKeyCardPair } from "./keycards";
 
+// Deterministic PRNG from a string or number seed (mulberry32 over an FNV-1a
+// hash). Same seed → same board + key cards, so games are reproducible for
+// comparing agents.
+export function makeRng(seed: string | number): () => number {
+  let s = typeof seed === "number" ? seed | 0 : hashString(seed);
+  return () => {
+    s = (s + 0x6d2b79f5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function hashString(str: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
 function shuffle<T>(arr: T[], rng: () => number): T[] {
   const a = arr.slice();
   for (let i = a.length - 1; i > 0; i--) {

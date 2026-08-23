@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createGame, giveClue, guess, endGuessing, passTurn, giverKey, remainingWords, aiGreenWordsRemaining } from "../src/engine";
+import { createGame, giveClue, guess, endGuessing, passTurn, giverKey, remainingWords, aiGreenWordsRemaining, makeRng } from "../src/engine";
 import type { GameState } from "../src/types";
 
 function rng(seed: number) {
@@ -200,5 +200,31 @@ describe("engine", () => {
       const after = JSON.stringify(s);
       expect(before).toBe(after);
     });
+  });
+});
+
+describe("makeRng", () => {
+  it("is deterministic per seed and differs across seeds, values in [0,1)", () => {
+    const a = makeRng("hello");
+    const b = makeRng("hello");
+    const seqA = [a(), a(), a()];
+    expect([b(), b(), b()]).toEqual(seqA); // same seed → same sequence
+    const c = makeRng("world");
+    expect([c(), c(), c()]).not.toEqual(seqA); // different seed → different
+    for (const v of seqA) {
+      expect(v).toBeGreaterThanOrEqual(0);
+      expect(v).toBeLessThan(1);
+    }
+  });
+
+  it("accepts a numeric seed", () => {
+    expect(makeRng(42)()).toBe(makeRng(42)());
+  });
+
+  it("same seed → identical board and key cards", () => {
+    const g1 = createGame({ rng: makeRng("board-seed") });
+    const g2 = createGame({ rng: makeRng("board-seed") });
+    expect(g1.words).toEqual(g2.words);
+    expect(g1.keys).toEqual(g2.keys);
   });
 });
