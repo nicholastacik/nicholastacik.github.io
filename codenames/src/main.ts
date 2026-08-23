@@ -207,6 +207,18 @@ export function createController(deps: ControllerDeps) {
     await runAIGuessTurn();
   }
 
+  // The human passes their clue turn (e.g. all their agents are already found, so
+  // there's nothing to clue). Advances to the AI's clue turn, spending a timer
+  // token — matching Duet, where a forced pass still uses the timeline.
+  function passClue(): void {
+    if (busy) return;
+    if (!(state.clueGiver === "human" && state.phase === "awaitClue" && state.status === "playing")) return;
+    log("You pass — no clue.");
+    state = passTurn(state);
+    render();
+    logEndState();
+  }
+
   async function clickCell(w: string): Promise<void> {
     if (busy) return;
     // Ownership guard: a cell click is only meaningful while the human is
@@ -257,7 +269,7 @@ export function createController(deps: ControllerDeps) {
     }
   }
 
-  return { newGame, submitClue, clickCell, endGuessing, retryAITurn, requestAIClue, loadModels };
+  return { newGame, submitClue, passClue, clickCell, endGuessing, retryAITurn, requestAIClue, loadModels };
 }
 
 // at bottom of main.ts — real app wiring (not exercised by jsdom tests)
@@ -270,6 +282,7 @@ if (typeof document !== "undefined" && document.getElementById("app")) {
   let controller: ReturnType<typeof createController>;
   const ui = new GameUI(root, {
     onClueSubmit: (w, n) => controller.submitClue(w, n),
+    onPassClue: () => controller.passClue(),
     onCellClick: (w) => controller.clickCell(w),
     onEndGuessing: () => controller.endGuessing(),
     onNewGame: () => controller.newGame(),
