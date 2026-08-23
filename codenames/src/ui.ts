@@ -3,6 +3,7 @@ import { TOTAL_AGENTS } from "./types";
 
 export interface UICallbacks {
   onClueSubmit(word: string, num: number): void;
+  onPassClue(): void;
   onCellClick(word: string): void;
   onEndGuessing(): void;
   onGetClue(): void;
@@ -43,7 +44,15 @@ function turnHeadline(state: GameState): string {
       ? "The AI's turn — get its clue"
       : `Your guess — clue “${c?.word}” for ${c?.number}`;
   }
-  return state.phase === "awaitClue" ? "Your turn — give a clue" : "The AI is guessing…";
+  if (state.phase === "awaitClue") {
+    const humanAgentsLeft = state.words.some(
+      (_, i) => state.keys.human[i] === "green" && !state.revealed[i],
+    );
+    return humanAgentsLeft
+      ? "Your turn — give a clue"
+      : "All your agents are found — pass to let the AI clue";
+  }
+  return "The AI is guessing…";
 }
 
 function revealedCategories(state: GameState): Map<string, Category> {
@@ -73,6 +82,7 @@ export class GameUI {
   private clueBarEl!: HTMLElement;
   private clueWordInput!: HTMLInputElement;
   private clueNumInput!: HTMLInputElement;
+  private passClueBtn!: HTMLButtonElement;
   private endGuessingBtn!: HTMLButtonElement;
   private getClueBtn!: HTMLButtonElement;
   private turnMainEl!: HTMLElement;
@@ -361,6 +371,15 @@ export class GameUI {
     this.clueBarEl.hidden = true;
     action.appendChild(this.clueBarEl);
 
+    // Pass: shown on your clue turn so you can skip (e.g. all your agents found).
+    this.passClueBtn = document.createElement("button");
+    this.passClueBtn.type = "button";
+    this.passClueBtn.textContent = "Pass (no clue)";
+    this.passClueBtn.className = "cn-pass-clue";
+    this.passClueBtn.hidden = true;
+    this.passClueBtn.addEventListener("click", () => this.cb.onPassClue());
+    action.appendChild(this.passClueBtn);
+
     // Shown on the AI's clue turn: the human explicitly requests the AI's clue.
     this.getClueBtn = document.createElement("button");
     this.getClueBtn.type = "button";
@@ -458,9 +477,10 @@ export class GameUI {
       this.gridEl.appendChild(btn);
     });
 
-    // Clue bar visibility
+    // Clue bar + Pass visibility (your clue turn)
     const showClueBar = state.phase === "awaitClue" && state.clueGiver === "human" && state.status === "playing";
     this.clueBarEl.hidden = !showClueBar;
+    this.passClueBtn.hidden = !showClueBar;
 
     // End guessing visibility — shown while YOU are guessing (the AI gave the
     // clue), so you can stop before spending all your guesses.

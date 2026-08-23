@@ -423,3 +423,29 @@ describe("controller rejects illegal human clues", () => {
     expect(s.history).toHaveLength(0);
   });
 });
+
+describe("controller: human passes a clue turn", () => {
+  it("passClue advances to the AI's clue turn and spends a timer token", async () => {
+    const { ui } = fakeUi();
+    const c = createController({ ui, makeCaller: () => ({ call: vi.fn() }), rng: rng(3), firstClueGiver: "human" });
+    await c.newGame();
+    const before = lastRendered(ui.render).turnsRemaining;
+    c.passClue();
+    const s = lastRendered(ui.render);
+    expect(s.clueGiver).toBe("ai");
+    expect(s.phase).toBe("awaitClue");
+    expect(s.turnsRemaining).toBe(before - 1);
+  });
+
+  it("passClue is a no-op when it is not the human's clue turn", async () => {
+    const { ui } = fakeUi();
+    // AI-first: after newGame it's the AI's clue turn (awaitClue, clueGiver ai)
+    const c = createController({ ui, makeCaller: () => ({ call: vi.fn() }), rng: rng(3), firstClueGiver: "ai" });
+    await c.newGame();
+    const before = lastRendered(ui.render);
+    c.passClue();
+    const after = lastRendered(ui.render);
+    expect(after.clueGiver).toBe(before.clueGiver);
+    expect(after.turnsRemaining).toBe(before.turnsRemaining);
+  });
+});
