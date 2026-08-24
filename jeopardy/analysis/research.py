@@ -482,8 +482,9 @@ _HTML_TEMPLATE = """<!doctype html>
     <h1>The Board</h1>
     <p>50 Jeopardy! category clusters, ranked by how deep you can actually study them.
        Pick a decade to see what dominated the board then, drill into its most recurring
-       answers, and pull live facts from Wikipedia. A type's <em>recurring answers</em> count is
-       how many distinct answers come up 5+ times &mdash; the higher it is, the more studying pays off.</p>
+       entities, and pull live facts from Wikipedia. A type's <em>recurring entities</em> count is
+       how many distinct people, places &amp; things come up 5+ times across its clues and answers
+       &mdash; the higher it is, the more studying pays off.</p>
   </header>
   <div class="era-bar" role="group" aria-label="Study era">
     <span class="era-bar-label">The board, as of</span>
@@ -604,7 +605,7 @@ _HTML_TEMPLATE = """<!doctype html>
           btn.setAttribute('role', 'listitem');
           const barPct = Math.max(4, (d.prevalence / maxShare) * 100);
           const metaHtml = studyable
-            ? `<span class="stat">${d.applicability} recurring answers &middot; ${pctLabel(d.prevalence)} of board</span>` +
+            ? `<span class="stat">${d.applicability} recurring entities &middot; ${pctLabel(d.prevalence)} of board</span>` +
               `<span class="prevalence"><span class="prevalence-fill" style="width:${barPct}%"></span></span>`
             : '<span class="stat">not really studyable</span>';
           btn.innerHTML = `<span class="name">${escapeHtml(d.name)}</span>` +
@@ -627,11 +628,11 @@ _HTML_TEMPLATE = """<!doctype html>
           ? currentList().find(x => x.cluster_id === selectedTypeId)
           : null;
         if (!d) {
-          mainPanel.innerHTML = '<p class="placeholder">Select a category from the left to see its most recurring answers.</p>';
+          mainPanel.innerHTML = '<p class="placeholder">Select a category from the left to see its most recurring entities.</p>';
           return;
         }
         let html = `<div class="main-head"><h2>${escapeHtml(d.name)}</h2>` +
-          `<p class="sub">${d.applicability} recurring answers &middot; ${pctLabel(d.prevalence)} of ${currentEra}s categories</p></div>`;
+          `<p class="sub">${d.applicability} recurring entities &middot; ${pctLabel(d.prevalence)} of ${currentEra}s categories</p></div>`;
         const hasSamples = ((DATA.sampleClues && DATA.sampleClues[String(d.cluster_id)]) || []).length > 0;
         if (hasSamples) {
           html += '<div class="sample-box" id="sample-box">' +
@@ -791,6 +792,8 @@ def run_research():
     tokens = pd.read_parquet(config.CATEGORY_TOKENS_PATH)
     eras = pd.read_parquet(config.CATEGORY_ERAS_PATH)
     labels = pd.read_csv(config.CLUSTER_LABELS_PATH).set_index("cluster_id")["name"].to_dict()
+    if config.MISC_ID in set(tokens["cluster_id"]) and config.MISC_ID not in labels:
+        labels[config.MISC_ID] = config.MISC_LABEL
     sample = pd.read_parquet(config.CATEGORY_SAMPLE_CLUES_PATH) \
         if config.CATEGORY_SAMPLE_CLUES_PATH.exists() else None
     data = build_research_data(tokens, eras, labels, sample)

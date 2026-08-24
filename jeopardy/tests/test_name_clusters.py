@@ -11,8 +11,17 @@ def test_write_labels_sorted(tmp_path):
     nc.write_labels({1: "Beta", 0: "Alpha"}, p)
     lines = p.read_text().splitlines()
     assert lines[0] == "cluster_id,name"
-    assert lines[1] == "0,Alpha"
-    assert lines[2] == "1,Beta"
+    assert lines[1] == "-1,Misc: Hard to Classify"  # overflow type preserved, sorts first
+    assert lines[2] == "0,Alpha"
+    assert lines[3] == "1,Beta"
+
+
+def test_write_labels_preserves_misc_when_absent(tmp_path):
+    import csv as _csv
+    p = tmp_path / "labels.csv"
+    nc.write_labels({0: "Alpha"}, p)  # names lacks -1; a re-naming run must not drop the misc type
+    rows = {int(r["cluster_id"]): r["name"] for r in _csv.DictReader(open(p))}
+    assert rows[nc.config.MISC_ID] == nc.config.MISC_LABEL
 
 
 def test_build_prompt_includes_fingerprints():
@@ -34,4 +43,6 @@ def test_run_name_clusters_stubbed(tmp_path, monkeypatch):
     monkeypatch.setattr(nc.config, "CLUSTER_LABELS_PATH", tmp_path / "labels.csv")
     monkeypatch.setattr(nc, "_complete", lambda prompt: '{"0": "Pasta"}')
     nc.run_name_clusters()
-    assert (tmp_path / "labels.csv").read_text().splitlines()[1] == "0,Pasta"
+    lines = (tmp_path / "labels.csv").read_text().splitlines()
+    assert "0,Pasta" in lines
+    assert "-1,Misc: Hard to Classify" in lines

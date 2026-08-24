@@ -28,11 +28,13 @@ def parse_response(text):
 
 
 def write_labels(names, path):
+    rows = dict(names)
+    rows.setdefault(config.MISC_ID, config.MISC_LABEL)  # keep the overflow type across re-naming
     with open(path, "w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(["cluster_id", "name"])
-        for cid in sorted(names):
-            writer.writerow([cid, names[cid]])
+        for cid in sorted(rows):
+            writer.writerow([cid, rows[cid]])
 
 
 def _complete(prompt):

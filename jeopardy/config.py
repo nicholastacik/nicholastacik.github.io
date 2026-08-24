@@ -26,6 +26,7 @@ OPENAI_MODEL = "gpt-4o-mini"              # optional cluster naming
 
 MISC_ID = -1                              # synthetic "hard to classify" overflow cluster
 MISC_FRACTION = 0.05                      # worst 5% by centroid distance -> misc pool
+MISC_LABEL = "Misc: Hard to Classify"     # label for the overflow cluster (survives re-naming)
 
 EMBEDDINGS_PATH = DATA_DIR / "embeddings.npy"       # gitignored cache
 INSTANCES_PATH = DATA_DIR / "instances.parquet"     # gitignored instance index
