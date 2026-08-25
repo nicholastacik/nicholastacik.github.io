@@ -7,6 +7,7 @@ project:
     - "posts/jeopardy_ds/research/**"
     - "posts/montreal_events/events/**"
     - "posts/codenames/app/**"
+    - "posts/chess/app/**"
   # Render every .qmd page; exclude committed data/notes artifacts that live
   # under posts/ but must not become web pages.
   render:

@@ -1,0 +1,23 @@
+{
+  "name": "chess-openings",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@lichess-org/chessground": "^9.1.1",
+    "chess.js": "^1.0.0"
+  },
+  "devDependencies": {
+    "jsdom": "^25.0.0",
+    "typescript": "^5.5.0",
+    "vite": "^5.4.0",
+    "vitest": "^2.1.0",
+    "zod": "^3.23.8"
+  }
+}
