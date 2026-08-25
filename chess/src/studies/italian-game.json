@@ -1,0 +1,27 @@
+{
+  "id": "italian-game",
+  "name": "Italian Game",
+  "eco": "C50",
+  "side": "white",
+  "intro": "The Italian Game develops quickly, points the bishop at Black's weak f7-square, and fights for the center. It leads to both quiet positional play (Giuoco Pianissimo) and sharp lines.",
+  "line": [
+    { "san": "e4", "comment": "Stake a claim in the center and open lines for the bishop and queen." },
+    { "san": "e5", "comment": "Black mirrors, contesting the center directly." },
+    { "san": "Nf3", "comment": "Develop with a threat: the knight attacks the e5-pawn." },
+    { "san": "Nc6", "comment": "Defend e5 and develop toward the center.",
+      "alts": [
+        [{ "san": "Nf6", "comment": "The Petrov Defense — Black counterattacks e4 instead of defending e5. A different opening entirely." }]
+      ] },
+    { "san": "Bc4", "comment": "The move that names the opening: the bishop eyes f7, the weakest square in Black's camp.",
+      "alts": [
+        [{ "san": "Bb5", "comment": "The Ruy Lopez — pinning pressure on the c6-knight instead." }]
+      ] },
+    { "san": "Bc5", "comment": "The Giuoco Piano ('quiet game'): Black mirrors, aiming the bishop at f2.",
+      "alts": [
+        [{ "san": "Nf6", "comment": "The Two Knights Defense — a sharper, more aggressive try that invites tactics." }]
+      ] },
+    { "san": "c3", "comment": "Prepare d4, building a big center. The modern main line often continues with slow maneuvering (the Giuoco Pianissimo)." },
+    { "san": "Nf6", "comment": "Develop and pressure e4." },
+    { "san": "d3", "comment": "The Giuoco Pianissimo: support e4 and keep the center closed for slow, strategic play." }
+  ]
+}
