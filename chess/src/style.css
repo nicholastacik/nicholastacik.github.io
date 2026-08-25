@@ -1,2 +1,12 @@
 :root { font-family: system-ui, sans-serif; }
 body { margin: 0; }
+
+.landing-header { padding: 1.5rem 1rem 0.5rem; max-width: 720px; margin: 0 auto; }
+.landing-header h1 { margin: 0 0 0.25rem; }
+.landing-header p { margin: 0; color: #555; }
+.study-search { display: block; width: calc(100% - 2rem); max-width: 720px; margin: 1rem auto; padding: 0.6rem 0.8rem; font-size: 1rem; box-sizing: border-box; }
+.study-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.75rem; max-width: 720px; margin: 0 auto 2rem; padding: 0 1rem; }
+.study-card { display: flex; flex-direction: column; gap: 0.25rem; text-align: left; padding: 0.9rem 1rem; border: 1px solid #ddd; border-radius: 8px; background: #fff; cursor: pointer; font: inherit; }
+.study-card:hover { border-color: #888; }
+.study-card-name { font-weight: 600; }
+.study-card-meta { color: #777; font-size: 0.85rem; text-transform: capitalize; }
