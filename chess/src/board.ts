@@ -1,7 +1,6 @@
 import { Chessground } from "@lichess-org/chessground";
 import type { Api } from "@lichess-org/chessground/api";
-// Board + piece styles shipped with chessground. If Step 1 showed different
-// filenames, update these three imports to match.
+// chessground ships its board + piece styles as these three CSS files (piece art is embedded as data URIs)
 import "@lichess-org/chessground/assets/chessground.base.css";
 import "@lichess-org/chessground/assets/chessground.brown.css";
 import "@lichess-org/chessground/assets/chessground.cburnett.css";

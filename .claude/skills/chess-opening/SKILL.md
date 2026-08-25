@@ -50,6 +50,7 @@ Ask the user for (or take from their request):
      *lines* branching at that node's ply — each alt is itself an array of nodes
      (a continuation). Use alts for the important divergences a learner should
      see, not every sideline.
+   - `nag` and `shapes` are optional and **reserved for a future annotations feature** — they are validated and stored but not rendered in the current version. Use `comment` for prose annotations.
    - `side` sets the default board orientation: use `"black"` for Black
      repertoires so the board starts from Black's view.
    - Write `comment` as short, concrete teaching notes ("controls d5", "prepares
