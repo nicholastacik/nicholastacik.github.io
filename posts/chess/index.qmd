@@ -1,0 +1,45 @@
+---
+title: "Walking chess openings instead of reading them"
+date: 2026-08-24
+categories: [chess, interactive, AI]
+---
+
+I'm learning chess, and opening theory is usually written as a wall of move
+notation — `1.e4 e5 2.Nf3 Nc6 3.Bc4 Bc5 4.c3 Nf6 5.d3`. I find that hard to
+follow: I can't *see* the position, and the moment a line branches I lose the
+thread.
+
+So I built a small tool to **walk** openings instead of read them: a board, a
+variation tree, and a short explanation at every move. Step forward and back
+with the arrow keys, click any move in the tree to jump there, and follow
+branches (the Petrov, the Ruy Lopez, the Two Knights) as first-class lines.
+
+<p><a class="btn btn-primary" href="app/" target="_blank" rel="noopener">
+Open the Chess Openings Explorer →</a></p>
+
+## How it's built
+
+It's a small Vite + TypeScript app. The interesting design decisions:
+
+- **Studies are just moves and prose.** Each opening is one JSON file — the
+  mainline, its variations, and a comment on the instructive moves. No board
+  positions are stored.
+- **The browser replays the moves.** Because the app already bundles
+  [`chess.js`](https://github.com/jhlywa/chess.js), it replays a line's moves to
+  derive each position on the fly, and renders it with Lichess's
+  [chessground](https://github.com/lichess-org/chessground) board. That keeps the
+  study files human-readable and skips a precompute step.
+- **Legality is a test, not a runtime check.** A Vitest suite replays every move
+  in every study and fails the build on anything illegal — so a broken line can
+  never reach the page.
+- **Adding an opening is a Claude skill.** I describe an opening ("add the
+  Najdorf, from Black's side"), Claude drafts the move tree and annotations from
+  opening theory into a new study file, the test suite verifies every move is
+  legal, and it rebuilds. The theory is Claude's draft and I review it, but the
+  moves are guaranteed to be real chess.
+
+The variation tree turned out to be the crux. Openings are naturally a tree, but
+they're *authored* most comfortably as a mainline with occasional
+"…or you could play this" asides. So a study is written in that readable
+line-plus-alternatives shape, then normalized once into a plain tree the UI can
+walk and click.
