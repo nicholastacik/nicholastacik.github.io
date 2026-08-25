@@ -1,17 +1,29 @@
 import "./style.css";
+import { loadStudies } from "./study";
+import { renderLanding, renderStudyView } from "./ui";
 import { createBoard } from "./board";
 
 if (typeof document !== "undefined" && document.getElementById("app")) {
   const app = document.getElementById("app")!;
-  const boardEl = document.createElement("div");
-  boardEl.style.width = "384px";
-  boardEl.style.height = "384px";
-  app.appendChild(boardEl);
-  const board = createBoard(boardEl, "white");
-  // Show the position after 1.e4 to confirm pieces render.
-  board.setPosition(
-    "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
-    ["e2", "e4"],
-    "white",
-  );
+  const studies = loadStudies();
+
+  function route(): void {
+    const hash = location.hash.replace(/^#/, "") || "/";
+    if (hash.startsWith("/study/")) {
+      const id = decodeURIComponent(hash.slice("/study/".length));
+      const study = studies.find((s) => s.id === id);
+      if (study) {
+        renderStudyView(app, study, {
+          makeBoard: (el, orientation) => createBoard(el, orientation),
+        });
+        return;
+      }
+    }
+    renderLanding(app, studies, (id) => {
+      location.hash = `#/study/${encodeURIComponent(id)}`;
+    });
+  }
+
+  window.addEventListener("hashchange", route);
+  route();
 }
