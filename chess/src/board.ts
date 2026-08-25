@@ -5,14 +5,7 @@ import type { Api } from "@lichess-org/chessground/api";
 import "@lichess-org/chessground/assets/chessground.base.css";
 import "@lichess-org/chessground/assets/chessground.brown.css";
 import "@lichess-org/chessground/assets/chessground.cburnett.css";
-
-export interface BoardHandle {
-  setPosition(
-    fen: string,
-    lastMove: [string, string] | undefined,
-    orientation: "white" | "black",
-  ): void;
-}
+import type { BoardHandle } from "./ui";
 
 export function createBoard(el: HTMLElement, orientation: "white" | "black"): BoardHandle {
   const cg: Api = Chessground(el, {
