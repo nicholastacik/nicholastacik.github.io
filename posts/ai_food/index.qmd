@@ -1,8 +1,8 @@
 ---
 title: "What's up with terrible AI restaurant pictures?"
-description: "Seriously..."
+description: "The trypophobia is real..."
 date: "2026-08-24"
-categories: [blog, AI, thoughts]
+categories: [AI, musings]
 draft: false
 ---
 I need to vent about something. I've been seeing so many posts lately with menu images from restaurants. Specifically, AI-generated menu images that look absolutely
@@ -26,4 +26,5 @@ bugs or worse?
 !["Better Scampi"](better_scampi.png){#fig-better width=50%}
 
 - I just need to know why so many restaurants are using these menu pictures that immediately make me lose my appetite when they have so many
-reasons not to do so. Any theories? 
+reasons not to do so. Any theories? Maybe there's a service that doordash (or equivalent) offers where they bulk generate these images for restaurants,
+and then they print them out for consistency?
