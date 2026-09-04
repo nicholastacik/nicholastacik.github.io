@@ -2,7 +2,7 @@
 title: "Getting Cryptic with Claude"
 description: "How I used AI to help set up a cryptic crossword workflow."
 date: "2026-07-02"
-categories: [blog, AI]
+categories: [AI, Projects]
 draft: false
 ---
 

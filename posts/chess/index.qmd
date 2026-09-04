@@ -2,6 +2,7 @@
 title: "Walking chess openings instead of reading them"
 date: 2026-08-24
 categories: [chess, interactive, AI]
+draft: true
 ---
 
 I'm learning chess, and opening theory is usually written as a wall of move
