@@ -3,6 +3,7 @@ title: "Navier-Stokes Solved?"
 description: "The politics of solving a Millennium Prize problem"
 date: "2026-09-08"
 categories: [AI, musings]
+image: navier-stokes-dark-master.webp
 draft: false
 ---
 It was announced today by [OpenAI](https://openai.com/index/navier-stokes-solution/) that they are sharing a solution to
