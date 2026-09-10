@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createGame, giveClue, guess, endGuessing, passTurn, giverKey, remainingWords, aiGreenWordsRemaining, makeRng } from "../src/engine";
+import { createGame, giveClue, guess, endGuessing, passTurn, giverKey, remainingWords, aiGreenWordsRemaining, makeRng, suddenDeathGuess } from "../src/engine";
 import type { GameState } from "../src/types";
 
 function rng(seed: number) {
@@ -208,6 +208,59 @@ describe("engine", () => {
       const after = JSON.stringify(s);
       expect(before).toBe(after);
     });
+  });
+});
+
+describe("suddenDeathGuess", () => {
+  function inSD(): GameState {
+    // a fresh game forced into sudden death
+    const s = createGame({ rng: rng(3) });
+    return { ...structuredClone(s), suddenDeath: true, turnsRemaining: 0 };
+  }
+  it("a human guess is judged against the AI card: green counts an agent", () => {
+    const s0 = inSD();
+    const idx = s0.keys.ai.findIndex((c) => c === "green");
+    const s = suddenDeathGuess(s0, s0.words[idx]!, "human");
+    expect(s.revealed[idx]).toBe(true);
+    expect(s.agentsFound).toBe(s0.agentsFound + 1);
+    expect(s.status).toBe("playing");
+    expect(s.suddenDeathGuesses.at(-1)).toEqual({ word: s0.words[idx], by: "human", outcome: "green" });
+  });
+  it("an AI guess is judged against the HUMAN card", () => {
+    const s0 = inSD();
+    const idx = s0.keys.human.findIndex((c) => c === "green");
+    const s = suddenDeathGuess(s0, s0.words[idx]!, "ai");
+    expect(s.revealed[idx]).toBe(true);
+    expect(s.agentsFound).toBe(s0.agentsFound + 1);
+  });
+  it("a bystander guess loses in sudden death", () => {
+    const s0 = inSD();
+    const idx = s0.keys.ai.findIndex((c) => c === "bystander");
+    const s = suddenDeathGuess(s0, s0.words[idx]!, "human");
+    expect(s.status).toBe("lost");
+  });
+  it("an assassin guess loses in sudden death", () => {
+    const s0 = inSD();
+    const idx = s0.keys.ai.findIndex((c) => c === "assassin");
+    const s = suddenDeathGuess(s0, s0.words[idx]!, "human");
+    expect(s.status).toBe("lost");
+  });
+  it("reaching 15 agents in sudden death wins", () => {
+    const s0 = inSD();
+    s0.agentsFound = 14;
+    const idx = s0.keys.ai.findIndex((c) => c === "green");
+    const s = suddenDeathGuess(s0, s0.words[idx]!, "human");
+    expect(s.status).toBe("won");
+  });
+  it("is a no-op when not in sudden death or already revealed, and does not mutate input", () => {
+    const s0 = inSD();
+    const idx = s0.keys.ai.findIndex((c) => c === "green");
+    const notSD = { ...s0, suddenDeath: false };
+    expect(suddenDeathGuess(notSD, s0.words[idx]!, "human").status).toBe("playing");
+    expect(suddenDeathGuess(notSD, s0.words[idx]!, "human").revealed[idx]).toBe(false);
+    const before = JSON.stringify(s0);
+    suddenDeathGuess(s0, s0.words[idx]!, "human");
+    expect(JSON.stringify(s0)).toBe(before);
   });
 });
 

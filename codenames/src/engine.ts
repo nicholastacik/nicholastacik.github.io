@@ -133,3 +133,25 @@ export function passTurn(state: GameState): GameState {
   if (state.status !== "playing" || state.phase !== "awaitClue") return state;
   return endTurn(structuredClone(state));
 }
+
+export function suddenDeathGuess(state: GameState, word: string, guesser: Player): GameState {
+  if (state.status !== "playing" || !state.suddenDeath) return state;
+  const next = structuredClone(state);
+  const idx = next.words.findIndex((w) => w === word);
+  if (idx < 0 || next.revealed[idx]) return next;
+
+  // Judged against the NON-guesser's card (Duet: your partner touches, YOUR card judges).
+  const judgeKey: KeyCard = guesser === "human" ? next.keys.ai : next.keys.human;
+  const cat: Category = judgeKey[idx]!;
+  next.suddenDeathGuesses.push({ word, by: guesser, outcome: cat });
+
+  if (cat === "green") {
+    next.revealed[idx] = true;
+    next.agentsFound += 1;
+    if (next.agentsFound >= TOTAL_AGENTS) next.status = "won";
+    return next;
+  }
+  // bystander or assassin → both lose
+  next.status = "lost";
+  return next;
+}
