@@ -66,6 +66,9 @@ function revealedCategories(state: GameState): Map<string, Category> {
       if (cat) map.set(word, cat);
     });
   }
+  for (const g of state.suddenDeathGuesses) {
+    map.set(g.word, g.outcome);
+  }
   return map;
 }
 
@@ -526,10 +529,17 @@ export class GameUI {
       const youLeft = state.keys.ai.filter((c, i) => c === "green" && !state.revealed[i]).length;
       const aiLeft = state.keys.human.filter((c, i) => c === "green" && !state.revealed[i]).length;
       this.sdCountsEl.textContent = `You still need ${youLeft} of the AI's agents · the AI still needs ${aiLeft} of yours`;
+      // Before the ranked list arrives, avoid a blank-but-clickable meter.
+      if (!this.meterEl.hasChildNodes() && this.meterEl.textContent === "") {
+        this.meterEl.textContent = "Reading the clues…";
+        this.aiGuessBtn.disabled = true;
+      }
     } else {
       this.meterEl.hidden = true;
       this.aiGuessBtn.hidden = true;
       this.sdCountsEl.hidden = true;
+      this.meterEl.replaceChildren();
+      this.meterEl.textContent = "";
 
       // Clue bar + Pass visibility (your clue turn)
       const showClueBar = state.phase === "awaitClue" && state.clueGiver === "human" && state.status === "playing";
