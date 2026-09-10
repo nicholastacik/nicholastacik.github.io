@@ -555,4 +555,41 @@ describe("controller: sudden death", () => {
     await c.requestAIClue();
     expect(meter.at(-1)).toEqual({ word, confidence: 0.5 });
   });
+
+  it("retryAITurn in sudden death only re-attempts the SD fetch — it never fires a clue", async () => {
+    const g = createGame({ rng: rng(3), firstClueGiver: "human" });
+    const word = g.words[0]!;
+    const { ui, meter } = fakeUiSD();
+    const suddenDeath = vi.fn(async (): Promise<Array<{ word: string; confidence: number }>> => {
+      throw new LLMError("Rate limited — wait and retry.", "rate_limit");
+    });
+    // caller: AI clue turn refuses (pass) so the timer burns down into sudden death
+    const call = vi.fn(async () => ({ parsed: null, refusal: "pass", finishReason: "stop" }));
+    const caller: LLMCaller = { call };
+    const c = createController({ ui, makeCaller: () => caller, suddenDeath, rng: rng(3), firstClueGiver: "human" });
+    await c.newGame();
+
+    await driveToSuddenDeath(c, ui.render);
+
+    expect(lastRendered(ui.render).suddenDeath).toBe(true);
+    expect(ui.setError).toHaveBeenCalledWith("Rate limited — wait and retry.");
+    // still leaves clueGiver/phase on the AI's clue-turn parities — the
+    // regression this guards against is retryAITurn misreading that as a
+    // real pending AI clue turn and firing one.
+    const beforeRetry = lastRendered(ui.render);
+    expect(beforeRetry.clueGiver).toBe("ai");
+    expect(beforeRetry.phase).toBe("awaitClue");
+    const callCountBeforeRetry = call.mock.calls.length;
+    const historyLenBeforeRetry = beforeRetry.history.length;
+
+    suddenDeath.mockImplementationOnce(async () => [{ word, confidence: 0.5 }]);
+    await c.retryAITurn();
+
+    // no new clue was fetched or fabricated into history
+    expect(call.mock.calls.length).toBe(callCountBeforeRetry);
+    expect(lastRendered(ui.render).history.length).toBe(historyLenBeforeRetry);
+    // the retry instead re-invoked the sudden-death fetch and it succeeded
+    expect(suddenDeath).toHaveBeenCalledTimes(2);
+    expect(meter.at(-1)).toEqual({ word, confidence: 0.5 });
+  });
 });

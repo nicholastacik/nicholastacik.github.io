@@ -327,6 +327,10 @@ export function createController(deps: ControllerDeps) {
   // "figure out which one is pending, and try it again."
   async function retryAITurn(): Promise<void> {
     if (busy) return;
+    if (state.suddenDeath) {
+      await maybeEnterSuddenDeath();
+      return;
+    }
     if (isAIsClueTurn()) {
       await runAIClueTurn();
     } else if (isAIsGuessPending()) {
