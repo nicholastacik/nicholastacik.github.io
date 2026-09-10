@@ -78,3 +78,27 @@ export function filterGuesses(guesses: string[], state: GameState): string[] {
   }
   return out;
 }
+
+export const SuddenDeathSchema = z.object({
+  reasoning: z.string(),
+  guesses: z.array(z.object({ word: z.string(), confidence: z.number() })),
+});
+export type SuddenDeathResponse = z.infer<typeof SuddenDeathSchema>;
+
+export function filterSuddenDeathGuesses(
+  guesses: Array<{ word: string; confidence: number }>,
+  state: GameState,
+): Array<{ word: string; confidence: number }> {
+  const canonical = new Map(remainingWords(state).map((w) => [norm(w), w]));
+  const out: Array<{ word: string; confidence: number }> = [];
+  const seen = new Set<string>();
+  for (const g of guesses) {
+    const key = norm(g.word);
+    const word = canonical.get(key);
+    if (word && !seen.has(key)) {
+      out.push({ word, confidence: Math.max(0, Math.min(1, g.confidence)) });
+      seen.add(key);
+    }
+  }
+  return out;
+}

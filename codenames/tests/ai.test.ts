@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
-import { getAIClue, getAIGuess, filterChatModels, toLLMError, type LLMCaller, type LLMResult } from "../src/ai";
+import { getAIClue, getAIGuess, filterChatModels, toLLMError, getSuddenDeathGuesses, type LLMCaller, type LLMResult } from "../src/ai";
 import { createGame, giveClue } from "../src/engine";
-import type { ClueResponse, GuessResponse } from "../src/validate";
+import type { ClueResponse, GuessResponse, SuddenDeathResponse } from "../src/validate";
 
 function rng(seed: number) {
   return () => { seed |= 0; seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed>>>15),1|seed); t=(t+Math.imul(t ^ (t>>>7),61|t))^t; return ((t ^ (t>>>14))>>>0)/4294967296; };
@@ -72,6 +72,24 @@ describe("getAIGuess", () => {
     s = giveClue(s, "OCEAN", 2);
     const caller = scripted([{ parsed: null, refusal: null, finishReason: "stop" }]);
     expect(await getAIGuess(caller, s, () => {})).toEqual([]);
+  });
+});
+
+describe("getSuddenDeathGuesses", () => {
+  it("returns a ranked, board-filtered list", async () => {
+    const s = createGame({ rng: rng(3) });
+    const legal = s.words.slice(0, 2);
+    const caller = scripted([ok<SuddenDeathResponse>({
+      reasoning: "",
+      guesses: [{ word: legal[0]!, confidence: 0.9 }, { word: "JUNK", confidence: 0.2 }, { word: legal[1]!, confidence: 0.7 }],
+    })]);
+    const out = await getSuddenDeathGuesses(caller, s, () => {});
+    expect(out).toEqual([{ word: legal[0], confidence: 0.9 }, { word: legal[1], confidence: 0.7 }]);
+  });
+  it("returns [] on refusal", async () => {
+    const s = createGame({ rng: rng(3) });
+    const caller = scripted([{ parsed: null, refusal: "no", finishReason: "stop" }]);
+    expect(await getSuddenDeathGuesses(caller, s, () => {})).toEqual([]);
   });
 });
 
