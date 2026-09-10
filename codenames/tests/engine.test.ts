@@ -228,3 +228,25 @@ describe("makeRng", () => {
     expect(g1.keys).toEqual(g2.keys);
   });
 });
+
+describe("bystander stays in play (Duet rule)", () => {
+  it("a bystander guess does not cover the word; it can still be found as the partner's agent", () => {
+    let s = createGame({ rng: rng(3), firstClueGiver: "human" });
+    // a word that's a bystander on the HUMAN card but an AGENT on the AI card
+    const idx = s.words.findIndex((_, i) => s.keys.human[i] === "bystander" && s.keys.ai[i] === "green");
+    expect(idx).toBeGreaterThanOrEqual(0);
+    const word = s.words[idx]!;
+
+    s = giveClue(s, "AAA", 1);            // human clues
+    s = guess(s, word);                    // partner guesses it → bystander on human's card
+    expect(s.revealed[idx]).toBe(false);   // NOT covered
+    expect(remainingWords(s)).toContain(word);
+    expect(s.clueGiver).toBe("ai");        // turn ended → AI's clue turn
+
+    s = giveClue(s, "BBB", 1);             // AI clues (its turn)
+    const before = s.agentsFound;
+    s = guess(s, word);                     // human guesses the same word → green on AI's card
+    expect(s.revealed[idx]).toBe(true);     // now covered as an agent
+    expect(s.agentsFound).toBe(before + 1);
+  });
+})

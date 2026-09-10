@@ -125,6 +125,7 @@ export class GameUI {
       "You each see a different key card. Turn on “Show my key card” to shade the board with yours: green = your agents, tan = bystanders, dark = assassins.",
       "Take turns: one partner gives a one-word clue + a number; the other clicks cells to guess.",
       "A guess is judged by the clue-giver’s card: green = agent found (keep guessing), bystander = turn ends, assassin = you both lose instantly.",
+      "A bystander is NOT removed — it stays on the board (marked 🟡), because a word that’s a bystander for one of you may be an agent for the other. You can still guess it later.",
       "You may guess up to the clue’s number + 1 — that extra guess is meant for an agent left over from an earlier clue.",
       "Win: all 15 agents found. Lose: hit an assassin, or the 9-turn timer runs out with agents still hidden.",
     ];
@@ -458,9 +459,9 @@ export class GameUI {
       btn.className = "cn-cell";
 
       const revealed = state.revealed[i];
+      const cat = revealedCats.get(word);
       if (revealed) {
         btn.classList.add("revealed");
-        const cat = revealedCats.get(word);
         if (cat) {
           btn.classList.add(`cat-${cat}`);
           const badge = document.createElement("span");
@@ -469,8 +470,17 @@ export class GameUI {
           btn.appendChild(badge); // corner badge (word text stays centered)
         }
         btn.disabled = true;
-      } else if (shadeKey) {
-        btn.classList.add(`shade-${shadeKey[i]}`);
+      } else {
+        if (shadeKey) btn.classList.add(`shade-${shadeKey[i]}`);
+        // Duet: a word touched as a bystander is NOT covered — it stays in play
+        // (it may be the partner's agent), so mark it but keep it guessable.
+        if (cat === "bystander") {
+          btn.classList.add("bystander-seen");
+          const mark = document.createElement("span");
+          mark.className = "cn-cell-badge";
+          mark.textContent = catEmoji("bystander");
+          btn.appendChild(mark);
+        }
       }
 
       btn.addEventListener("click", () => this.cb.onCellClick(word));
