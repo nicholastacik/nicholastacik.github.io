@@ -332,6 +332,7 @@ export function createController(deps: ControllerDeps) {
     } else if (isAIsGuessPending()) {
       await runAIGuessTurn();
     }
+    await maybeEnterSuddenDeath();
   }
 
   // Fetch the models this key can access and populate the picker. Independent
