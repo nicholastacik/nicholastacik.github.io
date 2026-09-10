@@ -530,4 +530,29 @@ describe("controller: sudden death", () => {
     const s = lastRendered(ui.render);
     expect(s.suddenDeathGuesses.some((x) => x.by === "human" && x.word === humanGreen)).toBe(true);
   });
+
+  it("LLMError while entering sudden death surfaces via ui.setError, and a later fetch can still succeed", async () => {
+    const g = createGame({ rng: rng(3), firstClueGiver: "human" });
+    const word = g.words[0]!;
+    const { ui, meter } = fakeUiSD();
+    const suddenDeath = vi.fn(async (): Promise<Array<{ word: string; confidence: number }>> => {
+      throw new LLMError("Rate limited — wait and retry.", "rate_limit");
+    });
+    const caller: LLMCaller = { call: vi.fn(async () => ({ parsed: null, refusal: "pass", finishReason: "stop" })) };
+    const c = createController({ ui, makeCaller: () => caller, suddenDeath, rng: rng(3), firstClueGiver: "human" });
+    await c.newGame();
+
+    await driveToSuddenDeath(c, ui.render);
+
+    expect(lastRendered(ui.render).suddenDeath).toBe(true);
+    expect(ui.setError).toHaveBeenCalledWith("Rate limited — wait and retry.");
+    // the failed fetch never set sdGuesses, so nothing was ever shown on the meter
+    expect(meter).toHaveLength(0);
+
+    // still retryable: sdGuesses is still null, so the next action that can
+    // re-enter sudden death (the AI's clue turn passing again) refetches
+    suddenDeath.mockImplementationOnce(async () => [{ word, confidence: 0.5 }]);
+    await c.requestAIClue();
+    expect(meter.at(-1)).toEqual({ word, confidence: 0.5 });
+  });
 });
