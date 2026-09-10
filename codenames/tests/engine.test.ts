@@ -27,6 +27,12 @@ describe("engine", () => {
     expect(s.phase).toBe("awaitClue");
   });
 
+  it("starts not in sudden death", () => {
+    const s = createGame({ rng: rng(3) });
+    expect(s.suddenDeath).toBe(false);
+    expect(s.suddenDeathGuesses).toEqual([]);
+  });
+
   it("a green guess counts an agent and lets guessing continue", () => {
     let s = createGame({ rng: rng(3) });
     s = giveClue(s, "OCEAN", 2);
@@ -69,13 +75,14 @@ describe("engine", () => {
     expect(s.phase).toBe("awaitClue");
   });
 
-  it("exhausting the timer with fewer than 15 agents found is a loss", () => {
+  it("exhausting the timer with fewer than 15 agents enters sudden death (not a loss)", () => {
     let s = createGame({ rng: rng(3) });
-    s.turnsRemaining = 1;               // arrange: one turn left
+    s.turnsRemaining = 1;
     s = giveClue(s, "OCEAN", 1);
-    s = endGuessing(s);                 // burns the last token
+    s = endGuessing(s);
     expect(s.turnsRemaining).toBe(0);
-    expect(s.status).toBe("lost");
+    expect(s.status).toBe("playing");
+    expect(s.suddenDeath).toBe(true);
   });
 
   it("win condition: reaching 15 agents found", () => {
@@ -168,12 +175,13 @@ describe("engine", () => {
       expect(next.currentClue).toBeNull();
     });
 
-    it("sets status to lost when the timer hits 0", () => {
+    it("passTurn enters sudden death when the timer hits 0 with agents remaining", () => {
       const s = createGame({ rng: rng(3) });
       s.turnsRemaining = 1;
       const next = passTurn(s);
       expect(next.turnsRemaining).toBe(0);
-      expect(next.status).toBe("lost");
+      expect(next.status).toBe("playing");
+      expect(next.suddenDeath).toBe(true);
     });
 
     it("is a no-op when status is not playing", () => {
