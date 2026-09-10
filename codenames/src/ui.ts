@@ -11,6 +11,9 @@ export interface UICallbacks {
   onNewGame(): void;
   onRetry(): void;
   onLoadModels(): void;
+  // Sudden death: the human asks the AI to make its guess. Optional — the
+  // button that wires it up lands in a later task.
+  onAiGuess?(): void;
 }
 
 const KEY_NAME = "openai_key";
