@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validateClue, filterGuesses, validateHumanClue } from "../src/validate";
+import { validateClue, filterGuesses, validateHumanClue, SuddenDeathSchema, filterSuddenDeathGuesses } from "../src/validate";
 import { createGame } from "../src/engine";
 
 function rng(seed: number) {
@@ -99,5 +99,21 @@ describe("clue vs board-word substring rule", () => {
 
   it("still accepts a clue unrelated to any board word", () => {
     expect(validateHumanClue("OCEAN", 2, s).ok).toBe(true);
+  });
+});
+
+describe("filterSuddenDeathGuesses", () => {
+  const s = createGame({ rng: rng(3) });
+  it("keeps canonical board words, clamps confidence, dedupes", () => {
+    const w0 = s.words[0]!;
+    const out = filterSuddenDeathGuesses(
+      [{ word: w0.toLowerCase(), confidence: 1.4 }, { word: "NOTAWORD", confidence: 0.5 }, { word: w0, confidence: 0.9 }],
+      s,
+    );
+    expect(out).toEqual([{ word: w0, confidence: 1 }]);
+  });
+  it("drops revealed words", () => {
+    const s2 = { ...s, revealed: s.revealed.map((_, i) => i === 0) };
+    expect(filterSuddenDeathGuesses([{ word: s.words[0]!, confidence: 0.9 }], s2)).toEqual([]);
   });
 });

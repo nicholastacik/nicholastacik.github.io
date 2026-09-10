@@ -2,8 +2,8 @@ import OpenAI from "openai";
 import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
 import type { GameState } from "./types";
-import { buildClueMessages, buildGuessMessages, repairMessage, type ChatMessage } from "./prompts";
-import { ClueSchema, GuessSchema, validateClue, filterGuesses, type ClueResponse } from "./validate";
+import { buildClueMessages, buildGuessMessages, buildSuddenDeathMessages, repairMessage, type ChatMessage } from "./prompts";
+import { ClueSchema, GuessSchema, SuddenDeathSchema, validateClue, filterGuesses, filterSuddenDeathGuesses, type ClueResponse } from "./validate";
 
 export interface LLMResult<T> { parsed: T | null; refusal: string | null; finishReason: string; }
 export type Logger = (line: string) => void;
@@ -137,4 +137,15 @@ export async function getAIGuess(caller: LLMCaller, state: GameState, log: Logge
   // the AI never actually guessed (an information leak). The controller logs each
   // guess as it is applied instead.
   return legal;
+}
+
+export async function getSuddenDeathGuesses(
+  caller: LLMCaller,
+  state: GameState,
+  log: Logger,
+): Promise<Array<{ word: string; confidence: number }>> {
+  const res = await caller.call(buildSuddenDeathMessages(state), SuddenDeathSchema, "sudden_death");
+  if (res.refusal) { log(`AI declined a sudden-death guess: ${res.refusal}.`); return []; }
+  if (!res.parsed) { log("AI returned no sudden-death guesses."); return []; }
+  return filterSuddenDeathGuesses(res.parsed.guesses, state);
 }
