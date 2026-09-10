@@ -1,5 +1,8 @@
 import type { Category, GameState, Player } from "./types";
-import { createGame, giveClue, guess, endGuessing as engineEndGuessing, passTurn, makeRng } from "./engine";
+import {
+  createGame, giveClue, guess, endGuessing as engineEndGuessing, passTurn, makeRng,
+  suddenDeathGuess,
+} from "./engine";
 import { validateHumanClue } from "./validate";
 import { getAIClue, getAIGuess, LLMError, type LLMCaller, type Logger } from "./ai";
 
@@ -14,6 +17,7 @@ export interface ControllerUI {
   isDebug?(): boolean;
   getSeed?(): string;
   setSeed?(seed: string): void;
+  setSuddenDeathMeter?(top: { word: string; confidence: number } | null): void;
 }
 
 export interface ControllerDeps {
@@ -26,6 +30,9 @@ export interface ControllerDeps {
   // Decides who clues first each new game when firstClueGiver is unset:
   // true → human, false → AI. Defaults to a 50/50 flip. Injectable for tests.
   coinFlip?: () => boolean;
+  // Fetches the AI's ranked sudden-death guesses. Optional so tests can inject
+  // a fake; the real entry passes getSuddenDeathGuesses.
+  suddenDeath?: (caller: LLMCaller, state: GameState, log: Logger) => Promise<Array<{ word: string; confidence: number }>>;
 }
 
 export function createController(deps: ControllerDeps) {
@@ -41,6 +48,10 @@ export function createController(deps: ControllerDeps) {
   // flight, and the (now-irrelevant) result must not be applied to the new
   // game's state.
   let generation = 0;
+
+  // The AI's ranked sudden-death guesses, fetched once on entering sudden
+  // death (null means "not fetched yet for this game"). Reset in newGame.
+  let sdGuesses: Array<{ word: string; confidence: number }> | null = null;
 
   const log: Logger = (line: string) => ui.log(line);
 
@@ -77,6 +88,60 @@ export function createController(deps: ControllerDeps) {
     else if (state.status === "lost") log("💥 Game over.");
   }
 
+  // --- sudden death ---
+  function isRevealedWord(word: string): boolean {
+    const i = state.words.indexOf(word);
+    return i >= 0 && !!state.revealed[i];
+  }
+  function topSDCandidate(): { word: string; confidence: number } | null {
+    if (!sdGuesses) return null;
+    return sdGuesses.find((g) => !isRevealedWord(g.word)) ?? null;
+  }
+  function updateSDMeter(): void {
+    ui.setSuddenDeathMeter?.(topSDCandidate());
+  }
+
+  // Fires the moment the timer hits 0 with agents still hidden: fetches the
+  // AI's ranked sudden-death guesses exactly once per game (guarded by
+  // sdGuesses === null) and sets the meter. Called at the end of every action
+  // that can advance the turn timer to 0.
+  async function maybeEnterSuddenDeath(): Promise<void> {
+    if (!state.suddenDeath || sdGuesses !== null || !deps.suddenDeath) return;
+    const gen = generation;
+    busy = true;
+    try {
+      ui.setError(null);
+      log("⏱ Sudden death — no clues left. Any wrong guess loses.");
+      const list = await deps.suddenDeath(caller(), state, log);
+      if (gen !== generation) return; // stale: a new game started meanwhile
+      sdGuesses = list;
+      updateSDMeter();
+      render();
+    } catch (e) {
+      if (gen !== generation) return; // stale: don't surface a dead game's error
+      if (e instanceof LLMError) ui.setError(e.message);
+      else throw e;
+    } finally {
+      if (gen === generation) busy = false;
+    }
+  }
+
+  // The AI's move during sudden death: guess its top confident candidate
+  // against the human's card. Called by the "AI guess" button.
+  async function aiSuddenDeathGuess(): Promise<void> {
+    if (busy || !state.suddenDeath || state.status !== "playing") return;
+    const top = topSDCandidate();
+    if (!top) {
+      log("The AI has no confident sudden-death guess — your move.");
+      return;
+    }
+    state = suddenDeathGuess(state, top.word, "ai");
+    log(`AI guessed ${top.word} → ${guessLabel(state.suddenDeathGuesses[state.suddenDeathGuesses.length - 1]!.outcome)}`);
+    updateSDMeter();
+    render();
+    logEndState();
+  }
+
   function isAIsClueTurn(): boolean {
     return state.clueGiver === "ai" && state.phase === "awaitClue" && state.status === "playing";
   }
@@ -100,6 +165,7 @@ export function createController(deps: ControllerDeps) {
         // exported passTurn primitive (no duplicated turn-advance logic here).
         state = passTurn(state);
         render();
+        await maybeEnterSuddenDeath();
         return;
       }
       state = giveClue(state, clue.clue, clue.number);
@@ -169,6 +235,7 @@ export function createController(deps: ControllerDeps) {
   async function newGame(): Promise<void> {
     generation += 1;
     busy = false; // abandon any in-flight AI call from the previous game (its result is discarded by the generation guard)
+    sdGuesses = null;
     ui.clearLog?.(); // fresh log each game
 
     // Seed: use what's entered, else generate one and show it — so every game
@@ -205,22 +272,36 @@ export function createController(deps: ControllerDeps) {
     state = giveClue(state, w, n);
     render();
     await runAIGuessTurn();
+    await maybeEnterSuddenDeath();
   }
 
   // The human passes their clue turn (e.g. all their agents are already found, so
   // there's nothing to clue). Advances to the AI's clue turn, spending a timer
   // token — matching Duet, where a forced pass still uses the timeline.
-  function passClue(): void {
+  async function passClue(): Promise<void> {
     if (busy) return;
     if (!(state.clueGiver === "human" && state.phase === "awaitClue" && state.status === "playing")) return;
     log("You pass — no clue.");
     state = passTurn(state);
     render();
     logEndState();
+    await maybeEnterSuddenDeath();
   }
 
   async function clickCell(w: string): Promise<void> {
     if (busy) return;
+    if (state.suddenDeath) {
+      if (state.status !== "playing") return;
+      const before = state.suddenDeathGuesses.length;
+      state = suddenDeathGuess(state, w, "human");
+      if (state.suddenDeathGuesses.length > before) {
+        log(`You guessed ${w} → ${guessLabel(state.suddenDeathGuesses[state.suddenDeathGuesses.length - 1]!.outcome)}`);
+      }
+      updateSDMeter();
+      render();
+      logEndState();
+      return;
+    }
     // Ownership guard: a cell click is only meaningful while the human is
     // guessing against the AI's active clue.
     if (!(state.clueGiver === "ai" && state.phase === "awaitGuess")) return;
@@ -229,12 +310,14 @@ export function createController(deps: ControllerDeps) {
     logGuessResult("You", w, beforeLen);
     render();
     logEndState();
+    await maybeEnterSuddenDeath();
   }
 
   async function endGuessing(): Promise<void> {
     if (busy) return;
     state = engineEndGuessing(state);
     render();
+    await maybeEnterSuddenDeath();
   }
 
   // Resumes whichever AI action is currently pending after it failed with an
@@ -269,12 +352,15 @@ export function createController(deps: ControllerDeps) {
     }
   }
 
-  return { newGame, submitClue, passClue, clickCell, endGuessing, retryAITurn, requestAIClue, loadModels };
+  return {
+    newGame, submitClue, passClue, clickCell, endGuessing, retryAITurn, requestAIClue, loadModels,
+    aiSuddenDeathGuess,
+  };
 }
 
 // at bottom of main.ts — real app wiring (not exercised by jsdom tests)
 import { GameUI } from "./ui";
-import { OpenAICaller, listChatModels } from "./ai";
+import { OpenAICaller, listChatModels, getSuddenDeathGuesses } from "./ai";
 import "./style.css";
 
 if (typeof document !== "undefined" && document.getElementById("app")) {
@@ -289,11 +375,13 @@ if (typeof document !== "undefined" && document.getElementById("app")) {
     onRetry: () => controller.retryAITurn(),
     onGetClue: () => controller.requestAIClue(),
     onLoadModels: () => controller.loadModels(),
+    onAiGuess: () => controller.aiSuddenDeathGuess(),
   });
   controller = createController({
     ui,
     makeCaller: (key, model) => new OpenAICaller({ apiKey: key, model }),
     listModels: (key) => listChatModels(key),
+    suddenDeath: (c, s, l) => getSuddenDeathGuesses(c, s, l),
   });
   controller.newGame();
 }
