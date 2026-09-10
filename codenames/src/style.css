@@ -319,6 +319,12 @@ body {
   opacity: 0.55;
 }
 
+/* Touched as a bystander but still in play (may be the partner's agent). */
+.cn-cell.bystander-seen {
+  border-style: dashed;
+  border-color: var(--bystander);
+}
+
 .cn-cell-badge {
   position: absolute;
   top: 2px;
