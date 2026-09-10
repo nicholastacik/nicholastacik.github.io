@@ -25,6 +25,18 @@ function lastRendered(render: any): GameState {
   return render.mock.calls.at(-1)[0] as GameState;
 }
 
+function fakeUiSD() {
+  const logs: string[] = [];
+  const meter: Array<{ word: string; confidence: number } | null> = [];
+  return {
+    ui: {
+      render: vi.fn(), log: (l: string) => logs.push(l), getKey: () => "sk", getModel: () => "m",
+      setError: vi.fn(), setSuddenDeathMeter: (t: any) => meter.push(t),
+    },
+    logs, meter,
+  };
+}
+
 describe("controller", () => {
   it("human clue → AI guesses are applied and logged", async () => {
     const { ui, logs } = fakeUi();
@@ -443,9 +455,141 @@ describe("controller: human passes a clue turn", () => {
     const c = createController({ ui, makeCaller: () => ({ call: vi.fn() }), rng: rng(3), firstClueGiver: "ai" });
     await c.newGame();
     const before = lastRendered(ui.render);
-    c.passClue();
+    await c.passClue();
     const after = lastRendered(ui.render);
     expect(after.clueGiver).toBe(before.clueGiver);
     expect(after.turnsRemaining).toBe(before.turnsRemaining);
+  });
+});
+
+describe("controller: sudden death", () => {
+  // Drive turnsRemaining to 0 deterministically via the public API: alternate
+  // the human passing their clue turn and the AI's clue turn passing (its
+  // caller refuses), each spending one timer token, until sudden death hits.
+  async function driveToSuddenDeath(
+    c: ReturnType<typeof createController>,
+    render: any,
+  ): Promise<void> {
+    for (let i = 0; i < 20; i++) {
+      const s = lastRendered(render);
+      if (s.suddenDeath || s.status !== "playing") return;
+      if (s.phase === "awaitClue" && s.clueGiver === "human") await c.passClue();
+      else if (s.phase === "awaitClue" && s.clueGiver === "ai") await c.requestAIClue();
+      else return; // unexpected phase — stop rather than loop forever
+    }
+  }
+
+  it("entering sudden death fetches the ranked list and sets the meter", async () => {
+    const g = createGame({ rng: rng(3), firstClueGiver: "human" });
+    const humanGreen = g.words.find((_, i) => g.keys.human[i] === "green")!;
+    const { ui, meter } = fakeUiSD();
+    const suddenDeath = vi.fn(async () => [{ word: humanGreen, confidence: 0.9 }]);
+    // caller: AI clue turn refuses (pass) so the timer burns down
+    const caller: LLMCaller = { call: vi.fn(async () => ({ parsed: null, refusal: "pass", finishReason: "stop" })) };
+    const c = createController({ ui, makeCaller: () => caller, suddenDeath, rng: rng(3), firstClueGiver: "human" });
+    await c.newGame();
+
+    await driveToSuddenDeath(c, ui.render);
+
+    const s = lastRendered(ui.render);
+    expect(s.suddenDeath).toBe(true);
+    expect(suddenDeath).toHaveBeenCalledTimes(1);
+    expect(meter.at(-1)).toEqual({ word: humanGreen, confidence: 0.9 });
+  });
+
+  it("aiSuddenDeathGuess applies the top candidate against the human card", async () => {
+    const g = createGame({ rng: rng(3), firstClueGiver: "human" });
+    const humanGreen = g.words.find((_, i) => g.keys.human[i] === "green")!;
+    const { ui } = fakeUiSD();
+    const suddenDeath = vi.fn(async () => [{ word: humanGreen, confidence: 0.95 }]);
+    const caller: LLMCaller = { call: vi.fn(async () => ({ parsed: null, refusal: "pass", finishReason: "stop" })) };
+    const c = createController({ ui, makeCaller: () => caller, suddenDeath, rng: rng(3), firstClueGiver: "human" });
+    await c.newGame();
+
+    await driveToSuddenDeath(c, ui.render);
+
+    expect(lastRendered(ui.render).suddenDeath).toBe(true);
+    await c.aiSuddenDeathGuess();
+    const s = lastRendered(ui.render);
+    expect(s.suddenDeathGuesses.some((x) => x.by === "ai" && x.word === humanGreen)).toBe(true);
+  });
+
+  it("a human click during sudden death routes to suddenDeathGuess, not the normal clue-guess path", async () => {
+    const g = createGame({ rng: rng(3), firstClueGiver: "human" });
+    const humanGreen = g.words.find((_, i) => g.keys.human[i] === "green")!;
+    const { ui } = fakeUiSD();
+    const suddenDeath = vi.fn(async () => [{ word: humanGreen, confidence: 0.5 }]);
+    const caller: LLMCaller = { call: vi.fn(async () => ({ parsed: null, refusal: "pass", finishReason: "stop" })) };
+    const c = createController({ ui, makeCaller: () => caller, suddenDeath, rng: rng(3), firstClueGiver: "human" });
+    await c.newGame();
+
+    await driveToSuddenDeath(c, ui.render);
+    expect(lastRendered(ui.render).suddenDeath).toBe(true);
+
+    await c.clickCell(humanGreen);
+    const s = lastRendered(ui.render);
+    expect(s.suddenDeathGuesses.some((x) => x.by === "human" && x.word === humanGreen)).toBe(true);
+  });
+
+  it("LLMError while entering sudden death surfaces via ui.setError, and a later fetch can still succeed", async () => {
+    const g = createGame({ rng: rng(3), firstClueGiver: "human" });
+    const word = g.words[0]!;
+    const { ui, meter } = fakeUiSD();
+    const suddenDeath = vi.fn(async (): Promise<Array<{ word: string; confidence: number }>> => {
+      throw new LLMError("Rate limited — wait and retry.", "rate_limit");
+    });
+    const caller: LLMCaller = { call: vi.fn(async () => ({ parsed: null, refusal: "pass", finishReason: "stop" })) };
+    const c = createController({ ui, makeCaller: () => caller, suddenDeath, rng: rng(3), firstClueGiver: "human" });
+    await c.newGame();
+
+    await driveToSuddenDeath(c, ui.render);
+
+    expect(lastRendered(ui.render).suddenDeath).toBe(true);
+    expect(ui.setError).toHaveBeenCalledWith("Rate limited — wait and retry.");
+    // the failed fetch never set sdGuesses, so nothing was ever shown on the meter
+    expect(meter).toHaveLength(0);
+
+    // still retryable: sdGuesses is still null, so the next action that can
+    // re-enter sudden death (the AI's clue turn passing again) refetches
+    suddenDeath.mockImplementationOnce(async () => [{ word, confidence: 0.5 }]);
+    await c.requestAIClue();
+    expect(meter.at(-1)).toEqual({ word, confidence: 0.5 });
+  });
+
+  it("retryAITurn in sudden death only re-attempts the SD fetch — it never fires a clue", async () => {
+    const g = createGame({ rng: rng(3), firstClueGiver: "human" });
+    const word = g.words[0]!;
+    const { ui, meter } = fakeUiSD();
+    const suddenDeath = vi.fn(async (): Promise<Array<{ word: string; confidence: number }>> => {
+      throw new LLMError("Rate limited — wait and retry.", "rate_limit");
+    });
+    // caller: AI clue turn refuses (pass) so the timer burns down into sudden death
+    const call = vi.fn(async () => ({ parsed: null, refusal: "pass", finishReason: "stop" }));
+    const caller: LLMCaller = { call };
+    const c = createController({ ui, makeCaller: () => caller, suddenDeath, rng: rng(3), firstClueGiver: "human" });
+    await c.newGame();
+
+    await driveToSuddenDeath(c, ui.render);
+
+    expect(lastRendered(ui.render).suddenDeath).toBe(true);
+    expect(ui.setError).toHaveBeenCalledWith("Rate limited — wait and retry.");
+    // still leaves clueGiver/phase on the AI's clue-turn parities — the
+    // regression this guards against is retryAITurn misreading that as a
+    // real pending AI clue turn and firing one.
+    const beforeRetry = lastRendered(ui.render);
+    expect(beforeRetry.clueGiver).toBe("ai");
+    expect(beforeRetry.phase).toBe("awaitClue");
+    const callCountBeforeRetry = call.mock.calls.length;
+    const historyLenBeforeRetry = beforeRetry.history.length;
+
+    suddenDeath.mockImplementationOnce(async () => [{ word, confidence: 0.5 }]);
+    await c.retryAITurn();
+
+    // no new clue was fetched or fabricated into history
+    expect(call.mock.calls.length).toBe(callCountBeforeRetry);
+    expect(lastRendered(ui.render).history.length).toBe(historyLenBeforeRetry);
+    // the retry instead re-invoked the sudden-death fetch and it succeeded
+    expect(suddenDeath).toHaveBeenCalledTimes(2);
+    expect(meter.at(-1)).toEqual({ word, confidence: 0.5 });
   });
 });

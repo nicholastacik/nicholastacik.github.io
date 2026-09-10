@@ -51,6 +51,8 @@ export function createGame(opts: {
     currentClue: null,
     status: "playing",
     history: [],
+    suddenDeath: false,
+    suddenDeathGuesses: [],
   };
 }
 
@@ -83,9 +85,11 @@ function endTurn(state: GameState): GameState {
   next.currentClue = null;
   next.clueGiver = next.clueGiver === "human" ? "ai" : "human";
   next.turnsRemaining -= 1;
-  // Win is already detected in guess() before endTurn is ever reached, so
-  // exhausting the timer here means fewer than 15 agents were found: a loss.
-  if (next.turnsRemaining <= 0 && next.status === "playing") next.status = "lost";
+  // Timer exhausted with agents still hidden → sudden death (not a loss). Win is
+  // detected in guess() before endTurn is ever reached, so agentsFound < 15 here.
+  if (next.turnsRemaining <= 0 && next.status === "playing" && next.agentsFound < TOTAL_AGENTS) {
+    next.suddenDeath = true;
+  }
   return next;
 }
 
@@ -128,4 +132,26 @@ export function endGuessing(state: GameState): GameState {
 export function passTurn(state: GameState): GameState {
   if (state.status !== "playing" || state.phase !== "awaitClue") return state;
   return endTurn(structuredClone(state));
+}
+
+export function suddenDeathGuess(state: GameState, word: string, guesser: Player): GameState {
+  if (state.status !== "playing" || !state.suddenDeath) return state;
+  const next = structuredClone(state);
+  const idx = next.words.findIndex((w) => w === word);
+  if (idx < 0 || next.revealed[idx]) return next;
+
+  // Judged against the NON-guesser's card (Duet: your partner touches, YOUR card judges).
+  const judgeKey: KeyCard = guesser === "human" ? next.keys.ai : next.keys.human;
+  const cat: Category = judgeKey[idx]!;
+  next.suddenDeathGuesses.push({ word, by: guesser, outcome: cat });
+
+  if (cat === "green") {
+    next.revealed[idx] = true;
+    next.agentsFound += 1;
+    if (next.agentsFound >= TOTAL_AGENTS) next.status = "won";
+    return next;
+  }
+  // bystander or assassin → both lose
+  next.status = "lost";
+  return next;
 }

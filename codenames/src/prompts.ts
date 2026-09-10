@@ -94,3 +94,24 @@ export function repairMessage(violations: string[]): ChatMessage {
     content: `That response was illegal: ${violations.join("; ")}. Try again and obey every rule.`,
   };
 }
+
+export const SUDDEN_DEATH_SYSTEM = `${RULES}
+
+SUDDEN DEATH: no more clues will be given. From the clues already given during the
+game, decide which of the remaining words are your partner's agents. Return a list
+RANKED most-confident first, each with a confidence from 0 to 1. A single wrong
+guess loses the game — lead with the words you would actually risk, and be honest
+about your confidence. Put your thinking in "reasoning" first.`;
+
+export function buildSuddenDeathMessages(state: GameState): ChatMessage[] {
+  const user = `${boardBlock(state)}
+
+Game so far (all clues given):
+${formatHistory(state)}
+
+Rank the remaining words now — best first, each with a confidence from 0 to 1.`;
+  return [
+    { role: "system", content: SUDDEN_DEATH_SYSTEM },
+    { role: "user", content: user },
+  ];
+}

@@ -11,6 +11,8 @@ export interface UICallbacks {
   onNewGame(): void;
   onRetry(): void;
   onLoadModels(): void;
+  // Sudden death: the human asks the AI to make its guess.
+  onAiGuess(): void;
 }
 
 const KEY_NAME = "openai_key";
@@ -38,6 +40,7 @@ function catEmoji(cat: Category): string {
 function turnHeadline(state: GameState): string {
   if (state.status === "won") return "🎉 You win!";
   if (state.status === "lost") return "💥 Game over";
+  if (state.suddenDeath && state.status === "playing") return "☠ SUDDEN DEATH — any wrong guess loses";
   const c = state.currentClue;
   if (state.clueGiver === "ai") {
     return state.phase === "awaitClue"
@@ -62,6 +65,9 @@ function revealedCategories(state: GameState): Map<string, Category> {
       const cat = turn.outcomes[i];
       if (cat) map.set(word, cat);
     });
+  }
+  for (const g of state.suddenDeathGuesses) {
+    map.set(g.word, g.outcome);
   }
   return map;
 }
@@ -91,6 +97,9 @@ export class GameUI {
   private errorEl!: HTMLElement;
   private errorMsgEl!: HTMLElement;
   private retryBtn!: HTMLButtonElement;
+  private aiGuessBtn!: HTMLButtonElement;
+  private meterEl!: HTMLElement;
+  private sdCountsEl!: HTMLElement;
 
   constructor(root: HTMLElement, cb: UICallbacks) {
     this.root = root;
@@ -128,6 +137,7 @@ export class GameUI {
       "A bystander is NOT removed — it stays on the board (marked 🟡), because a word that’s a bystander for one of you may be an agent for the other. You can still guess it later.",
       "You may guess up to the clue’s number + 1 — that extra guess is meant for an agent left over from an earlier clue.",
       "Win: all 15 agents found. Lose: hit an assassin, or the 9-turn timer runs out with agents still hidden.",
+      "Sudden death: if the timer runs out with agents still hidden, there are no more clues — you and the AI make one last attempt from the clues so far. Your key card is hidden, and any wrong guess (even a bystander) loses.",
     ];
     for (const text of rules) {
       const li = document.createElement("li");
@@ -342,6 +352,12 @@ export class GameUI {
 
     this.root.appendChild(this.buildLegend());
 
+    // Sudden-death: remaining-agent counts (shown only in sudden death), under the board.
+    this.sdCountsEl = document.createElement("div");
+    this.sdCountsEl.className = "cn-sd-counts";
+    this.sdCountsEl.hidden = true;
+    this.root.appendChild(this.sdCountsEl);
+
     // --- Action row: exactly one primary control shows per turn state ---
     const action = document.createElement("div");
     action.className = "cn-action";
@@ -398,6 +414,19 @@ export class GameUI {
     this.endGuessingBtn.addEventListener("click", () => this.cb.onEndGuessing());
     action.appendChild(this.endGuessingBtn);
 
+    // Sudden-death: confidence meter + "AI guess" (shown only in sudden death)
+    this.meterEl = document.createElement("div");
+    this.meterEl.className = "cn-meter";
+    this.meterEl.hidden = true;
+    this.aiGuessBtn = document.createElement("button");
+    this.aiGuessBtn.type = "button";
+    this.aiGuessBtn.textContent = "AI guess";
+    this.aiGuessBtn.className = "cn-ai-guess cn-primary";
+    this.aiGuessBtn.hidden = true;
+    this.aiGuessBtn.addEventListener("click", () => this.cb.onAiGuess());
+    action.appendChild(this.meterEl);
+    action.appendChild(this.aiGuessBtn);
+
     this.root.appendChild(action);
 
     // --- Reference (collapsed) ---
@@ -449,7 +478,7 @@ export class GameUI {
     // Shade by the HUMAN's own key card only — never the AI's. Always shown while
     // the human gives a clue; while the human guesses, shown iff they opted in.
     const showOwnKey = state.clueGiver === "human" || this.showKeyInput.checked;
-    const shadeKey = showOwnKey ? state.keys.human : null;
+    const shadeKey = state.suddenDeath ? null : showOwnKey ? state.keys.human : null;
 
     state.words.forEach((word, i) => {
       const btn = document.createElement("button");
@@ -487,19 +516,45 @@ export class GameUI {
       this.gridEl.appendChild(btn);
     });
 
-    // Clue bar + Pass visibility (your clue turn)
-    const showClueBar = state.phase === "awaitClue" && state.clueGiver === "human" && state.status === "playing";
-    this.clueBarEl.hidden = !showClueBar;
-    this.passClueBtn.hidden = !showClueBar;
+    if (state.suddenDeath) {
+      // Sudden death: no clues, no shading — just the meter, the AI-guess
+      // button, and remaining-agent counts. Hide all normal controls.
+      this.clueBarEl.hidden = true;
+      this.passClueBtn.hidden = true;
+      this.endGuessingBtn.hidden = true;
+      this.getClueBtn.hidden = true;
+      this.meterEl.hidden = false;
+      this.aiGuessBtn.hidden = false;
+      this.sdCountsEl.hidden = false;
+      const youLeft = state.keys.ai.filter((c, i) => c === "green" && !state.revealed[i]).length;
+      const aiLeft = state.keys.human.filter((c, i) => c === "green" && !state.revealed[i]).length;
+      this.sdCountsEl.textContent = `You still need ${youLeft} of the AI's agents · the AI still needs ${aiLeft} of yours`;
+      // Before the ranked list arrives, avoid a blank-but-clickable meter.
+      if (!this.meterEl.hasChildNodes() && this.meterEl.textContent === "") {
+        this.meterEl.textContent = "Reading the clues…";
+        this.aiGuessBtn.disabled = true;
+      }
+    } else {
+      this.meterEl.hidden = true;
+      this.aiGuessBtn.hidden = true;
+      this.sdCountsEl.hidden = true;
+      this.meterEl.replaceChildren();
+      this.meterEl.textContent = "";
 
-    // End guessing visibility — shown while YOU are guessing (the AI gave the
-    // clue), so you can stop before spending all your guesses.
-    const showEndGuessing = state.phase === "awaitGuess" && state.clueGiver === "ai" && state.status === "playing";
-    this.endGuessingBtn.hidden = !showEndGuessing;
+      // Clue bar + Pass visibility (your clue turn)
+      const showClueBar = state.phase === "awaitClue" && state.clueGiver === "human" && state.status === "playing";
+      this.clueBarEl.hidden = !showClueBar;
+      this.passClueBtn.hidden = !showClueBar;
 
-    // "Get the AI's clue" shows on the AI's clue turn (human triggers the fetch).
-    const showGetClue = state.phase === "awaitClue" && state.clueGiver === "ai" && state.status === "playing";
-    this.getClueBtn.hidden = !showGetClue;
+      // End guessing visibility — shown while YOU are guessing (the AI gave the
+      // clue), so you can stop before spending all your guesses.
+      const showEndGuessing = state.phase === "awaitGuess" && state.clueGiver === "ai" && state.status === "playing";
+      this.endGuessingBtn.hidden = !showEndGuessing;
+
+      // "Get the AI's clue" shows on the AI's clue turn (human triggers the fetch).
+      const showGetClue = state.phase === "awaitClue" && state.clueGiver === "ai" && state.status === "playing";
+      this.getClueBtn.hidden = !showGetClue;
+    }
 
     // Turn header — one clear line for whose move it is
     this.turnMainEl.textContent = turnHeadline(state);
@@ -597,5 +652,26 @@ export class GameUI {
       this.errorMsgEl.textContent = msg;
       this.retryBtn.hidden = false;
     }
+  }
+
+  setSuddenDeathMeter(top: { word: string; confidence: number } | null): void {
+    if (!top) {
+      this.meterEl.textContent = "No confident AI guess — your move.";
+      this.aiGuessBtn.disabled = true;
+      return;
+    }
+    const pct = Math.round(top.confidence * 100);
+    this.meterEl.replaceChildren();
+    const label = document.createElement("span");
+    label.textContent = `AI wants to guess ${top.word} — ${pct}%`;
+    const bar = document.createElement("div");
+    bar.className = "cn-meter-bar";
+    const fill = document.createElement("div");
+    fill.className = "cn-meter-fill";
+    fill.style.width = `${pct}%`;
+    bar.appendChild(fill);
+    this.meterEl.appendChild(label);
+    this.meterEl.appendChild(bar);
+    this.aiGuessBtn.disabled = false;
   }
 }
