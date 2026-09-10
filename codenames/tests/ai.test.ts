@@ -91,6 +91,11 @@ describe("getSuddenDeathGuesses", () => {
     const caller = scripted([{ parsed: null, refusal: "no", finishReason: "stop" }]);
     expect(await getSuddenDeathGuesses(caller, s, () => {})).toEqual([]);
   });
+  it("returns [] when there is no parsed content", async () => {
+    const s = createGame({ rng: rng(3) });
+    const caller = scripted([{ parsed: null, refusal: null, finishReason: "stop" }]);
+    expect(await getSuddenDeathGuesses(caller, s, () => {})).toEqual([]);
+  });
 });
 
 describe("filterChatModels", () => {

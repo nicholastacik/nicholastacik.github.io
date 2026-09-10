@@ -104,7 +104,7 @@ guess loses the game — lead with the words you would actually risk, and be hon
 about your confidence. Put your thinking in "reasoning" first.`;
 
 export function buildSuddenDeathMessages(state: GameState): ChatMessage[] {
-  const user = `${/* reuse boardBlock */ ""}Words still in play: ${remainingWords(state).join(", ")}
+  const user = `${boardBlock(state)}
 
 Game so far (all clues given):
 ${formatHistory(state)}

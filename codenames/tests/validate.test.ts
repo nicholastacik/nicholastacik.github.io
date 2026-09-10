@@ -116,4 +116,7 @@ describe("filterSuddenDeathGuesses", () => {
     const s2 = { ...s, revealed: s.revealed.map((_, i) => i === 0) };
     expect(filterSuddenDeathGuesses([{ word: s.words[0]!, confidence: 0.9 }], s2)).toEqual([]);
   });
+  it("clamps negative confidence to 0", () => {
+    expect(filterSuddenDeathGuesses([{ word: s.words[0]!, confidence: -0.5 }], s)).toEqual([{ word: s.words[0], confidence: 0 }]);
+  });
 });
