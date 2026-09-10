@@ -98,19 +98,22 @@ export function guess(state: GameState, word: string): GameState {
   if (idx < 0 || next.revealed[idx]) return next;
 
   const cat: Category = giverKey(next)[idx]!;
-  next.revealed[idx] = true;
   const turn = next.history[next.history.length - 1];
   if (turn) { turn.guesses.push(word); turn.outcomes.push(cat); }
 
-  if (cat === "assassin") { next.status = "lost"; return next; }
+  if (cat === "assassin") { next.revealed[idx] = true; next.status = "lost"; return next; }
   if (cat === "green") {
+    next.revealed[idx] = true; // covered — a found agent, counts toward the 15
     next.agentsFound += 1;
     if (next.agentsFound >= TOTAL_AGENTS) { next.status = "won"; return next; }
     next.currentClue!.guessesMade += 1;
     if (next.currentClue!.guessesMade >= next.currentClue!.number + 1) return endTurn(next);
     return next;
   }
-  // bystander
+  // Bystander — Duet rule: do NOT cover the word. It's tan on the clue-giver's
+  // card, but it may be an AGENT on the partner's card, so it stays in play and
+  // remains guessable (findable later from the other side). The turn ends,
+  // spending a timer token (via endTurn). Only `revealed` means "covered/found".
   return endTurn(next);
 }
 

@@ -272,6 +272,20 @@ describe("GameUI", () => {
     expect(callbacks.onPassClue).toHaveBeenCalled();
   });
 
+  it("marks a bystander-touched word 🟡 but leaves it in play (not disabled)", () => {
+    const ui = new GameUI(root, cb());
+    const s = createGame({ rng: rng(3) });
+    const w0 = s.words[0]!;
+    ui.render({
+      ...s,
+      history: [{ clueGiver: "human", clue: "X", number: 1, guesses: [w0], outcomes: ["bystander"] }],
+    });
+    const cell0 = root.querySelectorAll("[data-cell]")[0] as HTMLButtonElement;
+    expect(cell0.classList.contains("bystander-seen")).toBe(true);
+    expect(cell0.querySelector(".cn-cell-badge")!.textContent).toBe("🟡");
+    expect(cell0.disabled).toBe(false); // still guessable — may be the partner's agent
+  });
+
   it("shows a collapsible rules panel covering the key mechanics", () => {
     const ui = new GameUI(root, cb());
     ui.render(createGame({ rng: rng(3) }));
