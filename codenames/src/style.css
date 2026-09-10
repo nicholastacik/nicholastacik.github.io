@@ -131,6 +131,29 @@ body {
   padding: 0.6rem 1.4rem;
 }
 
+.cn-meter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+  min-width: 12rem;
+}
+.cn-meter-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border);
+  overflow: hidden;
+}
+.cn-meter-fill {
+  height: 100%;
+  background: var(--accent);
+}
+.cn-sd-counts {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
 .cn-error {
   display: flex;
   align-items: center;

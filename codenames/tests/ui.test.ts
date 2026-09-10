@@ -5,7 +5,7 @@ import { createGame } from "../src/engine";
 function rng(seed: number) {
   return () => { seed |= 0; seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed>>>15),1|seed); t=(t+Math.imul(t ^ (t>>>7),61|t))^t; return ((t ^ (t>>>14))>>>0)/4294967296; };
 }
-const cb = () => ({ onClueSubmit: vi.fn(), onPassClue: vi.fn(), onCellClick: vi.fn(), onEndGuessing: vi.fn(), onNewGame: vi.fn(), onRetry: vi.fn(), onGetClue: vi.fn(), onLoadModels: vi.fn() });
+const cb = () => ({ onClueSubmit: vi.fn(), onPassClue: vi.fn(), onCellClick: vi.fn(), onEndGuessing: vi.fn(), onNewGame: vi.fn(), onRetry: vi.fn(), onGetClue: vi.fn(), onLoadModels: vi.fn(), onAiGuess: vi.fn() });
 
 describe("GameUI", () => {
   let root: HTMLElement;
@@ -311,5 +311,31 @@ describe("GameUI", () => {
     expect(link).not.toBeNull();
     expect(link.getAttribute("href")).toContain("github.com");
     expect(link.getAttribute("rel")).toContain("noopener");
+  });
+
+  it("in sudden death: hides shading, shows counts + the AI-guess control, hides normal controls", () => {
+    const ui = new GameUI(root, cb());
+    const s = createGame({ rng: rng(3) });
+    // even with the toggle ON, sudden death hides shading
+    ui.render({ ...s, suddenDeath: true, clueGiver: "human", phase: "awaitClue" });
+    expect(root.querySelectorAll(".shade-green, .shade-bystander, .shade-assassin").length).toBe(0);
+    expect(root.querySelector(".cn-turn-main")!.textContent).toMatch(/sudden death/i);
+    expect((root.querySelector(".cn-ai-guess") as HTMLButtonElement)).not.toBeNull();
+    // normal controls hidden
+    expect((root.querySelector(".cn-clue-bar") as HTMLElement).hidden).toBe(true);
+    expect((root.querySelector(".cn-get-clue") as HTMLElement).hidden).toBe(true);
+    // remaining-agent counts render (identity-free)
+    expect(root.querySelector(".cn-sd-counts")!.textContent).toMatch(/\d/);
+  });
+
+  it("setSuddenDeathMeter shows the top candidate + confidence and fires onAiGuess", () => {
+    const callbacks = cb();
+    const ui = new GameUI(root, callbacks);
+    ui.render({ ...createGame({ rng: rng(3) }), suddenDeath: true });
+    ui.setSuddenDeathMeter({ word: "CRANE", confidence: 0.85 });
+    expect(root.querySelector(".cn-meter")!.textContent).toMatch(/CRANE/);
+    expect(root.querySelector(".cn-meter")!.textContent).toMatch(/85/);
+    (root.querySelector(".cn-ai-guess") as HTMLElement).click();
+    expect(callbacks.onAiGuess).toHaveBeenCalled();
   });
 });
