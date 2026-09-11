@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createGame, giveClue, guess, endGuessing, passTurn, giverKey, remainingWords, aiGreenWordsRemaining, makeRng, suddenDeathGuess } from "../src/engine";
+import { createGame, giveClue, guess, endGuessing, passTurn, giverKey, remainingWords, aiGreenWordsRemaining, aiWordsRemaining, makeRng, suddenDeathGuess } from "../src/engine";
 import type { GameState } from "../src/types";
 
 function rng(seed: number) {
@@ -103,6 +103,29 @@ describe("engine", () => {
     const green = aiGreenWordsRemaining(s);
     expect(green).toHaveLength(9);
     expect(green.every(w => s.keys.ai[s.words.indexOf(w)] === "green")).toBe(true);
+  });
+
+  it("aiWordsRemaining returns unrevealed words of a given category on AI's key", () => {
+    const s = createGame({ rng: rng(3) });
+    for (const cat of ["green", "bystander", "assassin"] as const) {
+      const words = aiWordsRemaining(s, cat);
+      expect(words.every(w => s.keys.ai[s.words.indexOf(w)] === cat)).toBe(true);
+    }
+    // 3 assassins per Duet key card
+    expect(aiWordsRemaining(s, "assassin")).toHaveLength(3);
+    // matches the green-specific helper
+    expect(aiWordsRemaining(s, "green")).toEqual(aiGreenWordsRemaining(s));
+  });
+
+  it("aiWordsRemaining excludes revealed words", () => {
+    const s = createGame({ rng: rng(3) });
+    const assassin = s.words[s.keys.ai.findIndex((c) => c === "assassin")]!;
+    const before = aiWordsRemaining(s, "assassin");
+    const revealed = { ...s, revealed: s.revealed.map((r, i) => i === s.words.indexOf(assassin) ? true : r) };
+    const after = aiWordsRemaining(revealed, "assassin");
+    expect(before).toContain(assassin);
+    expect(after).not.toContain(assassin);
+    expect(after).toHaveLength(before.length - 1);
   });
 
   it("immutability: guess does not mutate input state", () => {

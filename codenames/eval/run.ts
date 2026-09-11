@@ -36,7 +36,7 @@ async function playOneGame(apiKey: string, model: string): Promise<GameResult> {
         state = giveClue(state, clue.clue, clue.number);
       }
     } else if (state.phase === "awaitGuess") {
-      const words = await getAIGuess(caller, state, log);
+      const { guesses: words } = await getAIGuess(caller, state, log);
       for (const word of words) {
         if (state.phase !== "awaitGuess" || state.status !== "playing") break;
         state = guess(state, word);

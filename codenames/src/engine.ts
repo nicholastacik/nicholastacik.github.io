@@ -64,8 +64,12 @@ export function remainingWords(state: GameState): string[] {
   return state.words.filter((_, i) => !state.revealed[i]);
 }
 
+export function aiWordsRemaining(state: GameState, category: Category): string[] {
+  return state.words.filter((_, i) => state.keys.ai[i] === category && !state.revealed[i]);
+}
+
 export function aiGreenWordsRemaining(state: GameState): string[] {
-  return state.words.filter((_, i) => state.keys.ai[i] === "green" && !state.revealed[i]);
+  return aiWordsRemaining(state, "green");
 }
 
 export function giveClue(state: GameState, clue: string, number: number): GameState {

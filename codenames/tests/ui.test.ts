@@ -326,6 +326,24 @@ describe("GameUI", () => {
     expect((root.querySelector(".cn-get-clue") as HTMLElement).hidden).toBe(true);
     // remaining-agent counts render (identity-free)
     expect(root.querySelector(".cn-sd-counts")!.textContent).toMatch(/\d/);
+    // the color legend ("green = your agent") is hidden — misleading with the card hidden
+    expect((root.querySelector(".cn-legend") as HTMLElement).hidden).toBe(true);
+  });
+
+  it("legend is shown in normal play", () => {
+    const ui = new GameUI(root, cb());
+    ui.render(createGame({ rng: rng(3) }));
+    expect((root.querySelector(".cn-legend") as HTMLElement).hidden).toBe(false);
+  });
+
+  it("pluralizes the turn counter: '1 turn left' vs '2 turns left'", () => {
+    const ui = new GameUI(root, cb());
+    const s = createGame({ rng: rng(3) });
+    ui.render({ ...s, turnsRemaining: 1 });
+    expect(root.textContent).toContain("1 turn left");
+    expect(root.textContent).not.toContain("1 turns left");
+    ui.render({ ...s, turnsRemaining: 2 });
+    expect(root.textContent).toContain("2 turns left");
   });
 
   it("setSuddenDeathMeter shows the top candidate + confidence and fires onAiGuess", () => {

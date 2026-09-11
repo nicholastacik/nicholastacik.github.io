@@ -1,5 +1,5 @@
 import type { GameState } from "./types";
-import { remainingWords, aiGreenWordsRemaining } from "./engine";
+import { remainingWords, aiWordsRemaining } from "./engine";
 
 export type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
@@ -16,9 +16,12 @@ partner to guess. Rules for a legal clue:
   (e.g. do NOT clue "HERO" if SUPERHERO is on the board);
 - the NUMBER must equal how many target words you list.
 
-Strategy: prefer a SAFE clue that connects a few of your agents over an ambitious
-clue that could point at the assassin or a bystander. Think before you answer;
-put your thinking in "reasoning" first, then commit to "clue", "number", "targets".
+Strategy: you will be told which remaining words are your AGENTS, your ASSASSINS,
+and your BYSTANDERS. Prefer a SAFE clue linking a few agents over an ambitious one.
+Never choose a word that could lead your partner to one of YOUR assassins — that is
+an instant loss and outweighs any number of agents; steer clear of your bystanders
+too (touching one ends the turn). Think before you answer; put your thinking in
+"reasoning" first, then commit to "clue", "number", "targets".
 
 Example — board has APPLE, ORANGE, KING, QUEEN; your agents are APPLE, ORANGE.
 Good answer: reasoning "APPLE and ORANGE are both fruit and neither royal word is my agent",
@@ -55,10 +58,14 @@ function boardBlock(state: GameState): string {
 }
 
 export function buildClueMessages(state: GameState): ChatMessage[] {
-  const green = aiGreenWordsRemaining(state).join(", ");
+  const green = aiWordsRemaining(state, "green").join(", ");
+  const assassins = aiWordsRemaining(state, "assassin").join(", ") || "(none remaining)";
+  const bystanders = aiWordsRemaining(state, "bystander").join(", ") || "(none remaining)";
   const user = `${boardBlock(state)}
 
-Your agents (words your partner must find from YOUR clues): ${green}
+Your agents — steer your partner toward these (each is +1 toward the 15): ${green}
+ASSASSINS on YOUR key card — ${assassins}. If your partner touches one, you LOSE instantly; never give a clue that could point at them.
+BYSTANDERS on YOUR key card — ${bystanders}. Touching one ends the turn with nothing found; avoid steering toward them.
 Turns remaining: ${state.turnsRemaining}
 
 Game so far:

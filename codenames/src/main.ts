@@ -192,9 +192,12 @@ export function createController(deps: ControllerDeps) {
     try {
       ui.setError(null);
       log("The AI is thinking about your clue…");
-      const words = await getAIGuess(caller(), state, log);
+      const { guesses: words, reasoning } = await getAIGuess(caller(), state, log);
       if (gen !== generation) return; // stale: a new game started meanwhile
-      if (ui.isDebug?.()) log(`🐛 AI intends to guess: ${words.join(", ") || "(nothing)"}`);
+      if (ui.isDebug?.()) {
+        if (reasoning) log(`🐛 AI reasoning: ${reasoning}`);
+        log(`🐛 AI intends to guess: ${words.join(", ") || "(nothing)"}`);
+      }
       for (const word of words) {
         if (state.phase !== "awaitGuess" || state.status !== "playing") break;
         const beforeLen = outcomesLen();
