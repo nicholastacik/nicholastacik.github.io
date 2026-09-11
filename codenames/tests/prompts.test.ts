@@ -37,6 +37,18 @@ describe("prompts", () => {
     expect(assassinLine).not.toContain(bystander);
   });
 
+  it("clue prompt lists the CURRENT clue-giver's agents (human's card when the human clues)", () => {
+    // Regression: the prompt once hardcoded the AI's card, so in AI-vs-AI self-play
+    // a "human"-turn clue pointed at keys.ai greens while guesses were judged
+    // against keys.human — an assassin epidemic. Agents must follow giverKey.
+    const s = createGame({ rng: rng(3), firstClueGiver: "human" });
+    const agentsLine = buildClueMessages(s)[1]!.content.split("\n").find((l) => l.startsWith("Your agents"))!;
+    const humanGreen = s.words.find((_, i) => s.keys.human[i] === "green")!;
+    const aiOnlyGreen = s.words.find((_, i) => s.keys.ai[i] === "green" && s.keys.human[i] !== "green")!;
+    expect(agentsLine).toContain(humanGreen);       // giver = human → human's greens
+    expect(agentsLine).not.toContain(aiOnlyGreen);  // an AI-only green is NOT a human agent
+  });
+
   it("guess messages: guesser gets board but NOT the key card", () => {
     let s = createGame({ rng: rng(3), firstClueGiver: "human" });
     s = giveClue(s, "OCEAN", 2);
