@@ -72,6 +72,17 @@ export function aiGreenWordsRemaining(state: GameState): string[] {
   return aiWordsRemaining(state, "green");
 }
 
+// Words of a given category on the CURRENT clue-giver's card (keys.ai when the AI
+// clues, keys.human when the human clues). The clue prompt must use this so the
+// clue matches the card the guesser's touches are judged against (giverKey). This
+// is a no-op for the app — getAIClue only ever runs when clueGiver === "ai" — but
+// it makes AI-vs-AI self-play (the eval) coherent instead of cluing one card while
+// the engine judges against the other.
+export function giverWordsRemaining(state: GameState, category: Category): string[] {
+  const key = giverKey(state);
+  return state.words.filter((_, i) => key[i] === category && !state.revealed[i]);
+}
+
 export function giveClue(state: GameState, clue: string, number: number): GameState {
   if (state.status !== "playing") return state;
   const next = structuredClone(state);

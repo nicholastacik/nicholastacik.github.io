@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { GameState } from "./types";
-import { remainingWords } from "./engine";
+import { remainingWords, giverKey } from "./engine";
 
 export const ClueSchema = z.object({
   reasoning: z.string(),
@@ -41,11 +41,14 @@ export function validateClue(resp: ClueResponse, state: GameState): { ok: boolea
 
   if (resp.number !== resp.targets.length) violations.push("number must equal the count of targets");
 
-  const aiGreens = new Set(
-    state.words.filter((_, i) => state.keys.ai[i] === "green" && !state.revealed[i]).map(norm),
+  // Targets must be the clue-giver's own remaining agents. Judged against the
+  // giver's card (keys.ai when the AI clues) — matches the card guess() judges by.
+  const giverCard = giverKey(state);
+  const giverGreens = new Set(
+    state.words.filter((_, i) => giverCard[i] === "green" && !state.revealed[i]).map(norm),
   );
   for (const t of resp.targets) {
-    if (!aiGreens.has(norm(t))) violations.push(`target "${t}" is not one of your remaining agents`);
+    if (!giverGreens.has(norm(t))) violations.push(`target "${t}" is not one of your remaining agents`);
   }
   return { ok: violations.length === 0, violations };
 }
