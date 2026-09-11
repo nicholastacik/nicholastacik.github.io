@@ -1,4 +1,4 @@
-import type { GameState } from "./types";
+import { TOTAL_AGENTS, type GameState } from "./types";
 import { remainingWords, giverWordsRemaining, confirmedBystanders } from "./engine";
 
 export type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
@@ -18,6 +18,8 @@ partner to guess. Rules for a legal clue:
 - exactly one word, no spaces or hyphens;
 - must NOT be any word on the board, nor contained in one, nor contain one
   (e.g. do NOT clue "HERO" if SUPERHERO is on the board);
+- must NOT be another form of a board word (e.g. do NOT clue "PIRACY" if PIRATE
+  is on the board);
 - the NUMBER must equal how many target words you list.
 
 Strategy: you will be told which remaining words are your AGENTS, your ASSASSINS,
@@ -30,6 +32,14 @@ outweighs any number of agents, so when a clue is even somewhat risky, cluing fe
 agents — or a different pair — is usually better. In "reasoning", briefly note the
 main associations and any competing dangerous words, then commit to "clue", "number",
 "targets".
+
+Plan for the whole game, not just this turn. You have a limited number of clue turns
+to get EVERY one of your agents found, so weigh safety against coverage: group several
+agents under one clue when you can, and don't keep deferring a hard, isolated agent —
+if the timer runs out with an agent that was never clued, your partner has no way to
+find it. Near the end especially, before settling for a safe single-agent clue, check
+whether another agent would then be left with no clue at all; a broader clue may be
+worth the risk to avoid stranding it.
 
 Example — board has APPLE, ORANGE, BANANA, KING; your agents are APPLE and ORANGE, and
 BANANA is your ASSASSIN. "FRUIT" for 2 is tempting, but BANANA is just as much a fruit — a
@@ -91,15 +101,16 @@ function ordinal(n: number): string {
 }
 
 export function buildClueMessages(state: GameState): ChatMessage[] {
-  const green = giverWordsRemaining(state, "green").join(", ");
+  const greenWords = giverWordsRemaining(state, "green");
+  const green = greenWords.join(", ");
   const assassins = giverWordsRemaining(state, "assassin").join(", ") || "(none remaining)";
   const bystanders = giverWordsRemaining(state, "bystander").join(", ") || "(none remaining)";
   const user = `${boardBlock(state)}
 
-Your agents — steer your partner toward these (each is +1 toward the 15): ${green}
+Your agents (${greenWords.length} left to get your partner to find, in ~${state.turnsRemaining} clue turns) — each is +1 toward the 15: ${green}
 ASSASSINS on YOUR key card — ${assassins}. A touch here loses the game instantly; reject any clue your partner could plausibly read as pointing at one.
 BYSTANDERS on YOUR key card — ${bystanders}. A touch here ends the turn with nothing found; avoid clues that fit one as well as your agents.
-Turns remaining: ${state.turnsRemaining}
+Turns remaining (shared timer): ${state.turnsRemaining}. Agents still to find in total: ${TOTAL_AGENTS - state.agentsFound}. Make sure every one of your agents gets a clue before time runs out.
 
 Game so far:
 ${formatHistory(state)}
