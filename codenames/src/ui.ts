@@ -100,6 +100,7 @@ export class GameUI {
   private aiGuessBtn!: HTMLButtonElement;
   private meterEl!: HTMLElement;
   private sdCountsEl!: HTMLElement;
+  private legendEl!: HTMLElement;
 
   constructor(root: HTMLElement, cb: UICallbacks) {
     this.root = root;
@@ -350,7 +351,8 @@ export class GameUI {
     this.gridEl.className = "cn-grid";
     this.root.appendChild(this.gridEl);
 
-    this.root.appendChild(this.buildLegend());
+    this.legendEl = this.buildLegend();
+    this.root.appendChild(this.legendEl);
 
     // Sudden-death: remaining-agent counts (shown only in sudden death), under the board.
     this.sdCountsEl = document.createElement("div");
@@ -526,6 +528,10 @@ export class GameUI {
       this.meterEl.hidden = false;
       this.aiGuessBtn.hidden = false;
       this.sdCountsEl.hidden = false;
+      // The card is hidden in sudden death, so the color legend ("green = your
+      // agent") is both meaningless and misleading — the only green cells now are
+      // FOUND (union) agents, not your-card shading. Hide it.
+      this.legendEl.hidden = true;
       const youLeft = state.keys.ai.filter((c, i) => c === "green" && !state.revealed[i]).length;
       const aiLeft = state.keys.human.filter((c, i) => c === "green" && !state.revealed[i]).length;
       this.sdCountsEl.textContent = `You still need ${youLeft} of the AI's agents · the AI still needs ${aiLeft} of yours`;
@@ -538,6 +544,7 @@ export class GameUI {
       this.meterEl.hidden = true;
       this.aiGuessBtn.hidden = true;
       this.sdCountsEl.hidden = true;
+      this.legendEl.hidden = false;
       this.meterEl.replaceChildren();
       this.meterEl.textContent = "";
 
@@ -562,7 +569,7 @@ export class GameUI {
     // Status line
     this.statusEl.innerHTML = "";
     this.statusEl.appendChild(
-      document.createTextNode(`Agents ${state.agentsFound}/${TOTAL_AGENTS} · ${state.turnsRemaining} turns left`),
+      document.createTextNode(`Agents ${state.agentsFound}/${TOTAL_AGENTS} · ${state.turnsRemaining} turn${state.turnsRemaining === 1 ? "" : "s"} left`),
     );
 
     if (state.status === "won") {
