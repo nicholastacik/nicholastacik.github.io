@@ -15,9 +15,13 @@ const DEFAULT_MODEL = "gpt-5.6";
 const MAX_STEPS_PER_GAME = 500;
 
 async function playOneGame(
-  apiKey: string, model: string, rng: () => number, label: string, seedKey: string,
+  apiKey: string, clueModel: string, guessModel: string,
+  rng: () => number, label: string, seedKey: string,
 ): Promise<GameResult> {
-  const caller = new OpenAICaller({ apiKey, model });
+  // Separate callers so you can pit a strong clue-giver against a fixed guesser
+  // (or vice-versa) — isolating which half of the model drives a result.
+  const clueCaller = new OpenAICaller({ apiKey, model: clueModel });
+  const guessCaller = new OpenAICaller({ apiKey, model: guessModel });
 
   let clues = 0;        // clues successfully delivered
   let illegalClues = 0; // clue attempts rejected as illegal (each retry)
@@ -50,7 +54,7 @@ async function playOneGame(
     if (state.phase === "awaitClue") {
       const giver = state.clueGiver; // card this clue is about + judged against
       progress("thinking of a clue…");
-      const clue = await getAIClue(caller, state, log);
+      const clue = await getAIClue(clueCaller, state, log);
       turnsUsed += 1;
       if (clue === null) {
         trace.push(`T${turnsUsed} [${giver} clue] passed / no legal clue`);
@@ -69,7 +73,7 @@ async function playOneGame(
       const giver = state.clueGiver;              // guesses judged against this card
       const num = state.currentClue?.number ?? 0; // guesses beyond this are "bonus"
       progress("guessing…");
-      const { guesses: words, reasoning } = await getAIGuess(caller, state, log);
+      const { guesses: words, reasoning } = await getAIGuess(guessCaller, state, log);
       trace.push(`   [guess vs ${giver} card] wants: [${words.join(", ")}]  :: ${reasoning}`);
       let applied = 0;
       for (const word of words) {
@@ -139,17 +143,22 @@ async function main(): Promise<void> {
     process.exit(1);
   }
   const model = process.env.OPENAI_EVAL_MODEL ?? DEFAULT_MODEL;
+  // Optionally split the two roles: e.g. a strong clue-giver + a fixed guesser,
+  // to isolate which half drives a result. Both default to OPENAI_EVAL_MODEL.
+  const clueModel = process.env.OPENAI_EVAL_CLUE_MODEL ?? model;
+  const guessModel = process.env.OPENAI_EVAL_GUESS_MODEL ?? model;
   const n = Number.parseInt(process.argv[2] ?? "10", 10) || 10;
   // Base seed for reproducible, comparable boards. Game i uses `${seed}#${i}`,
   // so the SAME seed reproduces the SAME N boards across prompt versions —
   // run each version with the same seed to A/B on identical boards (paired).
   const seed = process.env.OPENAI_EVAL_SEED ?? "eval";
 
-  console.log(`model=${model}  games=${n}  seed=${seed}`);
+  const models = clueModel === guessModel ? `model=${clueModel}` : `clue=${clueModel}  guess=${guessModel}`;
+  console.log(`${models}  games=${n}  seed=${seed}`);
   const results: GameResult[] = [];
   for (let i = 0; i < n; i++) {
     const seedKey = `${seed}#${i}`;
-    const r = await playOneGame(apiKey, model, makeRng(seedKey), `game ${i + 1}/${n}`, seedKey);
+    const r = await playOneGame(apiKey, clueModel, guessModel, makeRng(seedKey), `game ${i + 1}/${n}`, seedKey);
     results.push(r);
     // Per-game outcome, then the running aggregate so far — so you can watch the
     // numbers converge instead of waiting for the whole run to finish.
