@@ -76,7 +76,10 @@ Reading the history: each player has a different key card, and every outcome sho
 refers to the card of whoever GAVE that clue. Your guesses this turn are judged
 against your PARTNER's card — so look for leftover agents among your PARTNER's earlier
 clues, never your own (your own clues described YOUR card). A word that ended a turn
-as a bystander for one of you may still be an agent on the other card.
+as a bystander for one of you may still be an agent on the other card. Only 9 of the
+25 words are agents on your partner's card; the other 16 are bystanders or assassins
+(3 of them fatal), so an unclued word is far more likely to be a miss — guess only
+what the clues actually support.
 
 In "reasoning", briefly explain the main associations and any competing words, then
 list "guesses" (exact board words).
@@ -114,7 +117,9 @@ game, decide which of the remaining words are your partner's agents. Return a li
 RANKED most-confident first, each with a confidence from 0 to 1. A single wrong
 guess loses the game — lead with the words you would actually risk, and be honest
 about your confidence. In "reasoning", briefly note which earlier clues point to which
-words. Remember these are your PARTNER's clues about your PARTNER's agents.`;function Kf(n){const e=`${oi(n)}
+words. Remember these are your PARTNER's clues about your PARTNER's agents. Only 9 of
+the 25 words are your partner's agents (3 are assassins that lose instantly), so most
+words are unsafe — rank conservatively and lead only with words the clues genuinely support.`;function Kf(n){const e=`${oi(n)}
 
 Game so far (all clues given):
 ${ai(n)}
