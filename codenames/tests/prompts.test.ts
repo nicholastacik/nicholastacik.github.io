@@ -19,6 +19,24 @@ describe("prompts", () => {
     expect(msgs[1]!.content).toContain(green);
   });
 
+  it("clue messages: disclose the AI's own assassins and bystanders, distinctly", () => {
+    const s = createGame({ rng: rng(3), firstClueGiver: "ai" });
+    const user = buildClueMessages(s)[1]!.content;
+    const assassin = s.words.find((_, i) => s.keys.ai[i] === "assassin")!;
+    const bystander = s.words.find((_, i) => s.keys.ai[i] === "bystander")!;
+    // both danger words are named to the clue-giver...
+    expect(user).toContain(assassin);
+    expect(user).toContain(bystander);
+    // ...under distinct, severity-labelled headings (assassin = instant loss)
+    expect(user).toMatch(/ASSASSINS on YOUR key card/);
+    expect(user).toMatch(/BYSTANDERS on YOUR key card/);
+    expect(user).toMatch(/lose instantly/i);
+    // the assassin is listed under the assassin heading, not the bystander one
+    const assassinLine = user.split("\n").find((l) => /ASSASSINS on YOUR key card/.test(l))!;
+    expect(assassinLine).toContain(assassin);
+    expect(assassinLine).not.toContain(bystander);
+  });
+
   it("guess messages: guesser gets board but NOT the key card", () => {
     let s = createGame({ rng: rng(3), firstClueGiver: "human" });
     s = giveClue(s, "OCEAN", 2);
