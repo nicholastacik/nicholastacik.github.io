@@ -15,18 +15,18 @@ const DEFAULT_MODEL = "gpt-5.6";
 const MAX_STEPS_PER_GAME = 500;
 
 async function playOneGame(
-  apiKey: string, model: string, rng: () => number, label: string,
+  apiKey: string, model: string, rng: () => number, label: string, seedKey: string,
 ): Promise<GameResult> {
   const caller = new OpenAICaller({ apiKey, model });
 
-  let clues = 0;
-  let illegalClues = 0;
-  let repairs = 0;
-  let turnsUsed = 0; // clue-turns + passes consumed (<= START_TURNS: we stop at
-                     // timer-out / sudden death rather than playing overtime)
+  let clues = 0;        // clues successfully delivered
+  let illegalClues = 0; // clue attempts rejected as illegal (each retry)
+  let turnsUsed = 0;    // clue-turns + passes consumed (<= START_TURNS: we stop
+                        // at timer-out / sudden death rather than playing overtime)
+  let reachedSuddenDeath = false;
+  const trace: string[] = []; // full per-turn record, printed under EVAL_LOG=1
   const log = (line: string): void => {
     if (/Illegal AI clue/.test(line)) illegalClues += 1;
-    if (/asking again/.test(line)) repairs += 1;
   };
 
   // Live single-line progress so a long game visibly advances (no false "hung").
@@ -45,26 +45,40 @@ async function playOneGame(
     // Timer ran out with agents still hidden → real games enter sudden death
     // (no more clues). The harness doesn't model sudden-death guessing, so end
     // the game here instead of grinding out overtime clues forever.
-    if (state.suddenDeath) break;
+    if (state.suddenDeath) { reachedSuddenDeath = true; break; }
 
     if (state.phase === "awaitClue") {
+      const giver = state.clueGiver; // card this clue is about + judged against
       progress("thinking of a clue…");
       const clue = await getAIClue(caller, state, log);
       turnsUsed += 1;
       if (clue === null) {
+        trace.push(`T${turnsUsed} [${giver} clue] passed / no legal clue`);
         state = passTurn(state);
         progress("passed");
       } else {
         clues += 1;
+        trace.push(
+          `T${turnsUsed} [${giver} clue] "${clue.clue}" ${clue.number}  ` +
+          `targets=[${clue.targets.join(", ")}]  :: ${clue.reasoning}`,
+        );
         state = giveClue(state, clue.clue, clue.number);
         progress(`clued "${clue.clue}" ${clue.number}`);
       }
     } else if (state.phase === "awaitGuess") {
+      const giver = state.clueGiver;              // guesses judged against this card
+      const num = state.currentClue?.number ?? 0; // guesses beyond this are "bonus"
       progress("guessing…");
-      const { guesses: words } = await getAIGuess(caller, state, log);
+      const { guesses: words, reasoning } = await getAIGuess(caller, state, log);
+      trace.push(`   [guess vs ${giver} card] wants: [${words.join(", ")}]  :: ${reasoning}`);
+      let applied = 0;
       for (const word of words) {
         if (state.phase !== "awaitGuess" || state.status !== "playing") break;
+        const isBonus = applied >= num;
         state = guess(state, word);
+        const cat = state.history[state.history.length - 1]?.outcomes.slice(-1)[0];
+        trace.push(`      → ${word} = ${cat}${isBonus ? "  (BONUS guess)" : ""}`);
+        applied += 1;
         progress(`guessed ${word}`);
       }
       // Mirror the controller: the returned list IS how many the AI chose to
@@ -78,11 +92,16 @@ async function playOneGame(
   }
   process.stdout.write("\r".padEnd(74) + "\r"); // clear the progress line
 
-  // EVAL_LOG=1 dumps the clue/guess/outcome trace so you can SEE why a game went
-  // the way it did (bad clues vs an over-reaching guesser) instead of guessing.
+  const outcome = reachedSuddenDeath ? "reached sudden death (unfinished)" : state.status;
+  // EVAL_LOG=1 dumps the full trace — clue, number, intended targets, and BOTH
+  // sides' reasoning, plus each applied guess's actual category and bonus flag —
+  // so a loss can be diagnosed (ambiguous clue vs bad read vs needless bonus).
   if (process.env.EVAL_LOG === "1") {
-    const trace = formatHistory(state).split("\n").map((l) => `      ${l}`).join("\n");
-    console.log(`  [${label}] ${state.status}, agents ${state.agentsFound}/${TOTAL_AGENTS}\n${trace}`);
+    const rev = process.env.EVAL_REV ? `  rev=${process.env.EVAL_REV}` : "";
+    console.log(
+      `\n══ ${label}  seed=${seedKey}${rev}  →  ${outcome}, ` +
+      `agents ${state.agentsFound}/${TOTAL_AGENTS}\n${trace.map((l) => "   " + l).join("\n")}`,
+    );
   }
 
   const hitAssassin = state.history.some((t) => t.outcomes.includes("assassin"));
@@ -90,9 +109,9 @@ async function playOneGame(
     won: state.status === "won",
     agentsFound: state.agentsFound,
     hitAssassin,
+    reachedSuddenDeath,
     clues,
     illegalClues,
-    repairs,
     turnsUsed,
   };
 }
@@ -103,9 +122,9 @@ function printTable(agg: ReturnType<typeof aggregate>): void {
     ["win rate", agg.winRate.toFixed(3)],
     ["avg agents found", agg.avgAgents.toFixed(2)],
     ["assassin rate", agg.assassinRate.toFixed(3)],
+    ["sudden-death rate", agg.suddenDeathRate.toFixed(3)],
     ["avg turns used", agg.avgTurnsUsed.toFixed(2)],
-    ["illegal clue rate", agg.illegalClueRate.toFixed(3)],
-    ["avg repairs / clue", agg.avgRepairsPerClue.toFixed(3)],
+    ["illegal clue rate (of attempts)", agg.illegalClueRate.toFixed(3)],
   ];
   const width = Math.max(...rows.map(([k]) => k.length));
   console.log("");
@@ -129,17 +148,19 @@ async function main(): Promise<void> {
   console.log(`model=${model}  games=${n}  seed=${seed}`);
   const results: GameResult[] = [];
   for (let i = 0; i < n; i++) {
-    const r = await playOneGame(apiKey, model, makeRng(`${seed}#${i}`), `game ${i + 1}/${n}`);
+    const seedKey = `${seed}#${i}`;
+    const r = await playOneGame(apiKey, model, makeRng(seedKey), `game ${i + 1}/${n}`, seedKey);
     results.push(r);
     // Per-game outcome, then the running aggregate so far — so you can watch the
     // numbers converge instead of waiting for the whole run to finish.
     const a = aggregate(results);
+    const tag = r.won ? "WON " : r.reachedSuddenDeath ? "sd→ " : "lost";
     console.log(
-      `${r.won ? "WON " : "lost"}  agents=${r.agentsFound}/15  turns=${r.turnsUsed}  ` +
+      `${tag}  agents=${r.agentsFound}/15  turns=${r.turnsUsed}  ` +
       `assassin=${r.hitAssassin ? "YES" : "no"}  illegal=${r.illegalClues}\n` +
       `   running(${a.games}): win ${a.winRate.toFixed(2)}  agents ${a.avgAgents.toFixed(1)}  ` +
-      `assassin ${a.assassinRate.toFixed(2)}  turns ${a.avgTurnsUsed.toFixed(1)}  ` +
-      `illegal/clue ${a.illegalClueRate.toFixed(3)}`,
+      `assassin ${a.assassinRate.toFixed(2)}  sd ${a.suddenDeathRate.toFixed(2)}  ` +
+      `turns ${a.avgTurnsUsed.toFixed(1)}  illegal ${a.illegalClueRate.toFixed(3)}`,
     );
   }
 

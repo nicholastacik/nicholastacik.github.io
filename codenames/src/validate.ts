@@ -40,6 +40,9 @@ export function validateClue(resp: ClueResponse, state: GameState): { ok: boolea
   if (conflict) violations.push(`clue must not be, contain, or be part of a board word (conflicts with "${conflict}")`);
 
   if (resp.number !== resp.targets.length) violations.push("number must equal the count of targets");
+  if (new Set(resp.targets.map(norm)).size !== resp.targets.length) {
+    violations.push("targets must be distinct words");
+  }
 
   // Targets must be the clue-giver's own remaining agents. Judged against the
   // giver's card (keys.ai when the AI clues) — matches the card guess() judges by.

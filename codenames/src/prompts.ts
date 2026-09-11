@@ -31,14 +31,15 @@ agents — or a different pair — is usually better. In "reasoning", briefly no
 main associations and any competing dangerous words, then commit to "clue", "number",
 "targets".
 
-Example — board has APPLE, ORANGE, LEMON, KING; your agents are APPLE and ORANGE, and
-LEMON is your ASSASSIN. "FRUIT" for 2 is tempting, but LEMON is just as much a fruit — a
-fatal match. Better: find a clue that fits BOTH agents yet not LEMON — APPLE and ORANGE
-are round while a lemon is oval, so "SPHERICAL" for 2 keeps both agents and dodges the
-assassin. Only if no such separating clue exists should you retreat to a safe single like
-"CIDER" for 1 (APPLE alone) — cluing fewer still beats risking the assassin. Good answer:
-reasoning "SPHERICAL fits round APPLE and ORANGE but not the oval LEMON, so I can safely
-take both", clue "SPHERICAL", number 2, targets ["APPLE","ORANGE"].`;
+Example — board has APPLE, ORANGE, BANANA, KING; your agents are APPLE and ORANGE, and
+BANANA is your ASSASSIN. "FRUIT" for 2 is tempting, but BANANA is just as much a fruit — a
+fatal match. Better: find a clue that fits BOTH agents yet clearly not BANANA — APPLE and
+ORANGE are round while a banana is long and curved, so "SPHERICAL" for 2 keeps both agents
+and dodges the assassin. Only if no such separating clue exists should you retreat to a
+safe single like "CIDER" for 1 (APPLE alone) — cluing fewer still beats risking the
+assassin. Good answer: reasoning "SPHERICAL fits round APPLE and ORANGE, and a banana is
+plainly not round, so my partner won't reach for BANANA", clue "SPHERICAL", number 2,
+targets ["APPLE","ORANGE"].`;
 
 export const GUESS_SYSTEM = `${RULES}
 
