@@ -100,8 +100,19 @@ async function main(): Promise<void> {
   console.log(`model=${model}  games=${n}  seed=${seed}`);
   const results: GameResult[] = [];
   for (let i = 0; i < n; i++) {
-    console.log(`Playing game ${i + 1}/${n}...`);
-    results.push(await playOneGame(apiKey, model, makeRng(`${seed}#${i}`)));
+    process.stdout.write(`game ${i + 1}/${n} … `);
+    const r = await playOneGame(apiKey, model, makeRng(`${seed}#${i}`));
+    results.push(r);
+    // Per-game outcome, then the running aggregate so far — so you can watch the
+    // numbers converge instead of waiting for the whole run to finish.
+    const a = aggregate(results);
+    console.log(
+      `${r.won ? "WON " : "lost"}  agents=${r.agentsFound}/15  turns=${r.turnsUsed}  ` +
+      `assassin=${r.hitAssassin ? "YES" : "no"}  illegal=${r.illegalClues}\n` +
+      `   running(${a.games}): win ${a.winRate.toFixed(2)}  agents ${a.avgAgents.toFixed(1)}  ` +
+      `assassin ${a.assassinRate.toFixed(2)}  turns ${a.avgTurnsUsed.toFixed(1)}  ` +
+      `illegal/clue ${a.illegalClueRate.toFixed(3)}`,
+    );
   }
 
   printTable(aggregate(results));
