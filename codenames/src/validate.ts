@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { GameState } from "./types";
-import { remainingWords, giverKey } from "./engine";
+import { remainingWords, giverKey, confirmedBystanders } from "./engine";
 
 export const ClueSchema = z.object({
   reasoning: z.string(),
@@ -75,12 +75,15 @@ export function validateHumanClue(
 
 export function filterGuesses(guesses: string[], state: GameState): string[] {
   const canonical = new Map(remainingWords(state).map((w) => [norm(w), w]));
+  // A word already shown to be a bystander on THIS card can't be an agent here,
+  // so drop it — re-guessing it can only waste (or end) the turn.
+  const banned = new Set(confirmedBystanders(state).map(norm));
   const out: string[] = [];
   const seen = new Set<string>();
   for (const g of guesses) {
     const key = norm(g);
     const word = canonical.get(key);
-    if (word && !seen.has(key)) { out.push(word); seen.add(key); }
+    if (word && !seen.has(key) && !banned.has(key)) { out.push(word); seen.add(key); }
   }
   return out;
 }

@@ -75,6 +75,16 @@ describe("filterGuesses", () => {
     const out = filterGuesses([w0], s2);
     expect(out).toEqual([]);
   });
+  it("drops a word already shown to be a bystander on this card", () => {
+    const base = createGame({ rng: rng(3), firstClueGiver: "ai" });
+    const [byst, other] = [base.words[0]!, base.words[1]!];
+    const s2 = { ...base, clueGiver: "ai" as const, history: [
+      { clueGiver: "ai" as const, clue: "X", number: 1, guesses: [byst], outcomes: ["bystander" as const] },
+    ]};
+    const out = filterGuesses([byst, other], s2);
+    expect(out).not.toContain(byst);
+    expect(out).toContain(other);
+  });
 });
 
 describe("validateHumanClue", () => {

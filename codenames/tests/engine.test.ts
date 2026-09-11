@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createGame, giveClue, guess, endGuessing, passTurn, giverKey, remainingWords, aiGreenWordsRemaining, aiWordsRemaining, makeRng, suddenDeathGuess } from "../src/engine";
+import { createGame, giveClue, guess, endGuessing, passTurn, giverKey, remainingWords, aiGreenWordsRemaining, aiWordsRemaining, confirmedBystanders, makeRng, suddenDeathGuess } from "../src/engine";
 import type { GameState } from "../src/types";
 
 function rng(seed: number) {
@@ -143,6 +143,17 @@ describe("engine", () => {
     s = giveClue(s, "OCEAN", 1);
     s = endGuessing(s);
     expect(s.clueGiver).toBe("human");
+  });
+
+  it("confirmedBystanders lists bystanders on the CURRENT clue-giver's card only", () => {
+    const base = createGame({ rng: rng(3), firstClueGiver: "ai" });
+    // A past "ai"-clue turn where ANT was a bystander on the AI's card; current giver = ai.
+    const s = { ...base, clueGiver: "ai" as const, history: [
+      { clueGiver: "ai" as const, clue: "X", number: 1, guesses: ["ANT"], outcomes: ["bystander" as const] },
+      { clueGiver: "human" as const, clue: "Y", number: 1, guesses: ["BEE"], outcomes: ["bystander" as const] },
+    ]};
+    expect(confirmedBystanders(s)).toContain("ANT");     // ai's card
+    expect(confirmedBystanders(s)).not.toContain("BEE"); // human's card — different card
   });
 
   it("immutability: guess does not mutate input state", () => {
