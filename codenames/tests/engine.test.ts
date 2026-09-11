@@ -128,6 +128,23 @@ describe("engine", () => {
     expect(after).toHaveLength(before.length - 1);
   });
 
+  it("endTurn skips a clue-giver with no agents left (the other gives all remaining clues)", () => {
+    let s = createGame({ rng: rng(3), firstClueGiver: "ai" });
+    // Reveal ALL of the human's greens → the human has nothing left to clue for.
+    s = { ...s, revealed: s.revealed.map((r, i) => (s.keys.human[i] === "green" ? true : r)) };
+    s = giveClue(s, "OCEAN", 1);
+    s = endGuessing(s); // end the AI's clue turn
+    // Would normally flip to the human, but the human has no agents → stay on AI.
+    expect(s.clueGiver).toBe("ai");
+  });
+
+  it("endTurn still alternates normally when both players have agents left", () => {
+    let s = createGame({ rng: rng(3), firstClueGiver: "ai" });
+    s = giveClue(s, "OCEAN", 1);
+    s = endGuessing(s);
+    expect(s.clueGiver).toBe("human");
+  });
+
   it("immutability: guess does not mutate input state", () => {
     let s = createGame({ rng: rng(3) });
     s = giveClue(s, "TEST", 2);
