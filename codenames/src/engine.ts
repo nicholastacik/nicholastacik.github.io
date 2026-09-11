@@ -94,12 +94,26 @@ export function giveClue(state: GameState, clue: string, number: number): GameSt
   return next;
 }
 
+// Unrevealed green count on a player's card — how many of that player's agents
+// are still to be found (via the OTHER player guessing this player's clues).
+function greensLeft(state: GameState, player: Player): number {
+  const key = player === "human" ? state.keys.human : state.keys.ai;
+  return key.reduce((n, cat, i) => n + (cat === "green" && !state.revealed[i] ? 1 : 0), 0);
+}
+
 function endTurn(state: GameState): GameState {
   const next = state;
   next.phase = "awaitClue";
   next.currentClue = null;
-  next.clueGiver = next.clueGiver === "human" ? "ai" : "human";
   next.turnsRemaining -= 1;
+  // Alternate the clue-giver, but SKIP a player who has no agents left to clue
+  // for (Duet: once one side's agents are all found, the other gives all the
+  // remaining clues). Otherwise that player burns a timer token on an empty pass,
+  // starving the team of productive clue turns before the clock runs out.
+  const other: Player = next.clueGiver === "human" ? "ai" : "human";
+  next.clueGiver = greensLeft(next, other) > 0 || greensLeft(next, next.clueGiver) === 0
+    ? other
+    : next.clueGiver;
   // Timer exhausted with agents still hidden → sudden death (not a loss). Win is
   // detected in guess() before endTurn is ever reached, so agentsFound < 15 here.
   if (next.turnsRemaining <= 0 && next.status === "playing" && next.agentsFound < TOTAL_AGENTS) {
