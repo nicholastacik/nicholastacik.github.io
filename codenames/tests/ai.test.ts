@@ -56,22 +56,22 @@ describe("getAIGuess", () => {
     let s = createGame({ rng: rng(3), firstClueGiver: "human" });
     s = giveClue(s, "OCEAN", 2);
     const legal = s.words.slice(0, 2);
-    const caller = scripted([ok<GuessResponse>({ reasoning: "", guesses: [...legal, "JUNK"] })]);
-    expect(await getAIGuess(caller, s, () => {})).toEqual(legal);
+    const caller = scripted([ok<GuessResponse>({ reasoning: "because reasons", guesses: [...legal, "JUNK"] })]);
+    expect(await getAIGuess(caller, s, () => {})).toEqual({ guesses: legal, reasoning: "because reasons" });
   });
 
-  it("returns [] on refusal", async () => {
+  it("returns empty guesses on refusal", async () => {
     let s = createGame({ rng: rng(3), firstClueGiver: "human" });
     s = giveClue(s, "OCEAN", 2);
     const caller = scripted([{ parsed: null, refusal: "no", finishReason: "stop" }]);
-    expect(await getAIGuess(caller, s, () => {})).toEqual([]);
+    expect(await getAIGuess(caller, s, () => {})).toEqual({ guesses: [], reasoning: "" });
   });
 
-  it("returns [] when there is no parsed content", async () => {
+  it("returns empty guesses when there is no parsed content", async () => {
     let s = createGame({ rng: rng(3), firstClueGiver: "human" });
     s = giveClue(s, "OCEAN", 2);
     const caller = scripted([{ parsed: null, refusal: null, finishReason: "stop" }]);
-    expect(await getAIGuess(caller, s, () => {})).toEqual([]);
+    expect(await getAIGuess(caller, s, () => {})).toEqual({ guesses: [], reasoning: "" });
   });
 });
 

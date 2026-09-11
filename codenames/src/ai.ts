@@ -124,19 +124,22 @@ export async function getAIClue(caller: LLMCaller, state: GameState, log: Logger
   return null;
 }
 
-export async function getAIGuess(caller: LLMCaller, state: GameState, log: Logger): Promise<string[]> {
+export interface AIGuessResult { guesses: string[]; reasoning: string; }
+
+export async function getAIGuess(caller: LLMCaller, state: GameState, log: Logger): Promise<AIGuessResult> {
   const messages = buildGuessMessages(state);
   const res = await caller.call(messages, GuessSchema, "guess");
-  if (res.refusal) { log(`AI refused to guess: ${res.refusal}. Passing.`); return []; }
-  if (!res.parsed) { log("AI returned no guesses. Passing."); return []; }
+  if (res.refusal) { log(`AI refused to guess: ${res.refusal}. Passing.`); return { guesses: [], reasoning: "" }; }
+  if (!res.parsed) { log("AI returned no guesses. Passing."); return { guesses: [], reasoning: "" }; }
 
   const legal = filterGuesses(res.parsed.guesses, state);
   if (legal.length < res.parsed.guesses.length) log("Dropped guesses that were not on the board.");
   // NOTE: do NOT log the intended guess list here — guesses are applied one at a
   // time and the turn can end early, so logging the whole list would reveal words
   // the AI never actually guessed (an information leak). The controller logs each
-  // guess as it is applied instead.
-  return legal;
+  // guess as it is applied instead. Reasoning is returned (not logged here) so the
+  // controller can surface it only in debug mode.
+  return { guesses: legal, reasoning: res.parsed.reasoning };
 }
 
 export async function getSuddenDeathGuesses(
