@@ -68,6 +68,18 @@ describe("prompts", () => {
     }
   });
 
+  it("guess messages warn off words already shown to be bystanders on this card", () => {
+    const base = createGame({ rng: rng(3), firstClueGiver: "ai" });
+    const byst = base.words[0]!;
+    const s = { ...base, clueGiver: "ai" as const,
+      currentClue: { word: "OCEAN", number: 2, guessesMade: 0 },
+      history: [{ clueGiver: "ai" as const, clue: "PRIOR", number: 1, guesses: [byst], outcomes: ["bystander" as const] }],
+    };
+    const user = buildGuessMessages(s)[1]!.content;
+    expect(user).toContain(byst);
+    expect(user).toMatch(/BYSTANDERS on the card/);
+  });
+
   it("guesser system prompt makes the bonus (N+1) guess conservative", () => {
     let s = createGame({ rng: rng(3), firstClueGiver: "human" });
     s = giveClue(s, "OCEAN", 2);
