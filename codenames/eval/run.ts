@@ -3,6 +3,7 @@
 // in tests or CI — invoke via `npm run eval [-- N]`.
 import { createGame, giveClue, guess, endGuessing, passTurn, makeRng } from "../src/engine";
 import { getAIClue, getAIGuess, OpenAICaller } from "../src/ai";
+import { formatHistory } from "../src/prompts";
 import { TOTAL_AGENTS, START_TURNS, type GameState } from "../src/types";
 import { aggregate, type GameResult } from "./metrics";
 
@@ -76,6 +77,13 @@ async function playOneGame(
     }
   }
   process.stdout.write("\r".padEnd(74) + "\r"); // clear the progress line
+
+  // EVAL_LOG=1 dumps the clue/guess/outcome trace so you can SEE why a game went
+  // the way it did (bad clues vs an over-reaching guesser) instead of guessing.
+  if (process.env.EVAL_LOG === "1") {
+    const trace = formatHistory(state).split("\n").map((l) => `      ${l}`).join("\n");
+    console.log(`  [${label}] ${state.status}, agents ${state.agentsFound}/${TOTAL_AGENTS}\n${trace}`);
+  }
 
   const hitAssassin = state.history.some((t) => t.outcomes.includes("assassin"));
   return {
