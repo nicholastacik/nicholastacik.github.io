@@ -30,7 +30,7 @@ describe("prompts", () => {
     // ...under distinct, severity-labelled headings (assassin = instant loss)
     expect(user).toMatch(/ASSASSINS on YOUR key card/);
     expect(user).toMatch(/BYSTANDERS on YOUR key card/);
-    expect(user).toMatch(/lose instantly/i);
+    expect(user).toMatch(/loses the game instantly/i);
     // the assassin is listed under the assassin heading, not the bystander one
     const assassinLine = user.split("\n").find((l) => /ASSASSINS on YOUR key card/.test(l))!;
     expect(assassinLine).toContain(assassin);
