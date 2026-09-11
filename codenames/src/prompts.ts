@@ -81,6 +81,14 @@ function boardBlock(state: GameState): string {
   return `Words still in play: ${remainingWords(state).join(", ")}`;
 }
 
+// English ordinal suffix: 1st, 2nd, 3rd, 4th … 11th/12th/13th, 21st, …
+function ordinal(n: number): string {
+  const rem100 = n % 100;
+  if (rem100 >= 11 && rem100 <= 13) return `${n}th`;
+  const suffix = ["th", "st", "nd", "rd"][n % 10] ?? "th";
+  return `${n}${suffix}`;
+}
+
 export function buildClueMessages(state: GameState): ChatMessage[] {
   const green = aiWordsRemaining(state, "green").join(", ");
   const assassins = aiWordsRemaining(state, "assassin").join(", ") || "(none remaining)";
@@ -112,7 +120,7 @@ Turns remaining: ${state.turnsRemaining}
 Game so far:
 ${formatHistory(state)}
 
-Make your guesses now: up to ${clue.number} for this clue, best-first — plus a ${clue.number + 1}th bonus guess ONLY if you're confident about an agent left over from an earlier clue.`;
+Make your guesses now: up to ${clue.number} for this clue, best-first — plus a ${ordinal(clue.number + 1)} bonus guess ONLY if you're confident about an agent left over from an earlier clue.`;
   return [
     { role: "system", content: GUESS_SYSTEM },
     { role: "user", content: user },
