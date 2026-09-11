@@ -83,6 +83,20 @@ export function giverWordsRemaining(state: GameState, category: Category): strin
   return state.words.filter((_, i) => key[i] === category && !state.revealed[i]);
 }
 
+// Words already shown to be BYSTANDERS on the CURRENT clue-giver's card (from
+// history — a bystander guess doesn't cover the word, so it's not "revealed").
+// A bystander on a card can never be an agent on that SAME card, so the guesser
+// must never re-guess it while guessing against this card. It may still be an
+// agent on the OTHER card, so this list is keyed to the current clue-giver only.
+export function confirmedBystanders(state: GameState): string[] {
+  const out = new Set<string>();
+  for (const turn of state.history) {
+    if (turn.clueGiver !== state.clueGiver) continue;
+    turn.guesses.forEach((w, i) => { if (turn.outcomes[i] === "bystander") out.add(w); });
+  }
+  return [...out];
+}
+
 export function giveClue(state: GameState, clue: string, number: number): GameState {
   if (state.status !== "playing") return state;
   const next = structuredClone(state);

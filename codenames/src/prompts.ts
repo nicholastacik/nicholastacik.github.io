@@ -1,5 +1,5 @@
 import type { GameState } from "./types";
-import { remainingWords, giverWordsRemaining } from "./engine";
+import { remainingWords, giverWordsRemaining, confirmedBystanders } from "./engine";
 
 export type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
@@ -113,9 +113,13 @@ Give your clue now.`;
 
 export function buildGuessMessages(state: GameState): ChatMessage[] {
   const clue = state.currentClue!;
+  const known = confirmedBystanders(state);
+  const bystanderLine = known.length
+    ? `\nAlready shown to be BYSTANDERS on the card you're guessing against — they CANNOT be agents here, so never guess them again: ${known.join(", ")}`
+    : "";
   const user = `${boardBlock(state)}
 
-Your partner's clue: "${clue.word}" for ${clue.number}.
+Your partner's clue: "${clue.word}" for ${clue.number}.${bystanderLine}
 Turns remaining: ${state.turnsRemaining}
 
 Game so far:
