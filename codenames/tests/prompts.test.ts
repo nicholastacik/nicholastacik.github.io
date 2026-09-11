@@ -46,6 +46,16 @@ describe("prompts", () => {
     expect(msgs[1]!.content).not.toMatch(/assassin|bystander/i); // no key-card leak
   });
 
+  it("bonus guess uses a correct ordinal (2nd, 3rd, 4th — never '3th')", () => {
+    const cases: Array<[number, string]> = [[1, "2nd"], [2, "3rd"], [3, "4th"]];
+    for (const [num, ord] of cases) {
+      let s = createGame({ rng: rng(3), firstClueGiver: "human" });
+      s = giveClue(s, "OCEAN", num);
+      const user = buildGuessMessages(s)[1]!.content;
+      expect(user).toContain(`${ord} bonus guess`);
+    }
+  });
+
   it("guesser system prompt makes the bonus (N+1) guess conservative", () => {
     let s = createGame({ rng: rng(3), firstClueGiver: "human" });
     s = giveClue(s, "OCEAN", 2);
