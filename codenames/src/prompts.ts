@@ -4,8 +4,12 @@ import { remainingWords, aiWordsRemaining } from "./engine";
 export type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
 const RULES = `You are an expert cooperative partner in Codenames Duet.
-Your team wins by contacting all 15 agents together before the timer runs out.
-Two dangers: guessing a BYSTANDER ends the turn; guessing an ASSASSIN loses the game instantly.`;
+You and your human partner each hold a DIFFERENT key card. You win together by
+contacting all 15 agents (the union of both cards) before the shared turn timer runs out.
+Two dangers: guessing a BYSTANDER ends the turn; guessing an ASSASSIN loses the game instantly.
+If the timer runs out with agents still hidden, no more clues can be given — you both
+make final guesses from the clues already given (sudden death), where a single wrong
+guess loses. So use each clue turn to convey as much as you safely can while it lasts.`;
 
 export const CLUE_SYSTEM = `${RULES}
 
@@ -17,27 +21,44 @@ partner to guess. Rules for a legal clue:
 - the NUMBER must equal how many target words you list.
 
 Strategy: you will be told which remaining words are your AGENTS, your ASSASSINS,
-and your BYSTANDERS. Prefer a SAFE clue linking a few agents over an ambitious one.
-Never choose a word that could lead your partner to one of YOUR assassins — that is
-an instant loss and outweighs any number of agents; steer clear of your bystanders
-too (touching one ends the turn). Think before you answer; put your thinking in
-"reasoning" first, then commit to "clue", "number", "targets".
+and your BYSTANDERS. Prefer familiar meanings and direct associations your partner
+can recognise from the clue alone — not elaborate links that only make sense once
+explained. Before committing, weigh every assassin and bystander against your clue:
+if your partner could plausibly read the clue as pointing at one of them, or it fits
+one as well as your agents, choose a safer clue. An assassin match is fatal and
+outweighs any number of agents, so when a clue is even somewhat risky, cluing fewer
+agents — or a different pair — is usually better. In "reasoning", briefly note the
+main associations and any competing dangerous words, then commit to "clue", "number",
+"targets".
 
-Example — board has APPLE, ORANGE, KING, QUEEN; your agents are APPLE, ORANGE.
-Good answer: reasoning "APPLE and ORANGE are both fruit and neither royal word is my agent",
-clue "FRUIT", number 2, targets ["APPLE","ORANGE"].`;
+Example — board has APPLE, ORANGE, LEMON, KING; your agents are APPLE and ORANGE, and
+LEMON is your ASSASSIN. "FRUIT" for 2 is tempting, but LEMON is just as much a fruit —
+a fatal match — so prefer a narrower, safer clue. Good answer: reasoning "LEMON is my
+assassin and also fits FRUIT, so I clue APPLE alone rather than risk it", clue "CIDER",
+number 1, targets ["APPLE"].`;
 
 export const GUESS_SYSTEM = `${RULES}
 
 Your job now: your partner gave a one-word clue and a number. Choose which words on
-the board they most likely mean, RANKED best-first. You do NOT know the key card —
-infer from the clue. Put your thinking in "reasoning" first, then list "guesses"
-(exact board words).
+the board they most likely mean, RANKED best-first. You do NOT see any key card —
+infer from the clues.
+
+Reading the history: each player has a different key card, and every outcome shown
+refers to the card of whoever GAVE that clue. Your guesses this turn are judged
+against your PARTNER's card — so look for leftover agents among your PARTNER's earlier
+clues, never your own (your own clues described YOUR card). A word that ended a turn
+as a bystander for one of you may still be an agent on the other card. Only 9 of the
+25 words are agents on your partner's card; the other 16 are bystanders or assassins
+(3 of them fatal), so an unclued word is far more likely to be a miss — guess only
+what the clues actually support.
+
+In "reasoning", briefly explain the main associations and any competing words, then
+list "guesses" (exact board words).
 
 How many to guess:
 - The number is how many words THIS clue points to. Guess those, most-confident first.
-- You may make ONE extra "bonus" guess (number+1 total), but ONLY use it for an agent
-  you are confident was pointed at by an EARLIER clue and left unfound — never to
+- You may make ONE extra "bonus" guess (number+1 total), but ONLY for an agent you are
+  confident your PARTNER pointed at in an EARLIER clue and left unfound — never to
   gamble on a loose association with the current clue.
 - If you have no such confident leftover, STOP after the clue's number.
 - A wrong guess ends the turn, and the assassin loses the game outright — so caution
@@ -64,8 +85,8 @@ export function buildClueMessages(state: GameState): ChatMessage[] {
   const user = `${boardBlock(state)}
 
 Your agents — steer your partner toward these (each is +1 toward the 15): ${green}
-ASSASSINS on YOUR key card — ${assassins}. If your partner touches one, you LOSE instantly; never give a clue that could point at them.
-BYSTANDERS on YOUR key card — ${bystanders}. Touching one ends the turn with nothing found; avoid steering toward them.
+ASSASSINS on YOUR key card — ${assassins}. A touch here loses the game instantly; reject any clue your partner could plausibly read as pointing at one.
+BYSTANDERS on YOUR key card — ${bystanders}. A touch here ends the turn with nothing found; avoid clues that fit one as well as your agents.
 Turns remaining: ${state.turnsRemaining}
 
 Game so far:
@@ -108,7 +129,10 @@ SUDDEN DEATH: no more clues will be given. From the clues already given during t
 game, decide which of the remaining words are your partner's agents. Return a list
 RANKED most-confident first, each with a confidence from 0 to 1. A single wrong
 guess loses the game — lead with the words you would actually risk, and be honest
-about your confidence. Put your thinking in "reasoning" first.`;
+about your confidence. In "reasoning", briefly note which earlier clues point to which
+words. Remember these are your PARTNER's clues about your PARTNER's agents. Only 9 of
+the 25 words are your partner's agents (3 are assassins that lose instantly), so most
+words are unsafe — rank conservatively and lead only with words the clues genuinely support.`;
 
 export function buildSuddenDeathMessages(state: GameState): ChatMessage[] {
   const user = `${boardBlock(state)}
