@@ -57,22 +57,64 @@ Tell it to read `references/pipeline.md` and follow it exactly, and to return **
 spoiler-free summary (grid size, clue counts, "crossings consistent", output path) — no
 answers, no solution grid, no hint text.
 
+**Set up a progress file the worker writes and you watch.** A full solve can run many
+minutes; relying on the worker to *remember* to message you is unreliable — it goes
+heads-down in the solve and forgets. Use a file as the channel instead, so progress doesn't
+depend on the worker volunteering it:
+
+1. Pick a spoiler-free progress path in your scratchpad — `<PROGRESS>` =
+   `<scratchpad>/cryptic-progress.log` — and create it empty: `: > <PROGRESS>`.
+2. Pass `<PROGRESS>` to the worker and have it **append** a one-line *spoiler-free* update
+   after every step (phase + counts only, e.g. `solving… 18/32 entries placed`), ending
+   with a line containing `done`. Appending after each step is work it's already doing — no
+   clock to watch.
+3. Don't poll by hand — a `Monitor` (step 2a) tails the file and streams each new line to
+   you, plus a heartbeat when it goes quiet, so a silent worker still surfaces as "still
+   working…" rather than a blank screen.
+
 A prompt like:
 
 > Build an interactive HTML cryptic crossword. Skill dir: `<SKILL>`. Image: `<IMAGE>`.
-> Output: `<TARGET>`. Read `<SKILL>/references/pipeline.md` and follow every step:
-> detect the grid from pixels, transcribe the clues (zoom in on the enumerations),
-> solve the whole puzzle using the crossings as verification, write two-tier hints,
-> assemble `puzzle.json`, and run `scripts/build.py` to produce the HTML. These answers
-> and hints are spoilers: keep them in files only, and in your final message report ONLY
-> the grid size, number of across/down clues, that all crossings and enumerations are
-> consistent, and the output path — never any answer letters, the solution grid, or hint text.
+> Output: `<TARGET>`. Progress file: `<PROGRESS>`. Read `<SKILL>/references/pipeline.md`
+> and follow every step: detect the grid from pixels, transcribe the clues (zoom in on the
+> enumerations), solve the whole puzzle using the crossings as verification, write two-tier
+> hints, assemble `puzzle.json`, and run `scripts/build.py` to produce the HTML.
+> As you finish each step, **append** a one-line **spoiler-free** update to `<PROGRESS>`
+> (phase + counts only, e.g. "solving… 18/32 entries placed"; append after each solve
+> batch, not one silent stretch), and append a final line containing "done" once the HTML
+> is built. Answers and hints are spoilers: keep them in your other files, never in the
+> progress file. In your final message report ONLY the grid size, number of across/down
+> clues, that all crossings and enumerations are consistent, and the output path — never
+> any answer letters, the solution grid, or hint text.
 
-### 3. Report back
+### 2a. Start the progress monitor
 
-Relay the subagent's spoiler-free summary and the output path. If the save directory is a
-blog post, mention they may want an accompanying `.qmd`/index or a link — but don't add one
-unless asked. Offer to open the file in a browser.
+Right after dispatching, start a `Monitor` on `<PROGRESS>` so new lines stream to you
+automatically, independent of the worker messaging you. It emits each new line, a heartbeat
+when the file goes quiet, and exits when it sees `done`:
+
+```
+Monitor(
+  description: "cryptic solve progress",
+  timeout_ms: 3600000,
+  persistent: false,
+  command: 'P="<PROGRESS>"; prev=""; q=0; while true; do cur=$(tail -n1 "$P" 2>/dev/null); if [ "$cur" != "$prev" ]; then [ -n "$cur" ] && echo "$cur"; prev="$cur"; q=0; else q=$((q+1)); { [ -n "$cur" ] && [ $((q%2)) -eq 0 ]; } && echo "still working — last: $cur"; fi; case "$cur" in *[Dd]one*) break;; esac; sleep 120; done'
+)
+```
+
+It polls every 120s: relays a line within ~2 min of the worker writing it, and after ~4 min
+of no change emits `still working — last: <last line>`. When the worker's completion
+notification arrives, the monitor has usually already exited on `done`; if it hasn't, stop
+it with `TaskStop`.
+
+### 3. Relay progress, then report back
+
+The `Monitor` streams the worker's spoiler-free progress lines (and heartbeats) to you as
+notifications. Relay each to the user as a short one-liner as it arrives — pass it through
+verbatim and never add anything of your own that could be a spoiler. When the completion
+notification arrives, relay the subagent's spoiler-free summary and the output path. If the
+save directory is a blog post, mention they may want an accompanying `.qmd`/index or a link
+— but don't add one unless asked. Offer to open the file in a browser.
 
 ## What's in this skill
 
