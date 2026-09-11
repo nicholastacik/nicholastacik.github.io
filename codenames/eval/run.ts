@@ -3,7 +3,7 @@
 // in tests or CI — invoke via `npm run eval [-- N]`.
 import { createGame, giveClue, guess, endGuessing, passTurn, makeRng } from "../src/engine";
 import { getAIClue, getAIGuess, OpenAICaller } from "../src/ai";
-import type { GameState } from "../src/types";
+import { TOTAL_AGENTS, START_TURNS, type GameState } from "../src/types";
 import { aggregate, type GameResult } from "./metrics";
 
 const DEFAULT_MODEL = "gpt-5.6";
@@ -13,17 +13,27 @@ const DEFAULT_MODEL = "gpt-5.6";
 // game ran long.
 const MAX_STEPS_PER_GAME = 500;
 
-async function playOneGame(apiKey: string, model: string, rng: () => number): Promise<GameResult> {
+async function playOneGame(
+  apiKey: string, model: string, rng: () => number, label: string,
+): Promise<GameResult> {
   const caller = new OpenAICaller({ apiKey, model });
 
   let clues = 0;
   let illegalClues = 0;
   let repairs = 0;
-  let turnsUsed = 0; // clue-turns + passes consumed (can exceed 9: the harness
-                     // doesn't model sudden death, so it keeps playing in overtime)
+  let turnsUsed = 0; // clue-turns + passes consumed (<= START_TURNS: we stop at
+                     // timer-out / sudden death rather than playing overtime)
   const log = (line: string): void => {
     if (/Illegal AI clue/.test(line)) illegalClues += 1;
     if (/asking again/.test(line)) repairs += 1;
+  };
+
+  // Live single-line progress so a long game visibly advances (no false "hung").
+  const progress = (note: string): void => {
+    process.stdout.write(
+      `\r${label} · turn ${turnsUsed}/${START_TURNS} · agents ${state.agentsFound}/${TOTAL_AGENTS}` +
+      ` · clue#${clues} · ${note}`.padEnd(72),
+    );
   };
 
   // Seeded board so a given (seed, index) always yields the same 25 words + key
@@ -31,20 +41,30 @@ async function playOneGame(apiKey: string, model: string, rng: () => number): Pr
   let state: GameState = createGame({ rng });
 
   for (let step = 0; step < MAX_STEPS_PER_GAME && state.status === "playing"; step++) {
+    // Timer ran out with agents still hidden → real games enter sudden death
+    // (no more clues). The harness doesn't model sudden-death guessing, so end
+    // the game here instead of grinding out overtime clues forever.
+    if (state.suddenDeath) break;
+
     if (state.phase === "awaitClue") {
+      progress("thinking of a clue…");
       const clue = await getAIClue(caller, state, log);
       turnsUsed += 1;
       if (clue === null) {
         state = passTurn(state);
+        progress("passed");
       } else {
         clues += 1;
         state = giveClue(state, clue.clue, clue.number);
+        progress(`clued "${clue.clue}" ${clue.number}`);
       }
     } else if (state.phase === "awaitGuess") {
+      progress("guessing…");
       const { guesses: words } = await getAIGuess(caller, state, log);
       for (const word of words) {
         if (state.phase !== "awaitGuess" || state.status !== "playing") break;
         state = guess(state, word);
+        progress(`guessed ${word}`);
       }
       // Mirror the controller: the returned list IS how many the AI chose to
       // guess. If the turn didn't already end (wrong guess / number+1 cap / win),
@@ -55,6 +75,7 @@ async function playOneGame(apiKey: string, model: string, rng: () => number): Pr
       }
     }
   }
+  process.stdout.write("\r".padEnd(74) + "\r"); // clear the progress line
 
   const hitAssassin = state.history.some((t) => t.outcomes.includes("assassin"));
   return {
@@ -100,8 +121,7 @@ async function main(): Promise<void> {
   console.log(`model=${model}  games=${n}  seed=${seed}`);
   const results: GameResult[] = [];
   for (let i = 0; i < n; i++) {
-    process.stdout.write(`game ${i + 1}/${n} … `);
-    const r = await playOneGame(apiKey, model, makeRng(`${seed}#${i}`));
+    const r = await playOneGame(apiKey, model, makeRng(`${seed}#${i}`), `game ${i + 1}/${n}`);
     results.push(r);
     // Per-game outcome, then the running aggregate so far — so you can watch the
     // numbers converge instead of waiting for the whole run to finish.
