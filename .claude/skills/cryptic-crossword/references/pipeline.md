@@ -6,6 +6,33 @@ appear in your final message back to the caller. Return only structure (see the 
 
 Work from the skill directory: `<SKILL>` = the cryptic-crossword skill folder.
 
+## 0. Report progress throughout (spoiler-free)
+
+The caller may be staring at a blank screen for many minutes, so keep a running progress
+log. The caller passes you a **progress file** path (`<PROGRESS>`); after each step,
+**append** one line to it naming the current phase and a count — nothing that reveals an
+answer, a grid letter, or a hint. Append (`>>`), don't overwrite, so the history is kept:
+
+```
+echo "solving… 12/32 entries placed" >> <PROGRESS>
+```
+
+Write a line at each milestone, and during the solve after each batch of clues:
+
+- `grid detected — 15×15, symmetric ✓`
+- `clues transcribed — 16 across, 16 down`
+- `solving… N/TOTAL entries placed`  ← append these repeatedly as the count climbs
+- `solve complete — grid fully interlocks ✓`
+- `hints written — N/TOTAL`
+- `building HTML…`
+- `done — HTML built ✓`  ← the caller's monitor stops on the first line containing "done"
+
+A count like "18/32 placed" is safe (it's just a number); an entry's letters or a clue's
+device breakdown is NOT — those stay in your other files, never in `<PROGRESS>`. Anchor a
+write to each step you already perform (don't try to watch a clock), and **solve in batches
+of interlocking clues, appending after each batch** rather than in one silent stretch. These
+lines are *in addition to* the final spoiler-free summary in step 7.
+
 ## 1. Detect the grid (pixels, not eyeballing)
 
 Run the detector on the image:
