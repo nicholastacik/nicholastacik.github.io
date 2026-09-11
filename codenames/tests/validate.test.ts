@@ -26,6 +26,12 @@ describe("validateClue", () => {
     const r = validateClue({ reasoning: "", clue: "OCEAN", number: 3, targets: aiGreens.slice(0, 1) }, s);
     expect(r.ok).toBe(false);
   });
+  it("rejects duplicate targets (length check alone would pass)", () => {
+    const g = aiGreens[0]!;
+    const r = validateClue({ reasoning: "", clue: "OCEAN", number: 2, targets: [g, g] }, s);
+    expect(r.ok).toBe(false);
+    expect(r.violations.some((v) => /distinct/.test(v))).toBe(true);
+  });
   it("rejects a target that is not one of the AI's greens", () => {
     const notGreen = s.words.find((_, i) => s.keys.ai[i] !== "green")!;
     const r = validateClue({ reasoning: "", clue: "OCEAN", number: 1, targets: [notGreen] }, s);
