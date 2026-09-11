@@ -1,5 +1,5 @@
 import type { GameState } from "./types";
-import { remainingWords, aiWordsRemaining } from "./engine";
+import { remainingWords, giverWordsRemaining } from "./engine";
 
 export type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
@@ -90,9 +90,9 @@ function ordinal(n: number): string {
 }
 
 export function buildClueMessages(state: GameState): ChatMessage[] {
-  const green = aiWordsRemaining(state, "green").join(", ");
-  const assassins = aiWordsRemaining(state, "assassin").join(", ") || "(none remaining)";
-  const bystanders = aiWordsRemaining(state, "bystander").join(", ") || "(none remaining)";
+  const green = giverWordsRemaining(state, "green").join(", ");
+  const assassins = giverWordsRemaining(state, "assassin").join(", ") || "(none remaining)";
+  const bystanders = giverWordsRemaining(state, "bystander").join(", ") || "(none remaining)";
   const user = `${boardBlock(state)}
 
 Your agents — steer your partner toward these (each is +1 toward the 15): ${green}

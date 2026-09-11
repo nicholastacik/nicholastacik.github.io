@@ -7,7 +7,7 @@ function rng(seed: number) {
 }
 
 describe("validateClue", () => {
-  const s = createGame({ rng: rng(3) });
+  const s = createGame({ rng: rng(3), firstClueGiver: "ai" });
   const aiGreens = s.words.filter((_, i) => s.keys.ai[i] === "green");
 
   it("accepts a legal clue targeting the AI's greens", () => {
@@ -32,14 +32,21 @@ describe("validateClue", () => {
     expect(r.ok).toBe(false);
   });
   it("rejects a clue equal to a revealed board word", () => {
-    const s2 = createGame({ rng: rng(3) });
+    const s2 = createGame({ rng: rng(3), firstClueGiver: "ai" });
     const w = s2.words[0]!;
     s2.revealed[0] = true;
     const r = validateClue({ reasoning: "", clue: w, number: 1, targets: aiGreens.slice(0, 1) }, s2);
     expect(r.ok).toBe(false);
   });
+  it("judges targets against the clue-giver's card (human's greens when the human clues)", () => {
+    const hs = createGame({ rng: rng(3), firstClueGiver: "human" });
+    const humanGreen = hs.words.find((_, i) => hs.keys.human[i] === "green")!;
+    const aiOnlyGreen = hs.words.find((_, i) => hs.keys.ai[i] === "green" && hs.keys.human[i] !== "green")!;
+    expect(validateClue({ reasoning: "", clue: "OCEAN", number: 1, targets: [humanGreen] }, hs).ok).toBe(true);
+    expect(validateClue({ reasoning: "", clue: "OCEAN", number: 1, targets: [aiOnlyGreen] }, hs).ok).toBe(false);
+  });
   it("rejects a target that is an AI green but revealed", () => {
-    const s2 = createGame({ rng: rng(3) });
+    const s2 = createGame({ rng: rng(3), firstClueGiver: "ai" });
     const greenIdx = s2.words.findIndex((_, i) => s2.keys.ai[i] === "green");
     const greenWord = s2.words[greenIdx]!;
     s2.revealed[greenIdx] = true;
@@ -83,7 +90,7 @@ describe("validateHumanClue", () => {
 });
 
 describe("clue vs board-word substring rule", () => {
-  const s = createGame({ rng: rng(3) });
+  const s = createGame({ rng: rng(3), firstClueGiver: "ai" });
   const longWord = s.words.find((w) => w.length >= 5)!;
   const aiGreen = s.words.find((_, i) => s.keys.ai[i] === "green")!;
 
