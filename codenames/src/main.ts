@@ -14,6 +14,9 @@ export interface ControllerUI {
   setError(msg: string | null): void;
   setModels?(ids: string[]): void;
   clearLog?(): void;
+  logLength?(): number;
+  truncateLog?(n: number): void;
+  setCanUndo?(enabled: boolean): void;
   isDebug?(): boolean;
   getSeed?(): string;
   setSeed?(seed: string): void;
@@ -61,6 +64,29 @@ export function createController(deps: ControllerDeps) {
 
   function render(): void {
     ui.render(state);
+  }
+
+  // --- undo: snapshot the (immutable) state + log length before each move, so
+  // one click steps the whole game back to just before the last clue/guess. ---
+  const undoStack: Array<{ state: GameState; logLen: number }> = [];
+  function snapshot(): void {
+    undoStack.push({ state, logLen: ui.logLength?.() ?? 0 });
+    ui.setCanUndo?.(true);
+  }
+  function undo(): void {
+    if (busy) return; // never unwind mid-AI-turn
+    const snap = undoStack.pop();
+    if (!snap) return;
+    state = snap.state; // engine states are immutable, so this reference is intact
+    ui.truncateLog?.(snap.logLen);
+    ui.setError(null);
+    // Sudden-death bookkeeping: if we've stepped back out of sudden death, drop the
+    // cached ranked list (it refetches on re-entry) and clear the meter; if we're
+    // still in it, refresh the meter against the restored board.
+    if (!state.suddenDeath) { sdGuesses = null; ui.setSuddenDeathMeter?.(null); }
+    else updateSDMeter();
+    ui.setCanUndo?.(undoStack.length > 0);
+    render();
   }
 
   // --- play-by-play logging (bottom panel) ---
@@ -135,6 +161,7 @@ export function createController(deps: ControllerDeps) {
       log("The AI has no confident sudden-death guess — your move.");
       return;
     }
+    snapshot();
     state = suddenDeathGuess(state, top.word, "ai");
     log(`AI guessed ${top.word} → ${guessLabel(state.suddenDeathGuesses[state.suddenDeathGuesses.length - 1]!.outcome)}`);
     updateSDMeter();
@@ -233,13 +260,15 @@ export function createController(deps: ControllerDeps) {
   // the direct result of the human submitting a clue.)
   async function requestAIClue(): Promise<void> {
     if (busy) return;
-    if (isAIsClueTurn()) await runAIClueTurn();
+    if (isAIsClueTurn()) { snapshot(); await runAIClueTurn(); }
   }
 
   async function newGame(): Promise<void> {
     generation += 1;
     busy = false; // abandon any in-flight AI call from the previous game (its result is discarded by the generation guard)
     sdGuesses = null;
+    undoStack.length = 0; // no undo across a fresh game
+    ui.setCanUndo?.(false);
     ui.clearLog?.(); // fresh log each game
 
     // Seed: use what's entered, else generate one and show it — so every game
@@ -272,6 +301,7 @@ export function createController(deps: ControllerDeps) {
       return;
     }
     ui.setError(null);
+    snapshot();
     log(`You clued "${w}" for ${n}.`);
     state = giveClue(state, w, n);
     render();
@@ -285,6 +315,7 @@ export function createController(deps: ControllerDeps) {
   async function passClue(): Promise<void> {
     if (busy) return;
     if (!(state.clueGiver === "human" && state.phase === "awaitClue" && state.status === "playing")) return;
+    snapshot();
     log("You pass — no clue.");
     state = passTurn(state);
     render();
@@ -296,6 +327,7 @@ export function createController(deps: ControllerDeps) {
     if (busy) return;
     if (state.suddenDeath) {
       if (state.status !== "playing") return;
+      snapshot();
       const before = state.suddenDeathGuesses.length;
       state = suddenDeathGuess(state, w, "human");
       if (state.suddenDeathGuesses.length > before) {
@@ -309,6 +341,7 @@ export function createController(deps: ControllerDeps) {
     // Ownership guard: a cell click is only meaningful while the human is
     // guessing against the AI's active clue.
     if (!(state.clueGiver === "ai" && state.phase === "awaitGuess")) return;
+    snapshot();
     const beforeLen = outcomesLen();
     state = guess(state, w);
     logGuessResult("You", w, beforeLen);
@@ -319,6 +352,7 @@ export function createController(deps: ControllerDeps) {
 
   async function endGuessing(): Promise<void> {
     if (busy) return;
+    if (state.phase === "awaitGuess" && state.status === "playing") snapshot();
     state = engineEndGuessing(state);
     render();
     await maybeEnterSuddenDeath();
@@ -363,7 +397,7 @@ export function createController(deps: ControllerDeps) {
 
   return {
     newGame, submitClue, passClue, clickCell, endGuessing, retryAITurn, requestAIClue, loadModels,
-    aiSuddenDeathGuess,
+    aiSuddenDeathGuess, undo,
   };
 }
 
@@ -385,6 +419,7 @@ if (typeof document !== "undefined" && document.getElementById("app")) {
     onGetClue: () => controller.requestAIClue(),
     onLoadModels: () => controller.loadModels(),
     onAiGuess: () => controller.aiSuddenDeathGuess(),
+    onUndo: () => controller.undo(),
   });
   controller = createController({
     ui,

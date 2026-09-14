@@ -363,6 +363,43 @@ describe("controller log UX (clear, thinking, debug)", () => {
   });
 });
 
+describe("controller undo", () => {
+  it("undoes the last guess, then the AI's clue, back to the start of the turn", async () => {
+    const g = createGame({ rng: rng(3), firstClueGiver: "ai" });
+    const aiGreen = g.words.find((_, i) => g.keys.ai[i] === "green")!;
+    const clue: ClueResponse = { reasoning: "", clue: "ZZZCLUE", number: 1, targets: [aiGreen] };
+    const logs: string[] = [];
+    let canUndo = false;
+    const render = vi.fn();
+    const ui = {
+      render, log: (l: string) => logs.push(l), getKey: () => "sk", getModel: () => "m", setError: vi.fn(),
+      logLength: () => logs.length, truncateLog: (n: number) => { logs.length = n; },
+      setCanUndo: (e: boolean) => { canUndo = e; },
+    };
+    const caller: LLMCaller = {
+      call: vi.fn(async (_m: any, _s: any, name: string): Promise<LLMResult<any>> =>
+        name === "clue" ? ok<ClueResponse>(clue) : ok<GuessResponse>({ reasoning: "", guesses: [] })),
+    };
+    const c = createController({ ui, makeCaller: () => caller, rng: rng(3), firstClueGiver: "ai" });
+    await c.newGame();
+    expect(canUndo).toBe(false);
+    await c.requestAIClue();            // AI clues (snapshot #1)
+    expect(canUndo).toBe(true);
+    await c.clickCell(aiGreen);          // human guesses the green (snapshot #2) → +1 agent
+    expect(lastRendered(render).agentsFound).toBe(1);
+    const logsAfterGuess = logs.length;
+
+    c.undo();                            // revert the guess
+    expect(lastRendered(render).agentsFound).toBe(0);
+    expect(lastRendered(render).phase).toBe("awaitGuess");
+    expect(logs.length).toBeLessThan(logsAfterGuess); // the guess's log line rolled back
+
+    c.undo();                            // revert the AI's clue
+    expect(lastRendered(render).phase).toBe("awaitClue");
+    expect(canUndo).toBe(false);         // nothing left to undo
+  });
+});
+
 describe("controller: AI stops guessing + seeds", () => {
   it("ends the AI's guessing turn when it stops early, so play advances (no stall)", async () => {
     const g = createGame({ rng: rng(3), firstClueGiver: "human" });
