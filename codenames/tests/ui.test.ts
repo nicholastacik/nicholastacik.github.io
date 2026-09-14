@@ -232,6 +232,26 @@ describe("GameUI", () => {
     expect(ui.isDebug()).toBe(true);
   });
 
+  it("debug toggle reveals/hides tagged intention lines retroactively", () => {
+    const ui = new GameUI(root, cb());
+    ui.render(createGame({ rng: rng(3) }));
+    ui.log("normal line");
+    ui.log("🐛 intention", { debug: true });
+    const logEl = root.querySelector(".cn-log") as HTMLElement;
+    // both lines exist; the debug one is tagged; off by default → hidden via class
+    expect(root.querySelectorAll(".cn-log-line").length).toBe(2);
+    expect(root.querySelector(".cn-log-debug")).not.toBeNull();
+    expect(logEl.classList.contains("cn-hide-debug")).toBe(true);
+    // toggling the checkbox reveals every past debug line, then hides them again
+    const box = root.querySelector(".cn-debug") as HTMLInputElement;
+    box.checked = true;
+    box.dispatchEvent(new Event("change"));
+    expect(logEl.classList.contains("cn-hide-debug")).toBe(false);
+    box.checked = false;
+    box.dispatchEvent(new Event("change"));
+    expect(logEl.classList.contains("cn-hide-debug")).toBe(true);
+  });
+
   it("puts a category badge (✅ agent / ❌ assassin) on revealed cells", () => {
     const ui = new GameUI(root, cb());
     const s = createGame({ rng: rng(3) });
