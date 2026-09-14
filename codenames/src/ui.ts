@@ -536,9 +536,11 @@ export class GameUI {
       this.gridEl.appendChild(btn);
     });
 
-    if (state.suddenDeath) {
-      // Sudden death: no clues, no shading — just the meter, the AI-guess
-      // button, and remaining-agent counts. Hide all normal controls.
+    if (state.suddenDeath && state.status === "playing") {
+      // Sudden death (still in progress): no clues, no shading — just the meter,
+      // the AI-guess button, and remaining-agent counts. Hide all normal controls.
+      // Once the game is won/lost this whole block is skipped, so the meter and
+      // "AI guess" button disappear instead of lingering with a stale prompt.
       this.clueBarEl.hidden = true;
       this.passClueBtn.hidden = true;
       this.endGuessingBtn.hidden = true;
@@ -709,7 +711,9 @@ export class GameUI {
     const pct = Math.round(top.confidence * 100);
     this.meterEl.replaceChildren();
     const label = document.createElement("span");
-    label.textContent = `AI wants to guess ${top.word} — ${pct}%`;
+    // Show only the AI's confidence, never which word it wants — you decide whether
+    // to trust it and fire "AI guess", or make your own guess instead.
+    label.textContent = `AI's next guess — ${pct}% confident`;
     const bar = document.createElement("div");
     bar.className = "cn-meter-bar";
     const fill = document.createElement("div");
