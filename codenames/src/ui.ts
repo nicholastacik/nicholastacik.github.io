@@ -192,7 +192,7 @@ export class GameUI {
     const tip = document.createElement("p");
     tip.className = "cn-privacy-tip";
     tip.textContent =
-      "Tip: create a dedicated OpenAI key with a low spending limit for this, and revoke it when you’re done — then even a worst-case leak costs pennies.";
+      "Tip: use a dedicated OpenAI key for this, keep an eye on its usage, and revoke it when you’re done. You can set a usage limit on your account, though it caps spending only approximately, not instantly.";
     panel.appendChild(tip);
 
     return panel;

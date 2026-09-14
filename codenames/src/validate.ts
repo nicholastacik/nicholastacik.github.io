@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { GameState } from "./types";
-import { remainingWords, giverKey, confirmedBystanders } from "./engine";
+import { remainingWords, giverKey, confirmedBystanders, confirmedBystandersOn } from "./engine";
 
 export const ClueSchema = z.object({
   reasoning: z.string(),
@@ -99,12 +99,16 @@ export function filterSuddenDeathGuesses(
   state: GameState,
 ): Array<{ word: string; confidence: number }> {
   const canonical = new Map(remainingWords(state).map((w) => [norm(w), w]));
+  // The AI's sudden-death guesses are judged against the HUMAN's card, so a word
+  // already shown to be a bystander on the human's card can't be an agent there —
+  // drop it (guessing it in sudden death would lose the game).
+  const banned = new Set(confirmedBystandersOn(state, "human").map(norm));
   const out: Array<{ word: string; confidence: number }> = [];
   const seen = new Set<string>();
   for (const g of guesses) {
     const key = norm(g.word);
     const word = canonical.get(key);
-    if (word && !seen.has(key)) {
+    if (word && !seen.has(key) && !banned.has(key)) {
       out.push({ word, confidence: Math.max(0, Math.min(1, g.confidence)) });
       seen.add(key);
     }

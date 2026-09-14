@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createGame, giveClue, guess, endGuessing, passTurn, giverKey, remainingWords, aiGreenWordsRemaining, aiWordsRemaining, confirmedBystanders, makeRng, suddenDeathGuess } from "../src/engine";
+import { createGame, giveClue, guess, endGuessing, passTurn, giverKey, remainingWords, aiGreenWordsRemaining, aiWordsRemaining, confirmedBystanders, confirmedBystandersOn, makeRng, suddenDeathGuess } from "../src/engine";
 import type { GameState } from "../src/types";
 
 function rng(seed: number) {
@@ -154,6 +154,9 @@ describe("engine", () => {
     ]};
     expect(confirmedBystanders(s)).toContain("ANT");     // ai's card
     expect(confirmedBystanders(s)).not.toContain("BEE"); // human's card — different card
+    // confirmedBystandersOn is card-explicit regardless of current clueGiver
+    expect(confirmedBystandersOn(s, "ai")).toEqual(["ANT"]);
+    expect(confirmedBystandersOn(s, "human")).toEqual(["BEE"]);
   });
 
   it("immutability: guess does not mutate input state", () => {
