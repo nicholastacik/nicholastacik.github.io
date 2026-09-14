@@ -3,6 +3,7 @@ title: "Playing Codenames Duet with an AI partner"
 description: "A fun little game to put an LLM into production..."
 date: 2026-09-09
 categories: [AI, projects]
+image: codenames-duet.jpg
 draft: false
 ---
 
@@ -313,7 +314,7 @@ like **syrup** or **canada** would have been better here? 14/15
 - The AI gives me **Sketch 2** this time. I suppose that's a *draft* with lines. 12/15.
 - **Deck 1** exhausts my agents. 13/15
 - The AI gives **syrup 2**. *Maple* is obvious, but now I have a previous clue relating to `shift` as well. Without hindsight I'm not sure it would be
-obvious that *doctor* was the remaining agent. 
+obvious that *doctor* was the remaining agent, closing out the victory.
 - Based on API token usage, this game cost about $0.02.
 - It does really seem like GPT-5.6 gave stronger, more specific clues, though also their *acer* clue could have been less esoteric.
 
