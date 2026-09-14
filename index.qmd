@@ -1,6 +1,6 @@
 ---
 title: "Nicholas Tacik"
-subtitle: "Building with AI, experiments, and Kaggle — a working notebook."
+subtitle: "Learning and Building..."
 listing:
   contents: posts
   sort: "date desc"

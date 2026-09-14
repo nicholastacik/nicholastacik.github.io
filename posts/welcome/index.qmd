@@ -5,15 +5,7 @@ date: "2026-06-27"
 categories: [meta]
 ---
 
-This is the first entry. The site is a working notebook — short writeups of
-things I'm building (often with AI in the loop), stray thoughts, and Kaggle
-logs.
+This is the first entry. This site is simply a working notebook for myself. Short writeups of things that I'm building,
+thoughts and musings, maybe Kaggle logs, maybe notes about books, papers or courses.
 
-Each entry is its own folder under `posts/`, so it can carry its own images,
-data, and code. New entries show up on the home page automatically, newest
-first.
-
-## Adding a new entry
-
-Create `posts/<slug>/index.qmd` with a date and a category, write, then push.
-The GitHub Action renders and publishes the rest.
+If you wish, you can contact me at nicktacik@gmail.com .
