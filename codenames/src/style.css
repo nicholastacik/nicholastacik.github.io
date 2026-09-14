@@ -410,10 +410,22 @@ button:hover {
 }
 
 .cn-new-game,
-.cn-pass-clue {
+.cn-pass-clue,
+.cn-undo {
   background: transparent;
   color: var(--text);
   border: 1px solid var(--border);
+}
+
+.cn-topbar-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.cn-undo:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
 .cn-log-panel {

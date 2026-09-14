@@ -13,6 +13,8 @@ export interface UICallbacks {
   onLoadModels(): void;
   // Sudden death: the human asks the AI to make its guess.
   onAiGuess(): void;
+  // Undo the last clue/guess, restoring the previous game state.
+  onUndo(): void;
 }
 
 const KEY_NAME = "openai_key";
@@ -82,6 +84,7 @@ export class GameUI {
   private rememberInput!: HTMLInputElement;
   private showKeyInput!: HTMLInputElement;
   private debugInput!: HTMLInputElement;
+  private undoBtn!: HTMLButtonElement;
   private seedInput!: HTMLInputElement;
   private lastState: GameState | null = null;
   private gridEl!: HTMLElement;
@@ -210,8 +213,19 @@ export class GameUI {
     newGameBtn.textContent = "New game";
     newGameBtn.className = "cn-new-game";
     newGameBtn.addEventListener("click", () => this.cb.onNewGame());
+    // Undo: step the game back one clue/guess. Disabled until there's history.
+    this.undoBtn = document.createElement("button");
+    this.undoBtn.type = "button";
+    this.undoBtn.textContent = "↩ Undo";
+    this.undoBtn.className = "cn-undo";
+    this.undoBtn.disabled = true;
+    this.undoBtn.addEventListener("click", () => this.cb.onUndo());
+    const actions = document.createElement("div");
+    actions.className = "cn-topbar-actions";
+    actions.appendChild(this.undoBtn);
+    actions.appendChild(newGameBtn);
     topbar.appendChild(title);
-    topbar.appendChild(newGameBtn);
+    topbar.appendChild(actions);
     this.root.appendChild(topbar);
 
     // Error banner
@@ -604,6 +618,20 @@ export class GameUI {
 
   clearLog(): void {
     this.logEl.replaceChildren();
+  }
+
+  // Undo support: snapshot the log length before an action, and roll the log
+  // back to it when that action is undone (the log is otherwise append-only).
+  logLength(): number {
+    return this.logEl.children.length;
+  }
+
+  truncateLog(n: number): void {
+    while (this.logEl.children.length > n) this.logEl.lastElementChild!.remove();
+  }
+
+  setCanUndo(enabled: boolean): void {
+    this.undoBtn.disabled = !enabled;
   }
 
   isDebug(): boolean {
