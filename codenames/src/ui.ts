@@ -18,7 +18,10 @@ export interface UICallbacks {
 }
 
 const KEY_NAME = "openai_key";
-const DEFAULT_MODEL = "gpt-5.6";
+// Explicit variant, not the bare "gpt-5.6" alias (which routes to gpt-5.6-sol,
+// the pricier flagship). Terra balances quality vs. cost for BYOK players; they
+// can switch via "Load my models".
+const DEFAULT_MODEL = "gpt-5.6-terra";
 const CUSTOM_MODEL = "__custom__";
 
 export function readSavedKey(): string {
