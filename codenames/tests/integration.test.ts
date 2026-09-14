@@ -551,6 +551,33 @@ describe("controller: sudden death", () => {
     expect(s.suddenDeathGuesses.some((x) => x.by === "ai" && x.word === humanGreen)).toBe(true);
   });
 
+  it("stops offering the AI a guess once all the human's agents are found (no self-loss)", async () => {
+    const g = createGame({ rng: rng(3), firstClueGiver: "human" });
+    const humanGreens = g.words.filter((_, i) => g.keys.human[i] === "green");
+    // a word the AI would rank next but that is NOT a human agent (ai-only green =
+    // bystander/assassin on the human's card) → guessing it in SD would lose.
+    const aiOnlyGreen = g.words.find((_, i) => g.keys.ai[i] === "green" && g.keys.human[i] !== "green")!;
+    const { ui } = fakeUiSD();
+    const suddenDeath = vi.fn(async () =>
+      [...humanGreens.map((w) => ({ word: w, confidence: 0.9 })), { word: aiOnlyGreen, confidence: 0.8 }]);
+    const caller: LLMCaller = { call: vi.fn(async () => ({ parsed: null, refusal: "pass", finishReason: "stop" })) };
+    const c = createController({ ui, makeCaller: () => caller, suddenDeath, rng: rng(3), firstClueGiver: "human" });
+    await c.newGame();
+    await driveToSuddenDeath(c, ui.render);
+
+    // AI finds every one of the human's agents...
+    for (let i = 0; i < humanGreens.length; i++) await c.aiSuddenDeathGuess();
+    const guessesBefore = lastRendered(ui.render).suddenDeathGuesses.length;
+    expect(lastRendered(ui.render).status).toBe("playing"); // AI's own agents still unfound
+
+    // ...now it must NOT be offered the leftover non-agent word (which would lose).
+    await c.aiSuddenDeathGuess();
+    const after = lastRendered(ui.render);
+    expect(after.suddenDeathGuesses.length).toBe(guessesBefore); // no further AI guess
+    expect(after.suddenDeathGuesses.some((x) => x.word === aiOnlyGreen)).toBe(false);
+    expect(after.status).toBe("playing"); // no bystander/assassin self-loss
+  });
+
   it("a human click during sudden death routes to suddenDeathGuess, not the normal clue-guess path", async () => {
     const g = createGame({ rng: rng(3), firstClueGiver: "human" });
     const humanGreen = g.words.find((_, i) => g.keys.human[i] === "green")!;

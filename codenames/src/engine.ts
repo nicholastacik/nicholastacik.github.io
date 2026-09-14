@@ -88,13 +88,17 @@ export function giverWordsRemaining(state: GameState, category: Category): strin
 // A bystander on a card can never be an agent on that SAME card, so the guesser
 // must never re-guess it while guessing against this card. It may still be an
 // agent on the OTHER card, so this list is keyed to the current clue-giver only.
-export function confirmedBystanders(state: GameState): string[] {
+export function confirmedBystandersOn(state: GameState, player: Player): string[] {
   const out = new Set<string>();
   for (const turn of state.history) {
-    if (turn.clueGiver !== state.clueGiver) continue;
+    if (turn.clueGiver !== player) continue; // outcomes are judged against the clue-giver's card
     turn.guesses.forEach((w, i) => { if (turn.outcomes[i] === "bystander") out.add(w); });
   }
   return [...out];
+}
+
+export function confirmedBystanders(state: GameState): string[] {
+  return confirmedBystandersOn(state, state.clueGiver);
 }
 
 export function giveClue(state: GameState, clue: string, number: number): GameState {

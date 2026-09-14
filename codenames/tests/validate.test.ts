@@ -142,4 +142,15 @@ describe("filterSuddenDeathGuesses", () => {
   it("clamps negative confidence to 0", () => {
     expect(filterSuddenDeathGuesses([{ word: s.words[0]!, confidence: -0.5 }], s)).toEqual([{ word: s.words[0], confidence: 0 }]);
   });
+  it("drops words already shown to be bystanders on the HUMAN's card (which judges AI SD guesses)", () => {
+    const base = createGame({ rng: rng(3) });
+    const [byst, other] = [base.words[0]!, base.words[1]!];
+    // a "human"-clue turn where `byst` came back a bystander → bystander on the human's card
+    const s2 = { ...base, history: [
+      { clueGiver: "human" as const, clue: "X", number: 1, guesses: [byst], outcomes: ["bystander" as const] },
+    ]};
+    const out = filterSuddenDeathGuesses([{ word: byst, confidence: 0.9 }, { word: other, confidence: 0.8 }], s2);
+    expect(out.some((g) => g.word === byst)).toBe(false);
+    expect(out.some((g) => g.word === other)).toBe(true);
+  });
 });
