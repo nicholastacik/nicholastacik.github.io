@@ -7,7 +7,9 @@ import { formatHistory } from "../src/prompts";
 import { TOTAL_AGENTS, START_TURNS, type GameState } from "../src/types";
 import { aggregate, type GameResult } from "./metrics";
 
-const DEFAULT_MODEL = "gpt-5.6";
+// Match the game's shipped default (explicit variant, not the bare alias which
+// routes to gpt-5.6-sol). Override per run with OPENAI_EVAL_MODEL / *_CLUE_MODEL.
+const DEFAULT_MODEL = "gpt-5.6-terra";
 // Each engine step (a clue, or a single guess) advances the game by at least
 // one turn-relevant action; 9 turns * a generous per-turn budget is nowhere
 // near this, so hitting the cap means something is stuck, not that a normal
