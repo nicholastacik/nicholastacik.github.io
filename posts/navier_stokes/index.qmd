@@ -33,3 +33,9 @@ their own private language models whose data privacy they can control? Are resea
 start being a lot more secretive about their work, when academia is very much based around collaboration?
 There's a lot to think about here. 
 
+**Update**: [24 Fields medal winners](https://mathandai.org/) have signed an open letter, titled *"A Severe Misalignment of AI in Mathematics"*.
+In it, they note that "the push by AI companies to solve mathematical problems as a benchmark is detrimental to the science of mathematics,
+and to the mathematical community". The reasoning presented is that "solving problems [is] only a tool and proxy for achieving the primary goal of
+conceptual understanding and insight", while also noting that the solutions are announced in a rush. Personally, I am in full agreement with what
+they are saying here. The beauty of mathematics is in concepts, ideas and ways of understanding, not in specific results. Can AI ever produce
+these kinds of new concepts? We'll have to see, I suppose.

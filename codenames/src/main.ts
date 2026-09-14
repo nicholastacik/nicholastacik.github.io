@@ -121,6 +121,11 @@ export function createController(deps: ControllerDeps) {
   }
   function topSDCandidate(): { word: string; confidence: number } | null {
     if (!sdGuesses) return null;
+    // The AI's sudden-death guesses are judged against the HUMAN's card. Once all
+    // the human's agents are found, ANY AI guess loses — offer nothing so the
+    // "AI guess" button disables and only the human can finish.
+    const humanAgentsLeft = state.keys.human.some((c, i) => c === "green" && !state.revealed[i]);
+    if (!humanAgentsLeft) return null;
     return sdGuesses.find((g) => !isRevealedWord(g.word)) ?? null;
   }
   function updateSDMeter(): void {
