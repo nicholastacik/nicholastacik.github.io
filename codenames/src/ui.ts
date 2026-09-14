@@ -288,14 +288,17 @@ export class GameUI {
     showKeyLabel.appendChild(this.showKeyInput);
     showKeyLabel.appendChild(document.createTextNode(" Show my key card (while guessing)"));
 
-    // Debug: surface the AI's private intentions in the log (spoilers). Off by default.
+    // Debug: the AI's private intentions are ALWAYS recorded in the log (tagged),
+    // and this checkbox just reveals/hides them — so toggling it shows or clears
+    // every past intention at once, not only future ones. Spoilers; off by default.
     const debugLabel = document.createElement("label");
     debugLabel.className = "cn-remember-label";
     this.debugInput = document.createElement("input");
     this.debugInput.type = "checkbox";
     this.debugInput.className = "cn-debug";
+    this.debugInput.addEventListener("change", () => this.syncDebug());
     debugLabel.appendChild(this.debugInput);
-    debugLabel.appendChild(document.createTextNode(" Debug (show AI intentions)"));
+    debugLabel.appendChild(document.createTextNode(" Debug — reveal AI intentions in the log"));
 
     // Seed: set it to reproduce a board (for comparing agents); leave blank for
     // a random game (the seed used is filled in so you can replay it).
@@ -448,6 +451,7 @@ export class GameUI {
     this.logEl.className = "cn-log";
     logPanel.appendChild(this.logEl);
     this.root.appendChild(logPanel);
+    this.syncDebug(); // apply the initial (off → hidden) debug visibility
   }
 
   // A small key for the board shading colors — they're meaningful but not
@@ -585,13 +589,14 @@ export class GameUI {
     }
   }
 
-  log(line: string): void {
+  log(line: string, opts?: { debug?: boolean }): void {
     // Keep the view pinned to the newest entry, but only if the user is already
     // at the bottom — so scrolling up to read history isn't yanked back down.
     const atBottom =
       this.logEl.scrollHeight - this.logEl.scrollTop - this.logEl.clientHeight < 4;
     const entry = document.createElement("div");
-    entry.className = "cn-log-line";
+    // Debug lines are always added but tagged; syncDebug() shows/hides them.
+    entry.className = opts?.debug ? "cn-log-line cn-log-debug" : "cn-log-line";
     entry.textContent = line;
     this.logEl.appendChild(entry);
     if (atBottom) this.logEl.scrollTop = this.logEl.scrollHeight;
@@ -603,6 +608,12 @@ export class GameUI {
 
   isDebug(): boolean {
     return this.debugInput.checked;
+  }
+
+  // Reflect the debug checkbox onto the log: when off, a class hides every tagged
+  // debug line (retroactively); when on, they all appear in their real positions.
+  private syncDebug(): void {
+    this.logEl.classList.toggle("cn-hide-debug", !this.debugInput.checked);
   }
 
   getSeed(): string {
