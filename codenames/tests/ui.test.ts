@@ -381,14 +381,25 @@ describe("GameUI", () => {
     expect(root.textContent).toContain("2 turns left");
   });
 
-  it("setSuddenDeathMeter shows the top candidate + confidence and fires onAiGuess", () => {
+  it("setSuddenDeathMeter shows confidence only (never the word) and fires onAiGuess", () => {
     const callbacks = cb();
     const ui = new GameUI(root, callbacks);
     ui.render({ ...createGame({ rng: rng(3) }), suddenDeath: true });
     ui.setSuddenDeathMeter({ word: "CRANE", confidence: 0.85 });
-    expect(root.querySelector(".cn-meter")!.textContent).toMatch(/CRANE/);
-    expect(root.querySelector(".cn-meter")!.textContent).toMatch(/85/);
+    const meter = root.querySelector(".cn-meter")!;
+    expect(meter.textContent).not.toMatch(/CRANE/); // the word is hidden
+    expect(meter.textContent).toMatch(/85/);        // only the confidence shows
+    expect(meter.textContent).toMatch(/confident/i);
     (root.querySelector(".cn-ai-guess") as HTMLElement).click();
     expect(callbacks.onAiGuess).toHaveBeenCalled();
+  });
+
+  it("hides the sudden-death meter + AI-guess button once the game is over", () => {
+    const ui = new GameUI(root, cb());
+    const s = createGame({ rng: rng(3) });
+    ui.render({ ...s, suddenDeath: true, status: "won" });
+    expect((root.querySelector(".cn-meter") as HTMLElement).hidden).toBe(true);
+    expect((root.querySelector(".cn-ai-guess") as HTMLElement).hidden).toBe(true);
+    expect((root.querySelector(".cn-sd-counts") as HTMLElement).hidden).toBe(true);
   });
 });
