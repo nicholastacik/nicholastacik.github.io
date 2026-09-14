@@ -5,7 +5,7 @@ import { createGame } from "../src/engine";
 function rng(seed: number) {
   return () => { seed |= 0; seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed>>>15),1|seed); t=(t+Math.imul(t ^ (t>>>7),61|t))^t; return ((t ^ (t>>>14))>>>0)/4294967296; };
 }
-const cb = () => ({ onClueSubmit: vi.fn(), onPassClue: vi.fn(), onCellClick: vi.fn(), onEndGuessing: vi.fn(), onNewGame: vi.fn(), onRetry: vi.fn(), onGetClue: vi.fn(), onLoadModels: vi.fn(), onAiGuess: vi.fn() });
+const cb = () => ({ onClueSubmit: vi.fn(), onPassClue: vi.fn(), onCellClick: vi.fn(), onEndGuessing: vi.fn(), onNewGame: vi.fn(), onRetry: vi.fn(), onGetClue: vi.fn(), onLoadModels: vi.fn(), onAiGuess: vi.fn(), onUndo: vi.fn() });
 
 describe("GameUI", () => {
   let root: HTMLElement;
@@ -250,6 +250,21 @@ describe("GameUI", () => {
     box.checked = false;
     box.dispatchEvent(new Event("change"));
     expect(logEl.classList.contains("cn-hide-debug")).toBe(true);
+  });
+
+  it("undo button: disabled until setCanUndo(true), fires onUndo; log length + truncate work", () => {
+    const callbacks = cb();
+    const ui = new GameUI(root, callbacks);
+    const undo = root.querySelector(".cn-undo") as HTMLButtonElement;
+    expect(undo.disabled).toBe(true);
+    ui.setCanUndo(true);
+    expect(undo.disabled).toBe(false);
+    undo.click();
+    expect(callbacks.onUndo).toHaveBeenCalled();
+    ui.log("a"); ui.log("b"); ui.log("c");
+    expect(ui.logLength()).toBe(3);
+    ui.truncateLog(1);
+    expect(ui.logLength()).toBe(1);
   });
 
   it("puts a category badge (✅ agent / ❌ assassin) on revealed cells", () => {
