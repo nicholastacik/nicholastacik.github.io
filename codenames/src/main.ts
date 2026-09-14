@@ -8,7 +8,7 @@ import { getAIClue, getAIGuess, LLMError, type LLMCaller, type Logger } from "./
 
 export interface ControllerUI {
   render(state: GameState): void;
-  log(line: string): void;
+  log(line: string, opts?: { debug?: boolean }): void;
   getKey(): string;
   getModel(): string;
   setError(msg: string | null): void;
@@ -169,7 +169,9 @@ export function createController(deps: ControllerDeps) {
         return;
       }
       state = giveClue(state, clue.clue, clue.number);
-      if (ui.isDebug?.()) log(`🐛 AI wants you to find: ${clue.targets.join(", ")}`);
+      // Always record the AI's intent (tagged debug); the UI reveals it only when
+      // the Debug toggle is on, so flipping the toggle shows/hides all of it.
+      ui.log(`🐛 AI wants you to find: ${clue.targets.join(", ")}`, { debug: true });
       render();
     } catch (e) {
       if (gen !== generation) return; // stale: don't surface a dead game's error
@@ -194,10 +196,9 @@ export function createController(deps: ControllerDeps) {
       log("The AI is thinking about your clue…");
       const { guesses: words, reasoning } = await getAIGuess(caller(), state, log);
       if (gen !== generation) return; // stale: a new game started meanwhile
-      if (ui.isDebug?.()) {
-        if (reasoning) log(`🐛 AI reasoning: ${reasoning}`);
-        log(`🐛 AI intends to guess: ${words.join(", ") || "(nothing)"}`);
-      }
+      // Always recorded, tagged debug; the Debug toggle reveals/hides them.
+      if (reasoning) ui.log(`🐛 AI reasoning: ${reasoning}`, { debug: true });
+      ui.log(`🐛 AI intends to guess: ${words.join(", ") || "(nothing)"}`, { debug: true });
       for (const word of words) {
         if (state.phase !== "awaitGuess" || state.status !== "playing") break;
         const beforeLen = outcomesLen();

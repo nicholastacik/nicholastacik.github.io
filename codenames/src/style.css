@@ -454,6 +454,17 @@ button:hover {
   padding-bottom: 0.2rem;
 }
 
+/* Debug intention lines: always logged + tagged, revealed only when the Debug
+   toggle is on. Distinct (muted, accent-tinted) so they read as spoilers. */
+.cn-log-debug {
+  color: var(--accent);
+  font-style: italic;
+}
+
+.cn-log.cn-hide-debug .cn-log-debug {
+  display: none;
+}
+
 @media (max-width: 480px) {
   .cn-cell {
     font-size: 0.65rem;
