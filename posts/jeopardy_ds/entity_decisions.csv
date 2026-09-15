@@ -3539,3 +3539,217 @@ cluster_id,phrase,keep,canonical,source
 43,Churchill,true,Winston Churchill,llm-alias
 43,Emerson,true,Ralph Waldo Emerson,llm-alias
 43,Truman,true,Harry Truman,llm-alias
+-1,Japan,false,Japan,llm-fragsweep
+-1,San Francisco,false,San Francisco,llm-fragsweep
+-1,Europe,false,Europe,llm-fragsweep
+-1,Alaska,false,Alaska,llm-fragsweep
+-1,Hawaii,false,Hawaii,llm-fragsweep
+-1,Spain,false,Spain,llm-fragsweep
+-1,Germany,false,Germany,llm-fragsweep
+-1,Seattle,false,Seattle,llm-fragsweep
+-1,Maine,false,Maine,llm-fragsweep
+-1,Michigan,false,Michigan,llm-fragsweep
+-1,Africa,false,Africa,llm-fragsweep
+-1,Manhattan,false,Manhattan,llm-fragsweep
+-1,Los Angeles,false,Los Angeles,llm-fragsweep
+-1,New Orleans,false,New Orleans,llm-fragsweep
+-1,Arizona,false,Arizona,llm-fragsweep
+-1,Alabama,false,Alabama,llm-fragsweep
+-1,Minnesota,false,Minnesota,llm-fragsweep
+-1,Rome,false,Rome,llm-fragsweep
+-1,Sydney,false,Sydney,llm-fragsweep
+-1,Vegas,false,Vegas,llm-fragsweep
+-1,Detroit,false,Detroit,llm-fragsweep
+-1,Asian,false,Asian,llm-fragsweep
+-1,Irish,false,Irish,llm-fragsweep
+-1,December,false,December,llm-fragsweep
+-1,March,false,March,llm-fragsweep
+-1,September,false,September,llm-fragsweep
+-1,August,false,August,llm-fragsweep
+-1,October,false,October,llm-fragsweep
+-1,January,false,January,llm-fragsweep
+-1,John,false,John,llm-fragsweep
+-1,Alex,false,Alex,llm-fragsweep
+-1,James,false,James,llm-fragsweep
+-1,Bill,false,Bill,llm-fragsweep
+-1,Olympic,true,Olympic Games,llm-fragsweep
+3,Canada,false,Canada,llm-fragsweep
+3,Israel,false,Israel,llm-fragsweep
+3,Vietnam,false,Vietnam,llm-fragsweep
+3,Congress,false,Congress,llm-fragsweep
+3,Senate,false,Senate,llm-fragsweep
+3,Navy,false,Navy,llm-fragsweep
+3,October,false,October,llm-fragsweep
+3,December,false,December,llm-fragsweep
+3,Irish,false,Irish,llm-fragsweep
+3,Olympic,true,Olympic Games,llm-fragsweep
+7,Japan,false,Japan,llm-fragsweep
+7,Massachusetts,false,Massachusetts,llm-fragsweep
+7,Asian,false,Asian,llm-fragsweep
+7,America,false,America,llm-fragsweep
+7,Jerusalem,false,Jerusalem,llm-fragsweep
+7,Ryan Seacrest,false,Ryan Seacrest,llm-fragsweep
+15,New York,false,New York,llm-fragsweep
+15,David,false,David,llm-fragsweep
+15,Atlanta,false,Atlanta,llm-fragsweep
+15,Black,false,Black,llm-fragsweep
+15,Ben,false,Ben,llm-fragsweep
+15,Kate,false,Kate,llm-fragsweep
+15,My Children,true,All My Children,llm-fragsweep
+15,Always Sunny,true,It's Always Sunny in Philadelphia,llm-fragsweep
+19,George,false,George,llm-fragsweep
+19,Brooklyn,false,Brooklyn,llm-fragsweep
+19,Though,false,Though,llm-fragsweep
+19,Bond,true,James Bond,llm-fragsweep
+23,New York,false,New York,llm-fragsweep
+23,Symphony,false,Symphony,llm-fragsweep
+23,Barber of Seville,true,The Barber of Seville,llm-fragsweep
+28,Dalmatians,true,101 Dalmatians,llm-fragsweep
+28,Little Mermaid,true,The Little Mermaid,llm-fragsweep
+32,Latin,false,Latin,llm-fragsweep
+32,New York,false,New York,llm-fragsweep
+32,March,false,March,llm-fragsweep
+32,India,false,India,llm-fragsweep
+32,Britain,false,Britain,llm-fragsweep
+32,Japan,false,Japan,llm-fragsweep
+32,July,false,July,llm-fragsweep
+32,Senate,false,Senate,llm-fragsweep
+36,Athens,false,Athens,llm-fragsweep
+36,Atlanta,false,Atlanta,llm-fragsweep
+36,England,false,England,llm-fragsweep
+40,George,false,George,llm-fragsweep
+40,James,false,James,llm-fragsweep
+40,England,false,England,llm-fragsweep
+40,Tennessee,false,Tennessee,llm-fragsweep
+40,Italian,false,Italian,llm-fragsweep
+40,Amendment,false,Amendment,llm-fragsweep
+40,Louis,false,Louis,llm-fragsweep
+48,Greek,false,Greek,llm-fragsweep
+48,Latin,false,Latin,llm-fragsweep
+48,Britain,false,Britain,llm-fragsweep
+48,Friday,false,Friday,llm-fragsweep
+48,Jewish,false,Jewish,llm-fragsweep
+48,John,false,John,llm-fragsweep
+48,Supreme Court,false,Supreme Court,llm-fragsweep
+48,White House,false,White House,llm-fragsweep
+48,the Army,false,the Army,llm-fragsweep
+0,Scott Fitzgerald,true,F. Scott Fitzgerald,llm-fragsweep
+0,Wells,true,H. G. Wells,llm-fragsweep
+0,God,false,God,llm-fragsweep
+4,Palace,false,Palace,llm-fragsweep
+8,Latin,false,Latin,llm-fragsweep
+8,Dutch,false,Dutch,llm-fragsweep
+8,European,false,European,llm-fragsweep
+8,Indian,false,Indian,llm-fragsweep
+8,Russian,false,Russian,llm-fragsweep
+8,Cuban,false,Cuban,llm-fragsweep
+8,Venetian,false,Venetian,llm-fragsweep
+8,Panama,false,Panama,llm-fragsweep
+8,Windsor,false,Windsor,llm-fragsweep
+8,Western,false,Western,llm-fragsweep
+8,Sarah,false,Sarah,llm-fragsweep
+8,Harris,false,Harris,llm-fragsweep
+8,Adirondack,false,Adirondack,llm-fragsweep
+8,Mary,true,Mary Jane (shoe),llm-fragsweep
+12,England,false,England,llm-fragsweep
+12,Robert,false,Robert,llm-fragsweep
+16,Paris,false,Paris,llm-fragsweep
+20,Australia,false,Australia,llm-fragsweep
+20,Greece,false,Greece,llm-fragsweep
+20,Paris,false,Paris,llm-fragsweep
+29,American,false,American,llm-fragsweep
+29,Spain,false,Spain,llm-fragsweep
+29,New York,false,New York,llm-fragsweep
+29,David,true,Jacques-Louis David,llm-fragsweep
+37,Texas,false,Texas,llm-fragsweep
+37,Joseph,false,Joseph,llm-fragsweep
+37,Pierre,false,Pierre,llm-fragsweep
+37,Louis,false,Louis,llm-fragsweep
+37,Bell,true,Alexander Graham Bell,llm-fragsweep
+41,New York,false,New York,llm-fragsweep
+41,July,false,July,llm-fragsweep
+41,Lisa Ann Walter,false,Lisa Ann Walter,llm-fragsweep
+41,Space Museum,true,National Air and Space Museum,llm-fragsweep
+45,New York,false,New York,llm-fragsweep
+45,Rocky Mountain,true,Rocky Mountain spotted fever,llm-fragsweep
+1,Soviet,false,Soviet,llm-fragsweep
+1,American,false,American,llm-fragsweep
+1,Chinese,false,Chinese,llm-fragsweep
+1,Japanese,false,Japanese,llm-fragsweep
+5,American,false,American,llm-fragsweep
+5,Boston,false,Boston,llm-fragsweep
+5,July,false,July,llm-fragsweep
+5,Louis,false,Louis,llm-fragsweep
+5,America,false,America,llm-fragsweep
+5,French,false,French,llm-fragsweep
+5,Star Game,true,All-Star Game,llm-fragsweep
+9,America,false,America,llm-fragsweep
+9,American,false,American,llm-fragsweep
+9,David Faber,false,David Faber,llm-fragsweep
+13,Washington,false,Washington,llm-fragsweep
+13,John,false,John,llm-fragsweep
+13,Italian,false,Italian,llm-fragsweep
+13,March,false,March,llm-fragsweep
+13,George,false,George,llm-fragsweep
+13,Clinton,true,Hillary Clinton,llm-fragsweep
+13,Mead,true,Margaret Mead,llm-fragsweep
+17,New York,false,New York,llm-fragsweep
+26,London,false,London,llm-fragsweep
+26,New York,false,New York,llm-fragsweep
+26,Japanese,false,Japanese,llm-fragsweep
+30,New York,false,New York,llm-fragsweep
+30,Earth,false,Earth,llm-fragsweep
+30,Sam,true,Uncle Sam,llm-fragsweep
+34,American,false,American,llm-fragsweep
+34,Nobel,true,Nobel Prize,llm-fragsweep
+34,Higgs,true,Higgs boson,llm-fragsweep
+38,November,false,November,llm-fragsweep
+38,Dec,false,Dec,llm-fragsweep
+2,American,false,American,llm-fragsweep
+2,Europe,false,Europe,llm-fragsweep
+2,Philadelphia,false,Philadelphia,llm-fragsweep
+2,Italy,false,Italy,llm-fragsweep
+2,Kansas,false,Kansas,llm-fragsweep
+2,Colorado,false,Colorado,llm-fragsweep
+2,Virginia,false,Virginia,llm-fragsweep
+10,American,false,American,llm-fragsweep
+10,English,false,English,llm-fragsweep
+10,Portuguese,false,Portuguese,llm-fragsweep
+14,Lebanon,false,Lebanon,llm-fragsweep
+14,North American,false,North American,llm-fragsweep
+14,Persian,false,Persian,llm-fragsweep
+14,Socrates,false,Socrates,llm-fragsweep
+14,Kansas,false,Kansas,llm-fragsweep
+14,Native Americans,false,Native Americans,llm-fragsweep
+14,Nevada,false,Nevada,llm-fragsweep
+14,Pacific,false,Pacific,llm-fragsweep
+14,Virginia,false,Virginia,llm-fragsweep
+14,Germany,false,Germany,llm-fragsweep
+14,Douglas,true,Douglas fir,llm-fragsweep
+22,French,false,French,llm-fragsweep
+22,England,false,England,llm-fragsweep
+27,Texas,false,Texas,llm-fragsweep
+27,France,false,France,llm-fragsweep
+27,Canada,false,Canada,llm-fragsweep
+27,Mediterranean,false,Mediterranean,llm-fragsweep
+27,Mexico,false,Mexico,llm-fragsweep
+31,New York,false,New York,llm-fragsweep
+31,Colin Jost,false,Colin Jost,llm-fragsweep
+35,American,false,American,llm-fragsweep
+35,Washington,true,George Washington,llm-fragsweep
+35,Obama,true,Barack Obama,llm-fragsweep
+35,Teddy Roosevelt,true,Theodore Roosevelt,llm-fragsweep
+39,Arizona,false,Arizona,llm-fragsweep
+39,Spain,false,Spain,llm-fragsweep
+39,Boston,false,Boston,llm-fragsweep
+39,San Francisco,false,San Francisco,llm-fragsweep
+39,Britain,false,Britain,llm-fragsweep
+39,Manhattan,false,Manhattan,llm-fragsweep
+39,Kentucky,false,Kentucky,llm-fragsweep
+39,South Dakota,false,South Dakota,llm-fragsweep
+39,Katie Couric,false,Katie Couric,llm-fragsweep
+39,Ari Shapiro,false,Ari Shapiro,llm-fragsweep
+43,England,false,England,llm-fragsweep
+43,Chicago,false,Chicago,llm-fragsweep
+47,American,false,American,llm-fragsweep
+47,Texas,false,Texas,llm-fragsweep
