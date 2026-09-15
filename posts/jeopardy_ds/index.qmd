@@ -155,10 +155,11 @@ in ten rewards a *skill* you drill rather than facts you memorize. Push the clus
 and wordplay even splits into two prep tracks: pure letter/anagram games (drill) versus
 etymology and idioms (genuinely studyable).
 
-Second, the types differ enormously in whether "study the common answers" even *works*. We
-can measure it: how many distinct entities recur ≥5 times in a type. Entity-dense types
-(authors, geography, presidents) are eminently studyable; wordplay and grab-bag types are
-not:
+Second, the types differ enormously in whether "study the common answers" even *works*. As a
+rough, exploratory heuristic we can count how many distinct entities recur ≥5 times in a type —
+a tally taken from raw phrases (before dedup and LLM cleaning) and sensitive to how big a type
+is, so read it as a directional signal, not a precise payoff score. Entity-dense types
+(authors, geography, presidents) score high; wordplay and grab-bag types don't:
 
 ```{python}
 #| label: fig-applicability
@@ -221,8 +222,9 @@ no longer clutters the authors list.
 
 The payoff is a lookup tool: pick a category type, see its most common (cleaned) entities,
 and jump straight to Wikipedia for each. It's live at [`research/`](research/), and it's
-filterable by era — from 1980 (all-time) up through 2020 — so you can watch a type's common
-answers shift decade by decade.
+filterable by a cumulative *study window* — all-time, or restricted to answers since 1990,
+2000, 2010, or 2020 — so you can watch a type's common entities shift as you narrow to more
+recent years.
 
 Two more touches make it a study aid rather than a lookup: press **Sample clue** to draw a
 real clue from that category — highlight an answer first to be quizzed on that specific
