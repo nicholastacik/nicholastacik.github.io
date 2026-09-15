@@ -66,8 +66,15 @@ def build_sample_clues(clusters_df, clues_df, decisions, k=3, general_n=25, min_
     )
     out_rows = []
     for cid, sub in merged.groupby("cluster_id"):
-        raw = _cluster_phrase_counts(sub, surface)
-        resolution = _cluster_resolution(raw, decisions.get(int(cid), {}), min_freq)
+        cdec = decisions.get(int(cid), {})
+        # Resolve entities per era window (not just all-time), so an entity that ranks high only
+        # in a recent window (e.g. "Stranger Things" since 2020) still gets sample clues.
+        resolution = {}
+        for cutoff in config.ERA_CUTOFFS:
+            era_sub = sub[sub["year"] >= cutoff]
+            if era_sub.empty:
+                continue
+            resolution.update(_cluster_resolution(_cluster_phrase_counts(era_sub, surface), cdec, min_freq))
         by_entity = {}
         general = []
         for row in sub.sort_values("year").itertuples():
@@ -98,7 +105,7 @@ def run_sample_clues(min_freq=5):
     misc = misc_membership(clusters, config.MISC_FRACTION, config.MISC_ID)
     clusters = pd.concat([clusters, misc], ignore_index=True)
     decisions = load_entity_decisions(config.ENTITY_DECISIONS_PATH)
-    df = build_sample_clues(clusters, clues, decisions, min_freq=min_freq)
+    df = build_sample_clues(clusters, clues, decisions, k=2, general_n=12, min_freq=min_freq)
     config.CATEGORY_SAMPLE_CLUES_PATH.parent.mkdir(parents=True, exist_ok=True)
     df.to_parquet(config.CATEGORY_SAMPLE_CLUES_PATH, index=False)
     print(f"Wrote {len(df):,} sample clues across {df['cluster_id'].nunique()} types "
