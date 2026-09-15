@@ -487,7 +487,7 @@ _HTML_TEMPLATE = """<!doctype html>
        &mdash; the higher it is, the more studying pays off.</p>
   </header>
   <div class="era-bar" role="group" aria-label="Study era">
-    <span class="era-bar-label">The board, as of</span>
+    <span class="era-bar-label">Study window (cumulative)</span>
     <div id="era-toggle" class="era-toggle"></div>
   </div>
   <div class="layout">
@@ -567,7 +567,7 @@ _HTML_TEMPLATE = """<!doctype html>
           btn.type = 'button';
           btn.className = 'era-pill' + (era === currentEra ? ' active' : '');
           btn.setAttribute('aria-pressed', era === currentEra ? 'true' : 'false');
-          btn.textContent = era + 's';
+          btn.textContent = (era === DATA.eras[0]) ? 'All-time' : ('Since ' + era);
           btn.addEventListener('click', () => selectEra(era));
           eraToggle.appendChild(btn);
         }
@@ -758,6 +758,9 @@ _HTML_TEMPLATE = """<!doctype html>
         selectedEntity = entity;
         renderMain();
         renderDetailLoading(entity);
+        if (window.matchMedia('(max-width: 980px)').matches) {
+          detailPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
         let summary;
         if (wikiCache.has(entity.phrase)) {
           summary = wikiCache.get(entity.phrase);

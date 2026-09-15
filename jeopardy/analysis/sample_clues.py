@@ -22,6 +22,14 @@ def _spread(items, n):
     return [items[int(i * step)] for i in range(n)]
 
 
+def _sample(items, n):
+    """Up to n year-spread items, always including the most recent so recent-era
+    filters (year >= cutoff) still have a clue. `items` is sorted oldest -> newest."""
+    if len(items) <= n:
+        return items
+    return _spread(items[:-1], n - 1) + [items[-1]]
+
+
 def _cluster_resolution(raw_counts, cluster_decisions, min_freq):
     """surface_phrase -> displayed entity (or None if dropped/below floor)."""
     topk = dict(sorted(raw_counts.items(), key=lambda kv: -kv[1])[:DEDUP_CANDIDATE_K])
@@ -75,11 +83,11 @@ def build_sample_clues(clusters_df, clues_df, decisions, k=3, general_n=25, min_
             general.append(rec)
         seen = set()
         for entity, recs in by_entity.items():
-            for rec in _spread(recs, k):
+            for rec in _sample(recs, k):
                 seen.add((rec["clue"], rec["answer"]))
                 out_rows.append({"cluster_id": int(cid), "phrase": entity, **rec})
         pool = [r for r in general if (r["clue"], r["answer"]) not in seen]
-        for rec in _spread(pool, general_n):
+        for rec in _sample(pool, general_n):
             out_rows.append({"cluster_id": int(cid), "phrase": None, **rec})
     return pd.DataFrame(out_rows, columns=["cluster_id", "phrase", "clue", "answer", "year", "category"])
 
