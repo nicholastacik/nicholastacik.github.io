@@ -8,8 +8,19 @@ def test_plural_merges_to_dominant():
 
 
 def test_component_merges_to_fuller_name():
+    # "Niels" (40) folds into "Niels Bohr" (111); "Bohr" (169) outnumbers the full name, so the
+    # count guard leaves it standalone (a legit alias is restored via entity_decisions, not here).
     out, _ = canonicalize({"Bohr": 169, "Niels": 40, "Niels Bohr": 111})
-    assert out == {"Niels Bohr": 320}
+    assert out == {"Bohr": 169, "Niels Bohr": 151}
+
+
+def test_count_guard_blocks_overprominent_short_phrase():
+    # "London" (118) outnumbers "Jack London" (70): a standalone entity, not a fragment.
+    out, _ = canonicalize({"London": 118, "Jack London": 70})
+    assert out == {"London": 118, "Jack London": 70}
+    # a minority short phrase still folds in
+    out2, _ = canonicalize({"Gogh": 10, "Vincent Gogh": 40})
+    assert out2 == {"Vincent Gogh": 50}
 
 
 def test_ambiguous_surname_not_over_merged():

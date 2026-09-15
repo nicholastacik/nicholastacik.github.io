@@ -30,11 +30,15 @@ def canonicalize(counts):
     def union(a, b):
         parent[find(a)] = find(b)
 
-    # Rule 1: unambiguous component merge (shorter is a contiguous token subseq of exactly one longer)
+    # Rule 1: unambiguous component merge (shorter is a contiguous token subseq of exactly one
+    # longer). Count guard: only fold the shorter in if it is no more frequent than the longer -
+    # a shorter phrase that outnumbers its container (e.g. "London" 118 > "Jack London" 70) is a
+    # standalone entity being wrongly absorbed, not a fragment. Legitimate surname aliases the
+    # guard blocks (e.g. "Dickens" -> "Charles Dickens") are restored via entity_decisions.
     for a in phrases:
         containers = [b for b in phrases
                       if b != a and len(toks[b]) > len(toks[a]) and _contiguous(toks[a], toks[b])]
-        if len(containers) == 1:
+        if len(containers) == 1 and counts[a] <= counts[containers[0]]:
             union(a, containers[0])
     # Rule 2: plurals
     for i, a in enumerate(phrases):

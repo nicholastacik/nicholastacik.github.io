@@ -15,11 +15,12 @@ def _clues():
     # 6 clues answered "van Gogh", 2 answered "Vincent van Gogh": under the token
     # pipeline these merge to the canonical "Vincent van Gogh". A sample clue for
     # that entity must include the "van Gogh" answers (provenance via canonicalize).
+    # Full name dominates (6 vs 2) so the dedup count guard allows "van Gogh" to fold into it.
     rows = []
-    for i in range(6):
+    for i in range(2):
         rows.append({"game_id": i, "round": "Jeopardy", "category": "ART", "air_date": _D,
                      "clue": f"This painter cut off his ear, case {i}", "answer": "van Gogh"})
-    for i in range(6, 8):
+    for i in range(2, 8):
         rows.append({"game_id": i, "round": "Jeopardy", "category": "ART", "air_date": _D,
                      "clue": "Dutch post-impressionist, full name", "answer": "Vincent van Gogh"})
     return pd.DataFrame(rows)

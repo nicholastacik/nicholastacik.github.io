@@ -1882,7 +1882,7 @@ cluster_id,phrase,keep,canonical,source
 45,Neanderthal,true,Neanderthal,llm
 45,Noah Wyle,true,Noah Wyle,llm
 45,Nobel Prize,true,Nobel Prize,llm
-45,Oz,true,Oz,llm
+45,Oz,false,Oz,llm-presenter
 45,Parkinson,true,Parkinson's Disease,llm
 45,Sarah of the Clue Crew,false,Sarah of the Clue Crew,llm
 45,Spanish,false,Spanish,llm
@@ -3413,7 +3413,7 @@ cluster_id,phrase,keep,canonical,source
 40,Dec,false,Dec,llm-disambig
 40,Sept,false,Sept,llm-disambig
 40,Though,false,Though,llm-disambig
-45,Oz,true,Mehmet Oz,llm-disambig
+45,Oz,false,Oz,llm-presenter
 45,Langerhans,true,Paul Langerhans,llm-disambig
 45,Reye,true,Reye syndrome,llm-disambig
 45,Hodgkin,true,Thomas Hodgkin,llm-disambig
@@ -3456,3 +3456,86 @@ cluster_id,phrase,keep,canonical,source
 28,Grimm,true,Brothers Grimm,llm-disambig
 38,Lee,true,Robert E. Lee,llm-disambig
 38,Grant,true,Ulysses S. Grant,llm-disambig
+0,Dickens,true,Charles Dickens,llm-alias
+0,Steinbeck,true,John Steinbeck,llm-alias
+0,Hawthorne,true,Nathaniel Hawthorne,llm-alias
+1,Churchill,true,Winston Churchill,llm-alias
+5,Steelers,true,Pittsburgh Steelers,llm-alias
+8,Dior,true,Christian Dior,llm-alias
+8,Chanel,true,Coco Chanel,llm-alias
+10,Hudson,true,Henry Hudson,llm-alias
+12,Longfellow,true,Henry Wadsworth Longfellow,llm-alias
+12,Shelley,true,Percy Shelley,llm-alias
+12,Yeats,true,William Butler Yeats,llm-alias
+17,Sondheim,true,Stephen Sondheim,llm-alias
+23,Wagner,true,Richard Wagner,llm-alias
+23,Schubert,true,Franz Schubert,llm-alias
+23,Gershwin,true,George Gershwin,llm-alias
+25,Antony,true,Mark Antony,llm-alias
+26,Steinbeck,true,John Steinbeck,llm-alias
+26,Kipling,true,Rudyard Kipling,llm-alias
+29,Picasso,true,Pablo Picasso,llm-alias
+29,Van Gogh,true,Vincent van Gogh,llm-alias
+29,Rubens,true,Peter Paul Rubens,llm-alias
+33,Spielberg,true,Steven Spielberg,llm-alias
+35,Bush,true,George Bush,llm-alias
+35,Taft,true,William Howard Taft,llm-alias
+37,Newton,true,Isaac Newton,llm-alias
+37,Darwin,true,Charles Darwin,llm-alias
+37,Morse,true,Samuel Morse,llm-alias
+40,Reagan,true,Ronald Reagan,llm-alias
+47,Elvis,true,Elvis Presley,llm-alias
+0,Hemingway,true,Ernest Hemingway,llm-alias
+0,Poe,true,Edgar Allan Poe,llm-alias
+10,Cook,true,James Cook,llm-alias
+12,Poe,true,Edgar Allan Poe,llm-alias
+12,Wordsworth,true,William Wordsworth,llm-alias
+12,Kipling,true,Rudyard Kipling,llm-alias
+12,Dickens,true,Charles Dickens,llm-alias
+13,Oprah,true,Oprah Winfrey,llm-alias
+17,Shaw,true,George Bernard Shaw,llm-alias
+23,Verdi,true,Giuseppe Verdi,llm-alias
+23,Grieg,true,Edvard Grieg,llm-alias
+26,Dickens,true,Charles Dickens,llm-alias
+26,Poe,true,Edgar Allan Poe,llm-alias
+26,Hawthorne,true,Nathaniel Hawthorne,llm-alias
+28,Pooh,true,Winnie the Pooh,llm-alias
+29,Gauguin,true,Paul Gauguin,llm-alias
+29,Manet,true,Edouard Manet,llm-alias
+34,Newton,true,Isaac Newton,llm-alias
+35,Nixon,true,Richard Nixon,llm-alias
+35,Truman,true,Harry Truman,llm-alias
+35,Buchanan,true,James Buchanan,llm-alias
+37,Edison,true,Thomas Edison,llm-alias
+37,Pasteur,true,Louis Pasteur,llm-alias
+37,Tesla,true,Nikola Tesla,llm-alias
+40,Nixon,true,Richard Nixon,llm-alias
+40,Lincoln,true,Abraham Lincoln,llm-alias
+43,Jefferson,true,Thomas Jefferson,llm-alias
+0,Faulkner,true,William Faulkner,llm-alias
+3,Lincoln,true,Abraham Lincoln,llm-alias
+5,Yankees,true,New York Yankees,llm-alias
+5,Red Sox,true,Boston Red Sox,llm-alias
+10,Columbus,true,Christopher Columbus,llm-alias
+12,Keats,true,John Keats,llm-alias
+12,Milton,true,John Milton,llm-alias
+12,Coleridge,true,Samuel Taylor Coleridge,llm-alias
+19,Hitchcock,true,Alfred Hitchcock,llm-alias
+23,Bach,true,Johann Sebastian Bach,llm-alias
+23,Liszt,true,Franz Liszt,llm-alias
+23,Mendelssohn,true,Felix Mendelssohn,llm-alias
+25,Shakespeare,true,William Shakespeare,llm-alias
+26,Hemingway,true,Ernest Hemingway,llm-alias
+26,Faulkner,true,William Faulkner,llm-alias
+27,Vegas,true,Las Vegas,llm-alias
+29,Monet,true,Claude Monet,llm-alias
+29,Rodin,true,Auguste Rodin,llm-alias
+29,Degas,true,Edgar Degas,llm-alias
+34,Yellowstone,true,Yellowstone National Park,llm-alias
+35,Lincoln,true,Abraham Lincoln,llm-alias
+35,Clinton,true,Bill Clinton,llm-alias
+37,Einstein,true,Albert Einstein,llm-alias
+39,Vegas,true,Las Vegas,llm-alias
+43,Churchill,true,Winston Churchill,llm-alias
+43,Emerson,true,Ralph Waldo Emerson,llm-alias
+43,Truman,true,Harry Truman,llm-alias
