@@ -1,108 +1,125 @@
 # Clue Fingerprints — Design
 
 **Date:** 2026-09-15
-**Status:** Draft (pending user review)
+**Status:** Draft (pending user review) — revised after spec review
 **Part of:** the "Jeopardy data science" research tool. A new feature (not a fix): for each
 recurring entity, distill the *distinctive cues Jeopardy uses to clue it* — answering "what
-should I recognize?" better than a generic Wikipedia bio, and making questionable entity
-assignments obvious. First of two proposed additions; the spaced-repetition **practice session**
-is a separate follow-on sub-project (out of scope here).
+should I recognize?" better than a generic Wikipedia bio. First of two proposed additions; the
+spaced-repetition **practice session** is a separate follow-on sub-project (out of scope here).
 
 ## Goal
 
-When you drill into an entity, show its **fingerprint**: the handful of terms/angles that keep
-recurring across the real clues where it's the answer, plus 2–3 example clues with J-Archive
-links. This is Jeopardy-specific study signal (what the show actually asks) on top of the
-existing live Wikipedia bio.
+When you drill into an entity, show its **fingerprint**: the handful of terms that keep recurring
+across the real clues where it's the answer — each with the evidence behind it (how many of the
+entity's clues it appears in) — plus 2–3 example clues with J-Archive links. Jeopardy-specific
+study signal on top of the existing live Wikipedia bio.
 
-## Approach — distinctive terms + example clues (offline, deterministic)
+## Architecture — one clue store, two consumers
 
-For each displayed `(cluster_id, entity)`:
-1. **Pool its clues** — every clue whose answer resolves to that canonical entity, reusing the
-   exact provenance the sample-clue builder already computes (`_cluster_resolution` per era,
-   unioned). This is the same mapping that guarantees "van Gogh" → *Vincent van Gogh*.
-2. **Distinctive cue terms** — treat the concatenation of the entity's clue texts as one
-   document and score terms with TF-IDF against the corpus of *all* entities' clue-documents
-   (reusing/adapting `label.ctfidf_terms`, `TfidfVectorizer(stop_words="english",
-   token_pattern=r"[A-Za-z][A-Za-z'\-]+")`). Keep the top ~6 terms that also **recur** (appear
-   in ≥2 of the entity's clues), after dropping: English stopwords (built in), the entity's own
-   name tokens, and a small Jeopardy-filler stoplist (`this`, `these`, `clue crew`, etc.). Cue
-   terms may be unigrams or bigrams (`ngram_range=(1,2)`) so distinctive phrases like
-   "Tom Sawyer" survive.
-3. **Example clues** — pick up to 3 clues that best exemplify the entity (contain the most cue
-   terms), spread across years for variety. Store each as `clue, answer, year, game_id`.
+The fingerprint's "representative examples" and the quiz's "varied, date-eligible sample" are
+different selections over the *same* clues. So store each clue **once** and have both features
+**reference clue IDs** — no duplicated clue text in the embedded page, and each keeps its own
+selection rule. This supersedes the earlier (rejected) "fold sample clues into fingerprints" idea,
+which would have collapsed the quiz pool.
 
-Rejected alternatives: an LLM-written blurb per entity (~2000 entities → real token cost + a
-curated artifact to maintain, re-run on data change) and "just example clues, no distilled cues"
-(doesn't answer "what recurs?"). TF-IDF is cheap, offline, deterministic, and reuses existing code.
+### 1. `category_clues.parquet` — the shared clue store
+Per cluster, the deduped pool of clues that resolve to a displayed entity (plus the general pool).
+One row per clue:
+`clue_id, cluster_id, phrase, clue, answer, year, category, game_id, round, row, column`
+- **`clue_id`** = stable per-clue identity `"{game_id}:{round}:{row}:{column}"` (game_id alone
+  identifies a game, not a clue). Final-Jeopardy clues (null row/column) use `row=col=0`.
+- **`phrase`** = the resolved canonical entity, or null for the general (un-highlighted) pool.
+- `category` is kept — the original Jeopardy category often carries essential constraints and the
+  quiz already displays it.
 
-## Data artifact — `category_fingerprints.parquet`
+### 2. Resolution & the window contract (explicit)
+- **Clue → entity provenance** is deterministic and window-aware without blind dict-union: resolve
+  each clue using the **all-time** mapping if its answer maps there; otherwise fall back to the
+  narrowest recent window where it maps (so recent-only entities like *Stranger Things* are
+  covered, per the fix already shipped in `sample_clues`). First assignment wins — no later window
+  silently overwrites an earlier interpretation.
+- **Cues are all-time** and labeled as such ("how it's usually clued") — an entity's distinctive
+  vocabulary is stable across windows, and computing per-window cues would 5× the work for little
+  gain.
+- **Examples are window-aware:** the fingerprint stores its representative clue IDs, but the tool
+  filters them to the active study window (`year >= cutoff`) and **always keeps the newest eligible
+  clue** — the same recency guarantee (`_sample`) we just added to the quiz, so "Since 2020" never
+  shows only pre-2020 examples when newer ones exist. If none are eligible in the window, fall back
+  to the entity's newest overall (labeled) rather than showing nothing.
 
-A new committed artifact, one row per `(cluster_id, entity)`:
-`cluster_id, phrase, cues (list[str]), clue, answer, year, game_id` — the example clues as up to
-3 rows per entity (like `category_sample_clues`), with the shared `cues` list repeated per row
-(or a compact JSON; the research build re-groups by entity anyway).
+### 3. `category_fingerprints.parquet` — cues + example references
+One row per `(cluster_id, phrase)`, nested lists (resolves the earlier one-row-vs-three ambiguity):
+`cluster_id, phrase, cues (list[{term, support, total}]), example_clue_ids (list[str])`
+- **`cues`**: distinctive terms via TF-IDF over the entity's concatenated clue text vs the corpus
+  of all entities' clue-documents (reusing `label.ctfidf_terms`, `TfidfVectorizer(stop_words=
+  "english", ngram_range=(1,2), token_pattern=r"[A-Za-z][A-Za-z'\-]+")`). Each kept cue carries
+  **`support`** = number of the entity's DISTINCT clues it appears in, and **`total`** = the
+  entity's clue count, so the UI can show "Hannibal · 7 of 24 clues".
+- Keep at most 6 cues, **require `support >= 2`** (genuinely recurring), and **allow fewer than 6**
+  (or zero). Drop a unigram that is fully subsumed by a kept bigram (keep "Tom Sawyer", drop "Tom"
+  and "Sawyer"); drop the entity's own name tokens and a small Jeopardy-filler stoplist.
+- **`example_clue_ids`**: up to ~4 representative clue IDs (ranked by cue coverage) so the
+  window-aware, recency-preserving filter in the tool still has candidates in recent windows.
 
-Built by a new offline CLI command **`fingerprints`** (`jeopardy/analysis/fingerprints.py`,
-`build_fingerprints` + `run_fingerprints`), which reuses `_cluster_resolution` from
-`sample_clues.py`/`tokens.py` for provenance — so fingerprints and displayed entities stay
-consistent. Only entities that appear in `category_tokens.parquet` (the displayed set across
-eras) get a fingerprint, bounding the artifact.
-
-**Relationship to sample clues:** both need "clues per entity," so to avoid duplicating clue text
-in the embedded page, the fingerprint's example clues *are* the entity's sample-clue pool — i.e.
-fold the per-entity sample clues into the fingerprint artifact and drop the redundant per-entity
-rows from `category_sample_clues.parquet` (keep only its general/`phrase=null` pool for the
-un-highlighted "any answer" case). The research tool's "Sample clue" button then draws from the
-fingerprint's example clues when an entity is highlighted. This keeps the embedded page from
-growing: fingerprints replace, not add to, the per-entity sample data. *(Confirm — see Decisions.)*
+Built by a new offline CLI command **`fingerprints`** (`jeopardy/analysis/fingerprints.py`),
+which also writes `category_clues.parquet`. Reuses `_cluster_resolution` for provenance so
+fingerprints, the clue store, and the displayed entities stay consistent. Only entities in
+`category_tokens.parquet` get a fingerprint.
 
 **J-Archive link:** `https://www.j-archive.com/showgame.php?game_id={game_id}` per example clue.
 
-## Tool UI
+### Relationship to the existing sample-clue feature
+`category_sample_clues.parquet` is replaced by references into `category_clues.parquet`: the quiz
+keeps **both** its per-entity date-eligible selection **and** the general pool (coverage and the
+un-highlighted "any answer" behavior are unchanged), now expressed as clue-ID lists. Net effect on
+page size is roughly neutral (clue text stored once, referenced twice).
 
-In the right **detail** pane, when an entity is selected, show the fingerprint **above** the live
-Wikipedia summary (study signal first, general bio second):
-- eyebrow "How Jeopardy clues it"; the cue terms as chips; then the 2–3 example clues (answer
-  shown — this is a study card, not the quiz), each with a small "J-Archive ↗" link.
-- The existing "Sample clue" quiz button and live-Wikipedia block are unchanged in behavior.
-- If an entity has no fingerprint (rare — e.g. a clue-mention-only entity with no answer clues),
-  show nothing for the fingerprint block and fall through to Wikipedia. This also visibly flags a
-  questionable/mis-assigned entity (no real answer clues → suspicious), per the QA benefit.
+## Cue extraction — empty/degenerate states
+- **0 clues** (entity is a valid clue-mention that is never itself the answer — explicitly allowed
+  in this project): no fingerprint block; fall through to Wikipedia with a neutral note
+  ("shows up in clues but is rarely the answer"). Absence of answer examples does **not** imply
+  misclassification.
+- **1 clue:** show it as the single example; cues only if a term still repeats within it (rare) —
+  otherwise show the example with no cue chips.
+- **No qualifying repeated terms:** show example clues with no cue chips (cues are optional).
 
-Embedded as a `fingerprints` key in the research JSON payload (like `sampleClues`), keyed by
-`cluster_id` → entity → `{cues, clues:[{clue,answer,year,game_id}]}`.
+## Tool UI (detail pane)
+On entity select, render the **fingerprint immediately from local data** — it must NOT wait on,
+and must survive the failure/hang of, the Wikipedia request:
+1. eyebrow "How Jeopardy clues it" + cue chips ("term · N of M clues") + the window-filtered
+   example clues (answer shown — study card, not quiz), each with a "J-Archive ↗" link;
+2. THEN kick off the async Wikipedia fetch and render its summary **below** when it resolves; on
+   failure, the fingerprint remains fully usable.
+
+Embedded as `clues` (id → fields), `fingerprints` (cluster → phrase → {cues, example_clue_ids}),
+and the quiz's clue-ID references, in the research JSON payload. The tool looks up clue text by ID.
 
 ## Reproducibility & size
-
-`category_fingerprints.parquet` is a committed artifact regenerated by `jeopardy fingerprints`
-(offline; reads committed parquet + `clues.parquet`). Deterministic (TF-IDF is stable; no RNG).
-Because fingerprints subsume the per-entity sample clues, the embedded page should stay near its
-current ~3 MB; verify after build and trim cue/clue caps if it exceeds ~3.5 MB.
+`category_clues.parquet` + `category_fingerprints.parquet` are committed, regenerated by
+`jeopardy fingerprints` (offline; deterministic — TF-IDF is stable, no RNG). Verify the embedded
+page stays near ~3 MB after build; trim cue/example caps if it exceeds ~3.5 MB.
 
 ## Testing
-
-- Unit-test cue extraction: an entity whose clues repeatedly mention a distinctive term surfaces
-  it; the entity's own name tokens and stopwords are excluded; a term appearing in only one clue
-  is not a "recurring" cue.
-- Unit-test the build: example clues carry `game_id`/`year`; only displayed entities get rows;
-  provenance matches the token pipeline (a merged-answer clue attaches to the canonical entity).
-- Research build: payload has `fingerprints` keyed by cluster; `render_html` contains the cue-chip
-  + J-Archive markup; existing render tests still pass.
-- Browser check: fingerprints render, cues look sensible for a few known entities, J-Archive links
-  open the right game, and a mis-assigned entity shows an empty/odd fingerprint.
+- Cue extraction: a repeated distinctive term surfaces with correct `support`/`total`; the
+  entity's own name tokens and stopwords are excluded; a term in only one clue is not a cue;
+  a unigram subsumed by a kept bigram is dropped; zero/one-clue and no-repeated-term states behave.
+- Clue store / provenance: `clue_id` is stable and unique per clue; a merged-answer clue attaches
+  to the canonical entity; a recent-only entity is covered; `category`/`game_id`/`year` present.
+- Window contract: example filtering keeps `year >= cutoff` and always includes the newest
+  eligible clue; falls back (labeled) when none eligible.
+- Research build: payload has `clues` + `fingerprints`; `render_html` contains cue-chip + J-Archive
+  markup; existing render tests still pass.
+- **Offline browser check** (new): with network/Wikipedia blocked, fingerprints still render and
+  are usable; plus the normal browser pass (cues sensible, links open the right game).
 
 ## Out of scope (YAGNI / separate)
+- The **practice session** (spaced repetition) — its own spec/plan next.
+- LLM-authored cue blurbs; deep-linking to the specific clue on J-Archive; per-window cue sets;
+  mention-based fingerprints for never-the-answer entities.
 
-- The **practice session** (spaced repetition, knew-it/unsure/missed, local progress) — its own
-  spec/plan next.
-- LLM-authored cue blurbs; deep-linking to the specific clue on J-Archive (game-level is enough).
-- Reworking the answer-vs-clue-mention ranking (settled: clue mentions are intentional).
-
-## Decisions to confirm (best-judgment defaults chosen)
-
-1. **Cue method** = distinctive TF-IDF terms + 2–3 example clues + J-Archive links (Option A).
-2. **Unify with sample clues** = fold per-entity sample clues into the fingerprint artifact
-   (fingerprints replace them; sample-clue general pool stays) to control embedded size.
-3. **Placement** = fingerprint above the live Wikipedia summary in the detail pane; example-clue
-   answers shown (study card, not quiz).
+## Decisions (settled per spec review)
+1. Cue method = distinctive TF-IDF terms **with support counts** + example clues + J-Archive links.
+2. **Shared clue store** (`category_clues.parquet`, stable `clue_id`); fingerprints and quiz both
+   reference IDs but keep separate selection rules; quiz retains per-entity + general pools.
+3. Cues all-time; **examples window-aware with the newest-eligible guarantee**.
+4. Fingerprint renders immediately and independently of Wikipedia (which loads below, async).
