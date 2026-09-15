@@ -39,6 +39,10 @@ def canonicalize(counts):
         containers = [b for b in phrases
                       if b != a and len(toks[b]) > len(toks[a]) and _contiguous(toks[a], toks[b])]
         if len(containers) == 1 and counts[a] <= counts[containers[0]]:
+            # A single bare token only folds in if it is the container's LAST word (a surname-like
+            # tail); a leading given name like "Jack" in "Jack London" is too ambiguous to merge.
+            if len(toks[a]) == 1 and toks[a][0] != toks[containers[0]][-1]:
+                continue
             union(a, containers[0])
     # Rule 2: plurals
     for i, a in enumerate(phrases):

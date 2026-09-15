@@ -481,10 +481,10 @@ _HTML_TEMPLATE = """<!doctype html>
     <p class="eyebrow">Field notes for trivia prep</p>
     <h1>The Board</h1>
     <p>50 Jeopardy! category clusters, ranked by how deep you can actually study them.
-       Pick a decade to see what dominated the board then, drill into its most recurring
+       Pick a study window to see what dominated the board then, drill into its most recurring
        entities, and pull live facts from Wikipedia. A type's <em>recurring entities</em> count is
        how many distinct people, places &amp; things come up 5+ times across its clues and answers
-       &mdash; the higher it is, the more studying pays off.</p>
+       &mdash; a rough, exploratory signal of how studyable a type is, not a precise payoff score.</p>
   </header>
   <div class="era-bar" role="group" aria-label="Study era">
     <span class="era-bar-label">Study window (cumulative)</span>
@@ -632,7 +632,7 @@ _HTML_TEMPLATE = """<!doctype html>
           return;
         }
         let html = `<div class="main-head"><h2>${escapeHtml(d.name)}</h2>` +
-          `<p class="sub">${d.applicability} recurring entities &middot; ${pctLabel(d.prevalence)} of ${currentEra}s categories</p></div>`;
+          `<p class="sub">${d.applicability} recurring entities &middot; ${pctLabel(d.prevalence)} of categories in this window</p></div>`;
         const hasSamples = ((DATA.sampleClues && DATA.sampleClues[String(d.cluster_id)]) || []).length > 0;
         if (hasSamples) {
           html += '<div class="sample-box" id="sample-box">' +
