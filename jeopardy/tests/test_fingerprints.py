@@ -72,6 +72,28 @@ def test_cue_needs_two_distinct_clues_with_support_counts():
     assert "twain" not in [c["term"] for c in fp["cues"]]   # entity's own name excluded
 
 
+def test_cluster_generic_term_is_dropped():
+    # "author" appears in every entity's clues across a large-enough cluster -> type-generic,
+    # dropped even though it recurs within an entity; the entity-distinctive "hannibal" survives.
+    # (The gate only applies once the cluster has >= generic_min_entities entities.)
+    ec = _mk(0, "Mark Twain", ["author in Hannibal", "author Hannibal tale", "Hannibal author"])
+    for i in range(12):
+        ec.update(_mk(0, f"Writer {i}", [f"author of book {i}", "the author wrote", "author again"]))
+    fp = build_cues(ec, n_cues=6, n_examples=4, generic_df_frac=0.2, generic_min_entities=10)[(0, "Mark Twain")]
+    terms = [c["term"] for c in fp["cues"]]
+    assert "author" not in terms          # in 13/13 cluster entities -> generic, dropped
+    assert "hannibal" in terms            # in 1/13 -> distinctive, kept
+
+
+def test_generic_gate_skipped_for_small_clusters():
+    # With too few entities, DF isn't a reliable generic signal, so the gate is skipped and a
+    # legitimately recurring term survives even at 100% cluster frequency.
+    ec = _mk(0, "Solo", ["rare widget here", "rare widget again", "the widget"])
+    ec.update(_mk(0, "Other", ["unrelated text entirely"]))
+    fp = build_cues(ec, n_cues=6, n_examples=4, generic_min_entities=10)[(0, "Solo")]
+    assert "widget" in [c["term"] for c in fp["cues"]]   # gate skipped (2 < 10 entities)
+
+
 def test_single_clue_entity_has_no_cues():
     ec = _mk(0, "Solo", ["the same the same the same word word"])
     ec.update(_mk(0, "Filler", ["different other text here"]))
