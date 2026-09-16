@@ -98,7 +98,16 @@ def _select_cues(candidates, n_cues):
     return kept
 
 
-def build_cues(entity_clues, n_cues=6, n_examples=4):
+def _entity_terms(recs):
+    out = set()
+    for r in recs:
+        toks = _CUE_TOKEN.findall((r["clue"] or "").lower())
+        out.update(toks)
+        out.update(toks[i] + " " + toks[i + 1] for i in range(len(toks) - 1))
+    return out
+
+
+def build_cues(entity_clues, n_cues=6, n_examples=4, generic_df_frac=0.2, generic_min_entities=10):
     from sklearn.feature_extraction.text import TfidfVectorizer
     keys = list(entity_clues)
     docs = [" ".join(r["clue"] or "" for r in entity_clues[k]) for k in keys]
@@ -106,12 +115,22 @@ def build_cues(entity_clues, n_cues=6, n_examples=4):
                           token_pattern=r"[A-Za-z][A-Za-z'\-]+")
     matrix = vec.fit_transform(docs)
     terms = np.array(vec.get_feature_names_out())
+    # Per-cluster document frequency: a term in many of a cluster's entities' clue-pools is
+    # type-generic (e.g. "author"/"novel" for Books & Authors), not entity-distinctive - drop it.
+    entity_terms = {k: _entity_terms(entity_clues[k]) for k in keys}
+    cluster_df, cluster_n = {}, {}
+    for (cid, _phrase), tset in entity_terms.items():
+        cluster_n[cid] = cluster_n.get(cid, 0) + 1
+        df = cluster_df.setdefault(cid, {})
+        for t in tset:
+            df[t] = df.get(t, 0) + 1
     out = {}
     for i, k in enumerate(keys):
         cid, phrase = k
         recs = entity_clues[k]
         total = len(recs)
         name_toks = {t.lower() for t in phrase.split()}
+        df, n = cluster_df[cid], cluster_n[cid]
         row = matrix.getrow(i).toarray().ravel()
         candidates = []
         for j in row.argsort()[::-1]:
@@ -120,6 +139,8 @@ def build_cues(entity_clues, n_cues=6, n_examples=4):
             term = terms[j]
             tparts = term.split()
             if any(t in name_toks for t in tparts) or any(t in _FILLER for t in tparts):
+                continue
+            if n >= generic_min_entities and df.get(term, 0) / n > generic_df_frac:
                 continue
             support = sum(1 for r in recs if _contains(term, r["clue"]))
             if support < 2:
