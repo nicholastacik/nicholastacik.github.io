@@ -278,8 +278,13 @@
   .fingerprint { margin: 0 0 18px; }
   .fingerprint .eyebrow { color: var(--gold); }
   .cue-chip { display: inline-block; font-family: var(--mono); font-size: 11px; background: var(--panel-2);
-    border: 1px solid var(--line); border-radius: var(--radius); padding: 3px 8px; margin: 0 6px 6px 0; }
+    border: 1px solid var(--line); border-radius: var(--radius); padding: 3px 8px; margin: 0 6px 6px 0;
+    cursor: pointer; }
+  .cue-chip:hover { border-color: var(--gold-dim); color: var(--paper); }
+  .cue-chip.active { border-color: var(--gold); background: var(--panel); color: var(--paper); }
   .cue-chip .support { color: var(--ash); }
+  .cue-why { margin: 2px 0 14px; font-size: 13px; line-height: 1.55; color: var(--paper); }
+  .cue-why .fallback { color: var(--ash); }
   .fp-label { cursor: help; }
   .fp-info { color: var(--ash); font-size: 10px; vertical-align: super; }
   .fp-none { color: var(--ash); font-size: 13px; font-style: italic; margin: 4px 0 10px; }
@@ -476,6 +481,51 @@
       const detailPanel = document.getElementById('detail-panel');
       const eraToggle = document.getElementById('era-toggle');
       const wikiCache = new Map();
+      const cueCache = new Map();
+      let activeCueBtn = null;
+
+      async function fetchCueWhy(entityPhrase, term) {
+        const key = entityPhrase + '\u0000' + term;
+        if (cueCache.has(key)) return cueCache.get(key);
+        let result = null;
+        try {
+          const q = entityPhrase + ' ' + term;
+          const s = await fetch('https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=' +
+            encodeURIComponent(q) + '&format=json&origin=*');
+          if (s.ok) {
+            const hit = (await s.json())?.query?.search?.[0];
+            if (hit && hit.snippet) {
+              const tmp = document.createElement('textarea');
+              tmp.innerHTML = hit.snippet.replace(/<[^>]+>/g, '');
+              result = { title: hit.title, snippet: tmp.value.trim() };
+            }
+          }
+        } catch (e) { /* fall through to null */ }
+        cueCache.set(key, result);
+        return result;
+      }
+
+      async function showCueWhy(entityPhrase, term, btn) {
+        const slot = document.getElementById('cue-why');
+        if (!slot) return;
+        if (activeCueBtn === btn) {
+          btn.classList.remove('active'); activeCueBtn = null; slot.innerHTML = ''; return;
+        }
+        if (activeCueBtn) activeCueBtn.classList.remove('active');
+        activeCueBtn = btn; btn.classList.add('active');
+        slot.innerHTML = '<div class="cue-why"><p class="pulse">Why &ldquo;' + escapeHtml(term) + '&rdquo;&hellip;</p></div>';
+        const why = await fetchCueWhy(entityPhrase, term);
+        if (activeCueBtn !== btn) return;
+        if (why && why.snippet) {
+          const url = 'https://en.wikipedia.org/wiki/' + encodeURIComponent(why.title.replace(/ /g, '_'));
+          slot.innerHTML = '<div class="cue-why"><p>' + escapeHtml(why.snippet) + '&hellip; ' +
+            '<a href="' + escapeHtml(url) + '" target="_blank" rel="noopener">' + escapeHtml(why.title) + ' &#8599;</a></p></div>';
+        } else {
+          const sUrl = 'https://en.wikipedia.org/w/index.php?search=' + encodeURIComponent(entityPhrase + ' ' + term);
+          slot.innerHTML = '<div class="cue-why"><p class="fallback">No quick explanation found. ' +
+            '<a href="' + escapeHtml(sUrl) + '" target="_blank" rel="noopener">Search Wikipedia &#8599;</a></p></div>';
+        }
+      }
 
       let currentEra = DATA.eras.includes(2010) ? 2010 : DATA.eras[0];
       let selectedTypeId = null;
@@ -698,17 +748,19 @@
       }
 
       function renderFingerprint(entity) {
+        activeCueBtn = null;
         const byPhrase = (DATA.fingerprints && DATA.fingerprints[String(selectedTypeId)]) || {};
         const fp = byPhrase[entity.phrase];
         let html = '<p class="eyebrow">The answer</p>' + `<h3>${escapeHtml(entity.phrase)}</h3>`;
         if (fp) {
           html += '<div class="fingerprint"><p class="eyebrow fp-label" ' +
             'title="The words Jeopardy uses most when this is the answer — the recurring angles worth recognizing. ' +
-            'Counted across all years; &ldquo;N of M&rdquo; = it appeared in N of this answer\'s M all-time clues.">' +
+            'Counted across all years; &ldquo;N of M&rdquo; = it appeared in N of this answer\'s M all-time clues. Tap a cue to see why.">' +
             'Clue Fingerprint <span class="fp-info">&#9432;</span></p>';
           if (fp.cues && fp.cues.length) {
-            html += fp.cues.map(c => `<span class="cue-chip">${escapeHtml(c.term)}` +
-              ` <span class="support">&middot; ${c.support} of ${c.total}</span></span>`).join('');
+            html += fp.cues.map(c => `<button type="button" class="cue-chip" data-term="${escapeHtml(c.term)}">${escapeHtml(c.term)}` +
+              ` <span class="support">&middot; ${c.support} of ${c.total}</span></button>`).join('');
+            html += '<div id="cue-why"></div>';
           } else {
             html += '<p class="fp-none">No single recurring angle &mdash; this answer gets clued many different ways.</p>';
           }
@@ -728,6 +780,9 @@
         }
         html += '<div id="wiki-slot"><p class="pulse">Asking Wikipedia&hellip;</p></div>';
         detailPanel.innerHTML = html;
+        detailPanel.querySelectorAll('.cue-chip').forEach(btn => {
+          btn.addEventListener('click', () => showCueWhy(entity.phrase, btn.dataset.term, btn));
+        });
       }
 
       async function selectEntity(entity) {
