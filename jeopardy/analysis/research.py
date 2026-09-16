@@ -345,6 +345,9 @@ _HTML_TEMPLATE = """<!doctype html>
   .cue-chip { display: inline-block; font-family: var(--mono); font-size: 11px; background: var(--panel-2);
     border: 1px solid var(--line); border-radius: var(--radius); padding: 3px 8px; margin: 0 6px 6px 0; }
   .cue-chip .support { color: var(--ash); }
+  .fp-label { cursor: help; }
+  .fp-info { color: var(--ash); font-size: 10px; vertical-align: super; }
+  .fp-none { color: var(--ash); font-size: 13px; font-style: italic; margin: 4px 0 10px; }
   .fp-clue { border-left: 3px solid var(--gold); padding: 8px 12px; margin: 8px 0; background: var(--panel); }
   .fp-clue .meta { font-family: var(--mono); font-size: 11px; color: var(--ash); }
 
@@ -752,10 +755,15 @@ _HTML_TEMPLATE = """<!doctype html>
         const fp = byPhrase[entity.phrase];
         let html = '<p class="eyebrow">The answer</p>' + `<h3>${escapeHtml(entity.phrase)}</h3>`;
         if (fp) {
-          html += '<div class="fingerprint"><p class="eyebrow">How Jeopardy clues it</p>';
+          html += '<div class="fingerprint"><p class="eyebrow fp-label" ' +
+            'title="The words Jeopardy uses most when this is the answer — the recurring angles worth recognizing. ' +
+            '&ldquo;N of M&rdquo; = it appeared in N of this answer\\'s M clues.">' +
+            'Clue Fingerprint <span class="fp-info">&#9432;</span></p>';
           if (fp.cues && fp.cues.length) {
             html += fp.cues.map(c => `<span class="cue-chip">${escapeHtml(c.term)}` +
               ` <span class="support">&middot; ${c.support} of ${c.total}</span></span>`).join('');
+          } else {
+            html += '<p class="fp-none">No single recurring angle &mdash; this answer gets clued many different ways.</p>';
           }
           const examples = (fp.exampleClueIds || []).map(clueById).filter(Boolean)
             .filter(c => c.year >= currentEra);

@@ -3940,3 +3940,8 @@ cluster_id,phrase,keep,canonical,source
 41,European,false,European,llm-fragsweep2
 41,New Jersey,false,New Jersey,llm-fragsweep2
 47,New York,false,New York,llm-fragsweep2
+0,Pulitzer,true,Pulitzer Prize,llm-alias
+17,Pulitzer,true,Pulitzer Prize,llm-alias
+26,Pulitzer,true,Pulitzer Prize,llm-alias
+40,Pulitzer,true,Pulitzer Prize,llm-alias
+40,Nobel,true,Nobel Prize,llm-alias
