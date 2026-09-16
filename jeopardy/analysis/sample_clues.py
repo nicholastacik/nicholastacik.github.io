@@ -5,6 +5,8 @@ from jeopardy.analysis.tokens import DEDUP_CANDIDATE_K, apply_entity_decisions
 
 def _spread(items, n):
     """Up to n items, evenly spaced across the (year-sorted) list — for era coverage."""
+    if n <= 0:
+        return []
     if len(items) <= n:
         return items
     step = len(items) / n

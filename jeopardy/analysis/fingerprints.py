@@ -145,8 +145,9 @@ def run_fingerprints(min_freq=5):
     misc = misc_membership(clusters, config.MISC_FRACTION, config.MISC_ID)
     clusters = pd.concat([clusters, misc], ignore_index=True)
     decisions = load_entity_decisions(config.ENTITY_DECISIONS_PATH)
-    store, entity_clues, quiz_refs = build_clue_index(clusters, clues, decisions, min_freq=min_freq)
-    cues = build_cues(entity_clues)
+    store, entity_clues, quiz_refs = build_clue_index(
+        clusters, clues, decisions, quiz_k=1, quiz_general_n=2, min_freq=min_freq)
+    cues = build_cues(entity_clues, n_cues=2, n_examples=1)
 
     quiz_rows = [{"cluster_id": cid, "phrase": ph, "clue_ids": ids}
                  for cid, refs in quiz_refs.items() for ph, ids in refs.items()]

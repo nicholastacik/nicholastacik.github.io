@@ -229,7 +229,13 @@ recent years.
 Two more touches make it a study aid rather than a lookup: press **Sample clue** to draw a
 real clue from that category — highlight an answer first to be quizzed on that specific
 entity, or leave it un-highlighted for anything on the board — with the answer hidden until
-you ask for it. And a 51st list, **Misc: Hard to Classify**, gathers the categories the
+you ask for it.
+
+Each answer now also carries a **clue fingerprint** — the handful of terms Jeopardy keeps using to
+ask about it (with how often), and real example clues linked back to J-Archive — so you can study
+the *angle*, not just the name.
+
+And a 51st list, **Misc: Hard to Classify**, gathers the categories the
 clustering was *least* sure about — the ones that sat farthest from any clean type — so the
 oddballs the other 50 lists smoothed over get a place to show themselves.
 
