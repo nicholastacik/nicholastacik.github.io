@@ -71,11 +71,11 @@ def tokens(min_freq, top_n):
     run_tokens(min_freq=min_freq, top_n=top_n)
 
 
-@cli.command(name="sample-clues")
-def sample_clues():
-    """Build the per-(type, entity) sample-clue index for the research tool."""
-    from jeopardy.analysis.sample_clues import run_sample_clues
-    run_sample_clues()
+@cli.command()
+def fingerprints():
+    """Build the shared clue store, quiz refs, and per-entity TF-IDF fingerprints."""
+    from jeopardy.analysis.fingerprints import run_fingerprints
+    run_fingerprints()
 
 
 @cli.command()

@@ -5,10 +5,12 @@ import numpy as np
 import pandas as pd
 
 from jeopardy import config
+from jeopardy.analysis.misc_pool import misc_membership
 from jeopardy.analysis.sample_clues import _cluster_resolution, _sample
 from jeopardy.analysis.tokens import (
     build_surface_counts,
     extract_phrases,
+    load_entity_decisions,
     _cluster_phrase_counts,
 )
 
@@ -135,3 +137,24 @@ def build_cues(entity_clues, n_cues=6, n_examples=4):
                 picks.append(r["clue_id"]); seen.add(r["clue_id"])
         out[k] = {"cues": cues, "example_clue_ids": picks}
     return out
+
+
+def run_fingerprints(min_freq=5):
+    clusters = pd.read_parquet(config.CATEGORY_CLUSTERS_PATH)
+    clues = pd.read_parquet(config.PARQUET_PATH)
+    misc = misc_membership(clusters, config.MISC_FRACTION, config.MISC_ID)
+    clusters = pd.concat([clusters, misc], ignore_index=True)
+    decisions = load_entity_decisions(config.ENTITY_DECISIONS_PATH)
+    store, entity_clues, quiz_refs = build_clue_index(clusters, clues, decisions, min_freq=min_freq)
+    cues = build_cues(entity_clues)
+
+    quiz_rows = [{"cluster_id": cid, "phrase": ph, "clue_ids": ids}
+                 for cid, refs in quiz_refs.items() for ph, ids in refs.items()]
+    fp_rows = [{"cluster_id": cid, "phrase": ph, "cues": v["cues"],
+                "example_clue_ids": v["example_clue_ids"]} for (cid, ph), v in cues.items()]
+
+    config.CLUES_STORE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    store.to_parquet(config.CLUES_STORE_PATH, index=False)
+    pd.DataFrame(quiz_rows).to_parquet(config.CATEGORY_QUIZ_REFS_PATH, index=False)
+    pd.DataFrame(fp_rows).to_parquet(config.CATEGORY_FINGERPRINTS_PATH, index=False)
+    print(f"Wrote {len(store):,} clues, {len(quiz_rows):,} quiz refs, {len(fp_rows):,} fingerprints")
