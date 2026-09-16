@@ -106,34 +106,53 @@ def test_render_html_has_era_selector_over_all_eras():
     assert "DATA.eras.includes(2010)" in html
 
 
-def _sample_clues_df():
+def _fp_df():
+    return pd.DataFrame([{"cluster_id": 0, "phrase": "Mark Twain",
+                          "cues": [{"term": "hannibal", "support": 3, "total": 4}],
+                          "example_clue_ids": ["1:Jeopardy:1:1"]}])
+
+
+def _quiz_df():
+    return pd.DataFrame([{"cluster_id": 0, "phrase": "Mark Twain", "clue_ids": ["1:Jeopardy:1:1"]},
+                         {"cluster_id": 0, "phrase": None, "clue_ids": ["9:Jeopardy:2:2"]}])
+
+
+def _clues_store_df():
     return pd.DataFrame([
-        {"cluster_id": 0, "phrase": "Abraham Lincoln", "clue": "16th president",
-         "answer": "Abraham Lincoln", "year": 1994, "category": "PRESIDENTS"},
-        {"cluster_id": 0, "phrase": None, "clue": "any clue", "answer": "something", "year": 2001,
-         "category": "PRESIDENTS"},
+        {"clue_id": "1:Jeopardy:1:1", "clue": "This Hannibal native", "answer": "Mark Twain",
+         "year": 1994, "category": "AUTHORS", "game_id": 1, "round": "Jeopardy", "row": 1, "column": 1},
+        {"clue_id": "9:Jeopardy:2:2", "clue": "unreferenced-by-nobody? no, general refs it", "answer": "x",
+         "year": 2001, "category": "MISC", "game_id": 9, "round": "Jeopardy", "row": 2, "column": 2},
+        {"clue_id": "7:Jeopardy:3:3", "clue": "NEVER REFERENCED", "answer": "y",
+         "year": 2000, "category": "X", "game_id": 7, "round": "Jeopardy", "row": 3, "column": 3},
     ])
 
 
-def test_build_research_data_embeds_sample_clues_keyed_by_cluster():
-    data = build_research_data(_tokens_df(), _eras_df(), _labels(), _sample_clues_df())
-    assert "sampleClues" in data
-    assert "0" in data["sampleClues"]
-    entry = data["sampleClues"]["0"][0]
-    assert set(entry.keys()) == {"phrase", "clue", "answer", "year", "category"}
+def test_build_embeds_only_referenced_clues():
+    data = build_research_data(_tokens_df(), _eras_df(), _labels(), _fp_df(), _quiz_df(), _clues_store_df())
+    assert set(data["clues"].keys()) == {"1:Jeopardy:1:1", "9:Jeopardy:2:2"}  # unreferenced pruned
+    assert "NEVER REFERENCED" not in json_dumps(data)
+    assert data["fingerprints"]["0"]["Mark Twain"]["cues"][0]["term"] == "hannibal"
+    assert data["quiz"]["0"][""] == ["9:Jeopardy:2:2"]  # general pool keyed by ""
 
 
-def test_build_research_data_sample_clues_default_empty():
+def json_dumps(d):
+    import json
+    return json.dumps(d)
+
+
+def test_build_research_data_defaults_empty():
     data = build_research_data(_tokens_df(), _eras_df(), _labels())
-    assert data["sampleClues"] == {}
+    assert data["quiz"] == {}
+    assert data["fingerprints"] == {}
+    assert data["clues"] == {}
 
 
 def test_render_html_has_sample_clue_controls():
-    data = build_research_data(_tokens_df(), _eras_df(), _labels(), _sample_clues_df())
+    data = build_research_data(_tokens_df(), _eras_df(), _labels())
     html = render_html(data)
     assert "sample-clue-btn" in html          # the trigger
     assert "reveal-answer-btn" in html         # hidden-answer reveal
-    assert "sampleClues" in html               # data embedded
 
 
 def test_render_html_marks_non_studyable():

@@ -6,7 +6,7 @@ import pandas as pd
 from jeopardy import config
 
 
-def build_research_data(tokens_df, eras_df, labels, sample_clues_df=None):
+def build_research_data(tokens_df, eras_df, labels, fingerprints_df=None, quiz_refs_df=None, clues_df=None):
     """Per-era, per-type entity data for the research page.
 
     Returns {"eras": [...], "byEra": {"<era>": [ {cluster_id, name, applicability,
@@ -36,16 +36,31 @@ def build_research_data(tokens_df, eras_df, labels, sample_clues_df=None):
             })
         entries.sort(key=lambda d: d["applicability"], reverse=True)
         by_era[str(int(era))] = entries
-    sample_map = {}
-    if sample_clues_df is not None:
-        for cid, grp in sample_clues_df.groupby("cluster_id"):
-            sample_map[str(int(cid))] = [
-                {"phrase": (None if pd.isna(r["phrase"]) else r["phrase"]),
-                 "clue": r["clue"], "answer": r["answer"], "year": int(r["year"]),
-                 "category": r["category"]}
-                for _, r in grp.iterrows()
-            ]
-    return {"eras": [int(e) for e in eras], "byEra": by_era, "sampleClues": sample_map}
+    fingerprints = {}
+    if fingerprints_df is not None:
+        for _, r in fingerprints_df.iterrows():
+            fingerprints.setdefault(str(int(r["cluster_id"])), {})[r["phrase"]] = {
+                "cues": list(r["cues"]), "exampleClueIds": list(r["example_clue_ids"])}
+    quiz = {}
+    if quiz_refs_df is not None:
+        for _, r in quiz_refs_df.iterrows():
+            key = "" if (r["phrase"] is None or pd.isna(r["phrase"])) else r["phrase"]
+            quiz.setdefault(str(int(r["cluster_id"])), {})[key] = list(r["clue_ids"])
+    referenced = set()
+    for byphrase in fingerprints.values():
+        for v in byphrase.values():
+            referenced.update(v["exampleClueIds"])
+    for byphrase in quiz.values():
+        for ids in byphrase.values():
+            referenced.update(ids)
+    clues = {}
+    if clues_df is not None:
+        for _, r in clues_df[clues_df["clue_id"].isin(referenced)].iterrows():
+            clues[r["clue_id"]] = {"clue": r["clue"], "answer": r["answer"], "year": int(r["year"]),
+                                   "category": r["category"], "game_id": int(r["game_id"])}
+    return {"eras": [int(e) for e in eras], "byEra": by_era,
+            "fingerprints": fingerprints, "quiz": quiz, "clues": clues,
+            "jarchive": config.JARCHIVE_GAME_URL}
 
 
 _HTML_TEMPLATE = """<!doctype html>
@@ -797,9 +812,10 @@ def run_research():
     labels = pd.read_csv(config.CLUSTER_LABELS_PATH).set_index("cluster_id")["name"].to_dict()
     if config.MISC_ID in set(tokens["cluster_id"]) and config.MISC_ID not in labels:
         labels[config.MISC_ID] = config.MISC_LABEL
-    sample = pd.read_parquet(config.CATEGORY_SAMPLE_CLUES_PATH) \
-        if config.CATEGORY_SAMPLE_CLUES_PATH.exists() else None
-    data = build_research_data(tokens, eras, labels, sample)
+    fp = pd.read_parquet(config.CATEGORY_FINGERPRINTS_PATH) if config.CATEGORY_FINGERPRINTS_PATH.exists() else None
+    qr = pd.read_parquet(config.CATEGORY_QUIZ_REFS_PATH) if config.CATEGORY_QUIZ_REFS_PATH.exists() else None
+    cs = pd.read_parquet(config.CLUES_STORE_PATH) if config.CLUES_STORE_PATH.exists() else None
+    data = build_research_data(tokens, eras, labels, fp, qr, cs)
     html = render_html(data)
     config.RESEARCH_HTML_PATH.parent.mkdir(parents=True, exist_ok=True)
     config.RESEARCH_HTML_PATH.write_text(html, encoding="utf-8")
