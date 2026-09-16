@@ -41,12 +41,16 @@ def build_clue_index(clusters_df, clues_df, decisions, quiz_k=2, quiz_general_n=
     entity_clues, quiz_refs = {}, {}
     for cid, sub in merged.groupby("cluster_id"):
         cdec = decisions.get(int(cid), {})
+        # All-time first (the earliest cutoff spans the most clues); recent windows only fill in
+        # surfaces the all-time mapping didn't resolve (e.g. an entity that only qualifies since
+        # 2020). setdefault keeps the all-time interpretation from being overwritten by a window.
         resolution = {}
         for cutoff in config.ERA_CUTOFFS:
             era_sub = sub[sub["year"] >= cutoff]
             if era_sub.empty:
                 continue
-            resolution.update(_cluster_resolution(_cluster_phrase_counts(era_sub, surface), cdec, min_freq))
+            for sp, ent in _cluster_resolution(_cluster_phrase_counts(era_sub, surface), cdec, min_freq).items():
+                resolution.setdefault(sp, ent)
         by_entity, general = {}, []
         for row in sub.sort_values("year").itertuples():
             answer = row.answer if isinstance(row.answer, str) else ""
@@ -85,14 +89,19 @@ def _contains(term, text):
 
 
 def _select_cues(candidates, n_cues):
+    # Candidates are in rank order. Keep the best terms with no unigram/bigram redundancy in
+    # EITHER ranking order: a unigram after its bigram is skipped, and accepting a bigram evicts
+    # any already-kept constituent unigram (freeing a slot to refill from lower-ranked terms).
     kept, bigram_words = [], set()
     for c in candidates:
         term = c["term"]
-        if " " not in term and term in bigram_words:
-            continue  # unigram covered by an already-kept bigram
+        parts = term.split()
+        if len(parts) >= 2:
+            kept = [k for k in kept if k["term"] not in parts]
+            bigram_words.update(parts)
+        elif term in bigram_words:
+            continue
         kept.append(c)
-        if " " in term:
-            bigram_words.update(term.split())
         if len(kept) >= n_cues:
             break
     return kept

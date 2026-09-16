@@ -700,12 +700,24 @@ _HTML_TEMPLATE = """<!doctype html>
       function eligibleClues(clusterId) {
         const refs = (DATA.quiz && DATA.quiz[String(clusterId)]) || {};
         const toClues = ids => (ids || []).map(clueById).filter(Boolean);
+        // The "any answer" pool is the deduped union of this cluster's general + every per-entity
+        // ref, so un-highlighted / fallback sampling has real variety (not just the ~12 general).
+        const anyClues = () => {
+          const seen = new Set(), out = [];
+          for (const key in refs) for (const id of refs[key]) {
+            if (seen.has(id)) continue;
+            seen.add(id);
+            const c = clueById(id);
+            if (c) out.push(c);
+          }
+          return out.filter(c => c.year >= currentEra);
+        };
         if (selectedEntity) {
           const scoped = toClues(refs[selectedEntity.phrase]).filter(c => c.year >= currentEra);
           if (scoped.length) return { clues: scoped, scoped: true, fellBack: false };
-          return { clues: toClues(refs[""]).filter(c => c.year >= currentEra), scoped: false, fellBack: true };
+          return { clues: anyClues(), scoped: false, fellBack: true };
         }
-        return { clues: toClues(refs[""]).filter(c => c.year >= currentEra), scoped: false, fellBack: false };
+        return { clues: anyClues(), scoped: false, fellBack: false };
       }
 
       function rollSampleClue(clusterId) {
@@ -757,7 +769,7 @@ _HTML_TEMPLATE = """<!doctype html>
         if (fp) {
           html += '<div class="fingerprint"><p class="eyebrow fp-label" ' +
             'title="The words Jeopardy uses most when this is the answer — the recurring angles worth recognizing. ' +
-            '&ldquo;N of M&rdquo; = it appeared in N of this answer\\'s M clues.">' +
+            'Counted across all years; &ldquo;N of M&rdquo; = it appeared in N of this answer\\'s M all-time clues.">' +
             'Clue Fingerprint <span class="fp-info">&#9432;</span></p>';
           if (fp.cues && fp.cues.length) {
             html += fp.cues.map(c => `<span class="cue-chip">${escapeHtml(c.term)}` +
@@ -765,10 +777,12 @@ _HTML_TEMPLATE = """<!doctype html>
           } else {
             html += '<p class="fp-none">No single recurring angle &mdash; this answer gets clued many different ways.</p>';
           }
-          const examples = (fp.exampleClueIds || []).map(clueById).filter(Boolean)
-            .filter(c => c.year >= currentEra);
-          const shown = examples.length ? examples
-            : (fp.exampleClueIds || []).map(clueById).filter(Boolean).slice(0, 1);
+          const allExamples = (fp.exampleClueIds || []).map(clueById).filter(Boolean);
+          const examples = allExamples.filter(c => c.year >= currentEra);
+          const shown = examples.length ? examples : allExamples.slice(0, 1);
+          if (!examples.length && allExamples.length) {
+            html += '<p class="fp-none">No examples in this window; showing the newest available.</p>';
+          }
           shown.slice(0, 3).forEach(c => {
             const url = escapeHtml(DATA.jarchive.replace('{game_id}', c.game_id));
             html += `<div class="fp-clue"><p class="clue-text">${escapeHtml(c.clue)}</p>` +
