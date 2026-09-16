@@ -78,21 +78,22 @@ def _contains(term, text):
     parts = term.split()
     if len(parts) == 1:
         return parts[0] in toks
-    joined = " ".join(toks)
-    return term in joined
+    n = len(parts)
+    return any(toks[i:i + n] == parts for i in range(len(toks) - n + 1))
 
 
-def _dedup_ngrams(cues):
-    bigram_words = set()
-    for c in cues:
-        if " " in c["term"]:
-            bigram_words.update(c["term"].split())
-    out = []
-    for c in cues:
-        if " " not in c["term"] and c["term"] in bigram_words:
-            continue  # unigram fully covered by a kept bigram
-        out.append(c)
-    return out
+def _select_cues(candidates, n_cues):
+    kept, bigram_words = [], set()
+    for c in candidates:
+        term = c["term"]
+        if " " not in term and term in bigram_words:
+            continue  # unigram covered by an already-kept bigram
+        kept.append(c)
+        if " " in term:
+            bigram_words.update(term.split())
+        if len(kept) >= n_cues:
+            break
+    return kept
 
 
 def build_cues(entity_clues, n_cues=6, n_examples=4):
@@ -110,9 +111,9 @@ def build_cues(entity_clues, n_cues=6, n_examples=4):
         total = len(recs)
         name_toks = {t.lower() for t in phrase.split()}
         row = matrix.getrow(i).toarray().ravel()
-        cues = []
+        candidates = []
         for j in row.argsort()[::-1]:
-            if row[j] <= 0 or len(cues) >= n_cues * 3:
+            if row[j] <= 0 or len(candidates) >= n_cues * 3:
                 break
             term = terms[j]
             tparts = term.split()
@@ -121,8 +122,8 @@ def build_cues(entity_clues, n_cues=6, n_examples=4):
             support = sum(1 for r in recs if _contains(term, r["clue"]))
             if support < 2:
                 continue
-            cues.append({"term": term, "support": int(support), "total": int(total)})
-        cues = _dedup_ngrams(cues)[:n_cues]
+            candidates.append({"term": term, "support": int(support), "total": int(total)})
+        cues = _select_cues(candidates, n_cues)
         cue_terms = [c["term"] for c in cues]
         newest = max(recs, key=lambda r: r["year"])
         by_cov = sorted(recs, key=lambda r: -sum(1 for t in cue_terms if _contains(t, r["clue"])))
