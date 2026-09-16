@@ -1,5 +1,7 @@
 import pandas as pd
-from jeopardy.analysis.fingerprints import clue_ids, build_clue_index, build_cues
+from jeopardy.analysis.fingerprints import (
+    clue_ids, build_clue_index, build_cues, _contains, _select_cues,
+)
 
 _D = pd.Timestamp("2005-06-01")
 
@@ -99,11 +101,28 @@ def test_bigram_kept_and_covered_unigrams_dropped():
     assert "tom" not in terms and "sawyer" not in terms
 
 
-def test_bigram_support_requires_token_adjacency():
-    # "great lakes" must NOT be credited to a clue that only has "lakes" (no adjacency).
-    ec = _mk(0, "Geo", ["the great lakes region", "great lakes shipping", "just lakes alone"])
-    ec.update(_mk(0, "Filler", ["nothing to see"]))
-    fp = build_cues(ec, n_cues=6, n_examples=4)[(0, "Geo")]
-    gl = [c for c in fp["cues"] if c["term"] == "great lakes"]
-    if gl:
-        assert gl[0]["support"] == 2  # only the two adjacent-occurrence clues, not the "lakes alone" one
+def test_contains_bigram_requires_token_adjacency_not_substring():
+    # Token-fusion: tokens are ["concat", "dog"] — the bigram "cat dog" must NOT match, though a
+    # naive space-join substring check ("...concat dog...") would false-positive. (Bites bug 1.)
+    assert _contains("cat dog", "this is concat dog food") is False
+    assert _contains("great lakes", "the great lakes region") is True
+    assert _contains("great lakes", "just lakes alone") is False
+
+
+def test_select_cues_drops_unigram_only_for_a_surviving_bigram():
+    # A high-ranked unigram must NOT be dropped by a bigram that falls outside the kept n_cues.
+    # Ranked candidates: unigram "sawyer" at #2, its covering bigram "tom sawyer" at #7 (past
+    # n_cues=6). Pre-fix (dedup on the full pool, then slice) dropped "sawyer" for a bigram that
+    # never survived; the fix keeps "sawyer". (Bites bug 2.)
+    cand = [{"term": t, "support": 2, "total": 3} for t in
+            ["alpha", "sawyer", "beta", "gamma", "delta", "epsilon", "tom sawyer"]]
+    kept = [c["term"] for c in _select_cues(cand, n_cues=6)]
+    assert "sawyer" in kept                      # not dropped by the sliced-away bigram
+    assert kept == ["alpha", "sawyer", "beta", "gamma", "delta", "epsilon"]
+
+    # But when the covering bigram IS kept (ranked above the unigram), the unigram is dropped.
+    cand2 = [{"term": "tom sawyer", "support": 3, "total": 3},
+             {"term": "sawyer", "support": 3, "total": 3},
+             {"term": "river", "support": 2, "total": 3}]
+    kept2 = [c["term"] for c in _select_cues(cand2, n_cues=6)]
+    assert kept2 == ["tom sawyer", "river"]
