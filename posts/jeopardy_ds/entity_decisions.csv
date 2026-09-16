@@ -3981,3 +3981,13 @@ cluster_id,phrase,keep,canonical,source
 17,George,false,George,llm-mismerge
 26,Alice,false,Alice,llm-mismerge
 39,Paul,false,Paul,llm-mismerge
+40,Washington,true,Booker T. Washington,llm-rename
+40,America,true,Miss America,llm-rename
+40,Apollo,true,Apollo program,llm-rename
+15,Fox,true,Michael J. Fox,llm-rename
+29,Renoir,true,Pierre-Auguste Renoir,llm-rename
+40,Marshall,false,Marshall,llm-mismerge
+39,Amazon,false,Amazon,llm-mismerge
+43,Earth,false,Earth,llm-mismerge
+31,Charlie's Angels,false,Charlie's Angels,llm-mismerge
+29,Jacques-Louis David,false,Jacques-Louis David,llm-mismerge
