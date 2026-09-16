@@ -269,7 +269,8 @@ def test_run_fingerprints_attaches_glosses(tmp_path, monkeypatch):
     clusters = _clusters(); clusters["centroid_dist"] = 0.0
     clues = _clues()  # resolves to "Vincent van Gogh"; a cue term will be "dutch" or similar
     for a in ("CATEGORY_CLUSTERS_PATH", "PARQUET_PATH", "ENTITY_DECISIONS_PATH", "CATEGORY_TOKENS_PATH",
-              "CLUES_STORE_PATH", "CATEGORY_QUIZ_REFS_PATH", "CATEGORY_FINGERPRINTS_PATH", "CUE_GLOSSES_PATH"):
+              "CLUES_STORE_PATH", "CATEGORY_QUIZ_REFS_PATH", "CATEGORY_FINGERPRINTS_PATH",
+              "CUE_GLOSSES_PATH", "CUE_DROPS_PATH"):
         monkeypatch.setattr(fp.config, a, tmp_path / (a.lower() + ".x"))
     clusters.to_parquet(fp.config.CATEGORY_CLUSTERS_PATH)
     clues.to_parquet(fp.config.PARQUET_PATH)
@@ -290,3 +291,12 @@ def test_run_fingerprints_attaches_glosses(tmp_path, monkeypatch):
     assert cues1[term].get("gloss") == "A test gloss."     # gloss merged onto the right cue
     others = [t for t, c in cues1.items() if t != term and c.get("gloss")]
     assert not others                                       # only the glossed term has a gloss
+
+    # a cue listed in cue_drops.csv is removed entirely from the fingerprint
+    with open(fp.config.CUE_DROPS_PATH, "w", newline="", encoding="utf-8") as f:
+        w = _csv.writer(f); w.writerow(["cluster_id", "phrase", "term"])
+        w.writerow([0, "Vincent van Gogh", term])
+    fp.run_fingerprints(min_freq=5)
+    fpr3 = pd.read_parquet(fp.config.CATEGORY_FINGERPRINTS_PATH)
+    terms3 = [c["term"] for c in list(fpr3[fpr3.phrase == "Vincent van Gogh"].iloc[0]["cues"])]
+    assert term not in terms3                               # dropped cue gone
