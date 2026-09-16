@@ -159,7 +159,7 @@ def test_render_html_has_fingerprint_and_ref_quiz():
     data = build_research_data(_tokens_df(), _eras_df(), _labels(), _fp_df(), _quiz_df(), _clues_store_df())
     html = render_html(data)
     for marker in ["renderFingerprint", "cue-chip", "j-archive", "DATA.clues", "DATA.quiz", "DATA.fingerprints",
-                   "showCueWhy", "fetchCueWhy", "cue-why"]:
+                   "showCueGloss", "cue-why", "cue-plain"]:
         assert marker in html
 
 
