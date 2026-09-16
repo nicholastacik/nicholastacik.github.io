@@ -7,6 +7,16 @@ def test_extracts_regnal_entity():
     assert "England" in out
 
 
+def test_parenthetical_name_joined():
+    # J-Archive writes optional answer parts in parens, e.g. "(Henry) Fielding". The parens must
+    # not split the name into bare "Henry" + "Fielding" — strip them and keep "Henry Fielding".
+    assert extract_phrases("(Henry) Fielding") == ["Henry Fielding"]
+    assert extract_phrases("Charles (Dickens)") == ["Charles Dickens"]
+    assert extract_phrases("(Robert) Ludlum") == ["Robert Ludlum"]
+    # a parenthetical title still strips like any title
+    assert extract_phrases("(Dr.) Van Helsing") == ["Van Helsing"]
+
+
 def test_extracts_multiword_war():
     out = extract_phrases("World War II began in Europe")
     assert "World War II" in out

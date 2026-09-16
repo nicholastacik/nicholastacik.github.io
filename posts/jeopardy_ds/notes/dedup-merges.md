@@ -7,6 +7,9 @@ draft: true
 ## era 1980, cluster -1
 - `Americans` -> `American`
 
+## era 1980, cluster 0
+- `Poe` -> `Edgar Allan Poe`
+
 ## era 1980, cluster 1
 - `Soviets` -> `Soviet`
 - `Africa` -> `South Africa`
@@ -25,13 +28,10 @@ draft: true
 - `Olympics` -> `Olympic`
 - `Super Bowls` -> `Super Bowl`
 - `Yankee` -> `Yankees`
-- `Dodger` -> `Dodgers`
 - `Laker` -> `Lakers`
-- `Ali` -> `Muhammad Ali`
+- `Dodger` -> `Dodgers`
 - `Packers` -> `Green Bay Packers`
 - `Cowboys` -> `Dallas Cowboys`
-- `Braves` -> `Atlanta Braves`
-- `Reds` -> `Cincinnati Reds`
 
 ## era 1980, cluster 6
 - `Christians` -> `Christian`
@@ -41,32 +41,31 @@ draft: true
 - `Muslim` -> `Muslims`
 
 ## era 1980, cluster 7
+- `Americans` -> `American`
 - `New York` -> `New York City`
-- `Britain` -> `Great Britain`
 
 ## era 1980, cluster 8
 - `Romans` -> `Roman`
+- `Chanel` -> `Coco Chanel`
 - `Egyptians` -> `Egyptian`
 - `Brit` -> `Brits`
 
+## era 1980, cluster 10
+- `Hudson` -> `Henry Hudson`
+
 ## era 1980, cluster 11
+- `American` -> `South American`
 - `Olympics` -> `Winter Olympics`
 
 ## era 1980, cluster 12
 - `Frost` -> `Robert Frost`
 - `Whitman` -> `Walt Whitman`
-- `Dickinson` -> `Emily Dickinson`
-- `Burns` -> `Robert Burns`
-- `Thomas` -> `Dylan Thomas`
-- `Edgar Allan` -> `Edgar Allan Poe`
-- `Sandburg` -> `Carl Sandburg`
+- `Yeats` -> `William Butler Yeats`
 - `Twain` -> `Mark Twain`
 
 ## era 1980, cluster 13
 - `Olympics` -> `Olympic`
 - `Lincoln` -> `Mary Todd Lincoln`
-- `Reagan` -> `Nancy Reagan`
-- `Ford` -> `Betty Ford`
 
 ## era 1980, cluster 14
 - `Greeks` -> `Greek`
@@ -90,7 +89,6 @@ draft: true
 - `Tony Awards` -> `Tony Award`
 
 ## era 1980, cluster 18
-- `Mexico` -> `New Mexico`
 - `England` -> `New England`
 - `Great Lake` -> `Great Lakes`
 
@@ -98,8 +96,8 @@ draft: true
 - `Oscars` -> `Oscar`
 - `Bond` -> `James Bond`
 - `Spielberg` -> `Steven Spielberg`
-- `Bogart` -> `Humphrey Bogart`
 - `Washington` -> `Denzel Washington`
+- `Bogart` -> `Humphrey Bogart`
 
 ## era 1980, cluster 20
 - `Americans` -> `American`
@@ -120,7 +118,6 @@ draft: true
 - `Romans` -> `Roman`
 - `Egyptians` -> `Egyptian`
 - `Caesar` -> `Julius Caesar`
-- `Great` -> `Alexander the Great`
 - `Aztec` -> `Aztecs`
 
 ## era 1980, cluster 25
@@ -130,29 +127,29 @@ draft: true
 
 ## era 1980, cluster 26
 - `Twain` -> `Mark Twain`
-- `War` -> `Civil War`
 - `Lewis` -> `Sinclair Lewis`
+- `War` -> `Civil War`
 - `Fitzgerald` -> `Scott Fitzgerald`
-- `Melville` -> `Herman Melville`
+- `Steinbeck` -> `John Steinbeck`
+- `Poe` -> `Edgar Allan Poe`
+- `Faulkner` -> `William Faulkner`
 
 ## era 1980, cluster 27
 - `Olympics` -> `Olympic`
 
 ## era 1980, cluster 28
 - `George` -> `Curious George`
-- `Simon` -> `Simple Simon`
 
 ## era 1980, cluster 29
-- `Warhol` -> `Andy Warhol`
 - `Impressionists` -> `Impressionist`
-- `Chagall` -> `Marc Chagall`
 - `Dali` -> `Salvador Dali`
-- `Munch` -> `Edvard Munch`
-- `Calder` -> `Alexander Calder`
+- `Rubens` -> `Peter Paul Rubens`
+- `Seurat` -> `Georges Seurat`
 
 ## era 1980, cluster 30
 - `Court` -> `Supreme Court`
 - `Americans` -> `American`
+- `Reagan` -> `Ronald Reagan`
 
 ## era 1980, cluster 31
 - `Emmys` -> `Emmy`
@@ -166,6 +163,7 @@ draft: true
 - `Oscars` -> `Oscar`
 - `Bond` -> `James Bond`
 - `Washington` -> `Denzel Washington`
+- `Spielberg` -> `Steven Spielberg`
 
 ## era 1980, cluster 34
 - `Greeks` -> `Greek`
@@ -173,20 +171,16 @@ draft: true
 - `Mexico` -> `New Mexico`
 
 ## era 1980, cluster 35
-- `Republicans` -> `Republican`
 - `Reagan` -> `Ronald Reagan`
+- `Republicans` -> `Republican`
 - `Carter` -> `Jimmy Carter`
 - `Ford` -> `Gerald Ford`
-- `Jackson` -> `Andrew Jackson`
 - `Wilson` -> `Woodrow Wilson`
-- `Democrats` -> `Democrat`
 - `Cleveland` -> `Grover Cleveland`
+- `Democrats` -> `Democrat`
 - `Hoover` -> `Herbert Hoover`
 - `Van Buren` -> `Martin Van Buren`
 - `Madison` -> `James Madison`
-- `Coolidge` -> `Calvin Coolidge`
-- `Tyler` -> `John Tyler`
-- `Monroe` -> `James Monroe`
 - `War` -> `Civil War`
 
 ## era 1980, cluster 36
@@ -194,16 +188,15 @@ draft: true
 
 ## era 1980, cluster 37
 - `Bell` -> `Alexander Graham Bell`
-- `Alexander Graham` -> `Alexander Graham Bell`
-- `Franklin` -> `Ben Franklin`
-- `Bohr` -> `Niels Bohr`
-- `Fulton` -> `Robert Fulton`
-- `Goddard` -> `Robert Goddard`
+- `Mendel` -> `Gregor Mendel`
+- `Tesla` -> `Nikola Tesla`
+- `Pavlov` -> `Ivan Pavlov`
+- `Morse` -> `Samuel Morse`
+- `Halley` -> `Edmond Halley`
 
 ## era 1980, cluster 38
 - `Americans` -> `American`
 - `Indians` -> `Indian`
-- `Hamilton` -> `Alexander Hamilton`
 
 ## era 1980, cluster 39
 - `Americans` -> `American`
@@ -214,24 +207,19 @@ draft: true
 
 ## era 1980, cluster 43
 - `Americans` -> `American`
-- `Twain` -> `Mark Twain`
+- `Marx` -> `Karl Marx`
 - `Nixon` -> `Richard Nixon`
-- `Lincoln` -> `Abraham Lincoln`
 - `Paine` -> `Thomas Paine`
-- `Roosevelt` -> `Teddy Roosevelt`
-- `Caesar` -> `Julius Caesar`
-- `Sartre` -> `Paul Sartre`
-- `Martin Luther` -> `Martin Luther King`
+- `Jefferson` -> `Thomas Jefferson`
+- `Mac` -> `Douglas Mac`
 - `Roman` -> `Romans`
 
 ## era 1980, cluster 44
 - `Greeks` -> `Greek`
 - `Romans` -> `Roman`
-- `Sagan` -> `Carl Sagan`
 
 ## era 1980, cluster 45
 - `American` -> `Americans`
-- `Jung` -> `Carl Jung`
 
 ## era 1980, cluster 46
 - `Great Lakes` -> `Great Lake`
@@ -247,6 +235,7 @@ draft: true
 - `Romans` -> `Roman`
 - `Americans` -> `American`
 - `Egyptians` -> `Egyptian`
+- `Pascal` -> `Blaise Pascal`
 - `Army` -> `the Army`
 
 ## era 1980, cluster 49
@@ -256,9 +245,11 @@ draft: true
 ## era 1990, cluster -1
 - `Americans` -> `American`
 - `Africa` -> `South Africa`
+- `Red Cross` -> `American Red Cross`
 
 ## era 1990, cluster 0
-- `Vonnegut` -> `Kurt Vonnegut`
+- `Poe` -> `Edgar Allan Poe`
+- `Faulkner` -> `William Faulkner`
 
 ## era 1990, cluster 1
 - `Africa` -> `South Africa`
@@ -279,11 +270,7 @@ draft: true
 - `Yankee` -> `Yankees`
 - `Laker` -> `Lakers`
 - `Dodger` -> `Dodgers`
-- `Ali` -> `Muhammad Ali`
-- `Cowboys` -> `Dallas Cowboys`
 - `Packers` -> `Green Bay Packers`
-- `Braves` -> `Atlanta Braves`
-- `Reds` -> `Cincinnati Reds`
 
 ## era 1990, cluster 6
 - `Christians` -> `Christian`
@@ -294,10 +281,9 @@ draft: true
 
 ## era 1990, cluster 7
 - `New York` -> `New York City`
-- `Britain` -> `Great Britain`
-- `Mary` -> `Virgin Mary`
 
 ## era 1990, cluster 8
+- `Chanel` -> `Coco Chanel`
 - `Egyptians` -> `Egyptian`
 - `Brit` -> `Brits`
 
@@ -305,26 +291,22 @@ draft: true
 - `Williams` -> `William`
 - `Wall Street` -> `Wall Street Journal`
 
+## era 1990, cluster 10
+- `Hudson` -> `Henry Hudson`
+
 ## era 1990, cluster 12
 - `Frost` -> `Robert Frost`
 - `Whitman` -> `Walt Whitman`
-- `Dickinson` -> `Emily Dickinson`
-- `Thomas` -> `Dylan Thomas`
-- `Burns` -> `Robert Burns`
-- `Edgar Allan` -> `Edgar Allan Poe`
-- `Blake` -> `William Blake`
-- `Sandburg` -> `Carl Sandburg`
+- `Yeats` -> `William Butler Yeats`
 
 ## era 1990, cluster 13
 - `Olympics` -> `Olympic`
-- `Lincoln` -> `Mary Todd Lincoln`
-- `Clinton` -> `Hillary Clinton`
-- `Ford` -> `Betty Ford`
 
 ## era 1990, cluster 14
 - `Greeks` -> `Greek`
 - `Romans` -> `Roman`
 - `Indians` -> `Indian`
+- `Egyptians` -> `Egyptian`
 
 ## era 1990, cluster 15
 - `Emmys` -> `Emmy`
@@ -350,7 +332,6 @@ draft: true
 - `Oscars` -> `Oscar`
 - `Bond` -> `James Bond`
 - `Spielberg` -> `Steven Spielberg`
-- `Chaplin` -> `Charlie Chaplin`
 - `Washington` -> `Denzel Washington`
 
 ## era 1990, cluster 20
@@ -360,11 +341,13 @@ draft: true
 
 ## era 1990, cluster 21
 - `Romans` -> `Roman`
+- `Mongols` -> `Mongol`
 
 ## era 1990, cluster 22
 - `Americans` -> `American`
 
 ## era 1990, cluster 23
+- `Gershwin` -> `George Gershwin`
 - `Seville` -> `Barber of Seville`
 
 ## era 1990, cluster 24
@@ -372,7 +355,6 @@ draft: true
 - `Romans` -> `Roman`
 - `Egyptians` -> `Egyptian`
 - `Caesar` -> `Julius Caesar`
-- `Great` -> `Alexander the Great`
 - `Aztec` -> `Aztecs`
 - `Titan` -> `Titans`
 
@@ -384,8 +366,10 @@ draft: true
 ## era 1990, cluster 26
 - `Twain` -> `Mark Twain`
 - `War` -> `Civil War`
+- `Lewis` -> `Sinclair Lewis`
 - `Fitzgerald` -> `Scott Fitzgerald`
-- `Melville` -> `Herman Melville`
+- `Poe` -> `Edgar Allan Poe`
+- `Faulkner` -> `William Faulkner`
 
 ## era 1990, cluster 27
 - `Olympics` -> `Olympic`
@@ -395,11 +379,10 @@ draft: true
 
 ## era 1990, cluster 29
 - `Impressionists` -> `Impressionist`
-- `Warhol` -> `Andy Warhol`
-- `Chagall` -> `Marc Chagall`
 - `Dali` -> `Salvador Dali`
-- `Munch` -> `Edvard Munch`
-- `Calder` -> `Alexander Calder`
+- `Rubens` -> `Peter Paul Rubens`
+- `Seurat` -> `Georges Seurat`
+- `Matisse` -> `Henri Matisse`
 
 ## era 1990, cluster 30
 - `Court` -> `Supreme Court`
@@ -416,7 +399,7 @@ draft: true
 
 ## era 1990, cluster 33
 - `Oscars` -> `Oscar`
-- `Washington` -> `Denzel Washington`
+- `Bond` -> `James Bond`
 - `Spielberg` -> `Steven Spielberg`
 
 ## era 1990, cluster 34
@@ -425,26 +408,24 @@ draft: true
 ## era 1990, cluster 35
 - `Republicans` -> `Republican`
 - `Reagan` -> `Ronald Reagan`
-- `Jackson` -> `Andrew Jackson`
 - `Carter` -> `Jimmy Carter`
 - `Ford` -> `Gerald Ford`
 - `Wilson` -> `Woodrow Wilson`
-- `Democrats` -> `Democrat`
 - `Cleveland` -> `Grover Cleveland`
+- `Democrats` -> `Democrat`
 - `Hoover` -> `Herbert Hoover`
-- `Van Buren` -> `Martin Van Buren`
-- `Tyler` -> `John Tyler`
-- `Monroe` -> `James Monroe`
+- `Madison` -> `James Madison`
 
 ## era 1990, cluster 36
 - `England` -> `New England`
 
 ## era 1990, cluster 37
 - `Bell` -> `Alexander Graham Bell`
-- `Alexander Graham` -> `Alexander Graham Bell`
-- `Franklin` -> `Ben Franklin`
-- `Bohr` -> `Niels Bohr`
-- `Fulton` -> `Robert Fulton`
+- `Mendel` -> `Gregor Mendel`
+- `Tesla` -> `Nikola Tesla`
+- `Pavlov` -> `Ivan Pavlov`
+- `Halley` -> `Edmond Halley`
+- `Morse` -> `Samuel Morse`
 
 ## era 1990, cluster 38
 - `Americans` -> `American`
@@ -461,17 +442,15 @@ draft: true
 ## era 1990, cluster 43
 - `Americans` -> `American`
 - `Marx` -> `Karl Marx`
-- `Lincoln` -> `Abraham Lincoln`
 - `Nixon` -> `Richard Nixon`
 - `Paine` -> `Thomas Paine`
+- `Jefferson` -> `Thomas Jefferson`
 - `Roosevelt` -> `Teddy Roosevelt`
 - `Martin Luther` -> `Martin Luther King`
 - `Romans` -> `Roman`
-- `Sartre` -> `Paul Sartre`
 
 ## era 1990, cluster 44
 - `Romans` -> `Roman`
-- `Sagan` -> `Carl Sagan`
 
 ## era 1990, cluster 45
 - `Americans` -> `American`
@@ -492,6 +471,7 @@ draft: true
 - `Americans` -> `American`
 - `Britain` -> `Great Britain`
 - `New York` -> `New York City`
+- `Pascal` -> `Blaise Pascal`
 - `Army` -> `the Army`
 
 ## era 1990, cluster 49
@@ -500,9 +480,13 @@ draft: true
 
 ## era 2000, cluster -1
 - `Americans` -> `American`
-- `Mexico` -> `New Mexico`
 - `Red Cross` -> `American Red Cross`
 - `Vegas` -> `Las Vegas`
+
+## era 2000, cluster 0
+- `Poe` -> `Edgar Allan Poe`
+- `Vonnegut` -> `Kurt Vonnegut`
+- `Eliot` -> `George Eliot`
 
 ## era 2000, cluster 1
 - `Africa` -> `South Africa`
@@ -514,6 +498,7 @@ draft: true
 - `Americans` -> `American`
 - `Olympics` -> `Olympic`
 - `Africa` -> `South Africa`
+- `Native Americans` -> `Native American`
 
 ## era 2000, cluster 3
 - `Olympics` -> `Olympic`
@@ -542,8 +527,8 @@ draft: true
 - `Wednesday` -> `Ash Wednesday`
 
 ## era 2000, cluster 8
-- `Chanel` -> `Coco Chanel`
 - `Dior` -> `Christian Dior`
+- `Chanel` -> `Coco Chanel`
 - `Brit` -> `Brits`
 
 ## era 2000, cluster 9
@@ -553,18 +538,11 @@ draft: true
 ## era 2000, cluster 12
 - `Frost` -> `Robert Frost`
 - `Whitman` -> `Walt Whitman`
-- `Dickinson` -> `Emily Dickinson`
-- `Donne` -> `John Donne`
-- `Thomas` -> `Dylan Thomas`
-- `Blake` -> `William Blake`
-- `Sandburg` -> `Carl Sandburg`
+- `Yeats` -> `William Butler Yeats`
 
 ## era 2000, cluster 13
-- `Clinton` -> `Hillary Clinton`
 - `Olympics` -> `Olympic`
 - `Bush` -> `Barbara Bush`
-- `Carter` -> `Rosalynn Carter`
-- `Ginsburg` -> `Ruth Bader Ginsburg`
 
 ## era 2000, cluster 14
 - `Greeks` -> `Greek`
@@ -582,7 +560,7 @@ draft: true
 
 ## era 2000, cluster 17
 - `Tonys` -> `Tony`
-- `Mamet` -> `David Mamet`
+- `Shaw` -> `George Bernard Shaw`
 
 ## era 2000, cluster 18
 - `England` -> `New England`
@@ -591,7 +569,7 @@ draft: true
 
 ## era 2000, cluster 19
 - `Oscars` -> `Oscar`
-- `Ford` -> `Harrison Ford`
+- `Bond` -> `James Bond`
 - `Washington` -> `Denzel Washington`
 - `Spielberg` -> `Steven Spielberg`
 
@@ -608,7 +586,7 @@ draft: true
 - `Americans` -> `American`
 
 ## era 2000, cluster 23
-- `Strauss` -> `Richard Strauss`
+- `Elgar` -> `Edward Elgar`
 
 ## era 2000, cluster 24
 - `Greeks` -> `Greek`
@@ -616,18 +594,18 @@ draft: true
 - `Egyptians` -> `Egyptian`
 - `Aztec` -> `Aztecs`
 - `Great` -> `Alexander the Great`
-- `Caesar` -> `Julius Caesar`
 - `Titans` -> `Titan`
 
 ## era 2000, cluster 25
 - `Caesar` -> `Julius Caesar`
 - `Venice` -> `Merchant of Venice`
+- `York` -> `New York`
 
 ## era 2000, cluster 26
 - `Twain` -> `Mark Twain`
 - `Fitzgerald` -> `Scott Fitzgerald`
-- `Stevenson` -> `Robert Louis Stevenson`
-- `Grisham` -> `John Grisham`
+- `Poe` -> `Edgar Allan Poe`
+- `Buck` -> `Pearl Buck`
 
 ## era 2000, cluster 27
 - `Olympics` -> `Olympic`
@@ -638,11 +616,9 @@ draft: true
 
 ## era 2000, cluster 29
 - `Impressionists` -> `Impressionist`
-- `Warhol` -> `Andy Warhol`
-- `Chagall` -> `Marc Chagall`
-- `Cassatt` -> `Mary Cassatt`
-- `Duchamp` -> `Marcel Duchamp`
-- `Calder` -> `Alexander Calder`
+- `Dali` -> `Salvador Dali`
+- `Seurat` -> `Georges Seurat`
+- `Matisse` -> `Henri Matisse`
 
 ## era 2000, cluster 30
 - `Americans` -> `American`
@@ -664,28 +640,30 @@ draft: true
 
 ## era 2000, cluster 35
 - `Reagan` -> `Ronald Reagan`
-- `Ford` -> `Gerald Ford`
 - `Carter` -> `Jimmy Carter`
-- `Jackson` -> `Andrew Jackson`
+- `Ford` -> `Gerald Ford`
 - `Jefferson` -> `Thomas Jefferson`
 - `Wilson` -> `Woodrow Wilson`
-- `Cleveland` -> `Grover Cleveland`
-- `Democrats` -> `Democrat`
 - `Van Buren` -> `Martin Van Buren`
+- `Democrats` -> `Democrat`
+- `Hoover` -> `Herbert Hoover`
 - `Tyler` -> `John Tyler`
 
 ## era 2000, cluster 36
 - `Pennsylvania` -> `University of Pennsylvania`
-- `Miami` -> `University of Miami`
+- `England` -> `New England`
 
 ## era 2000, cluster 37
+- `Bell` -> `Alexander Graham Bell`
 - `Franklin` -> `Ben Franklin`
+- `Mendel` -> `Gregor Mendel`
+- `Halley` -> `Edmond Halley`
+- `Pavlov` -> `Ivan Pavlov`
 
 ## era 2000, cluster 38
 - `Americans` -> `American`
-- `Jefferson` -> `Thomas Jefferson`
+- `Jackson` -> `Andrew Jackson`
 - `Native Americans` -> `Native American`
-- `Hamilton` -> `Alexander Hamilton`
 
 ## era 2000, cluster 39
 - `Americans` -> `American`
@@ -697,17 +675,14 @@ draft: true
 ## era 2000, cluster 43
 - `Americans` -> `American`
 - `Marx` -> `Karl Marx`
-- `Twain` -> `Mark Twain`
 - `Paine` -> `Thomas Paine`
 - `Nixon` -> `Richard Nixon`
-- `Martin Luther` -> `Martin Luther King`
+- `Jefferson` -> `Thomas Jefferson`
 - `War` -> `Civil War`
-- `Caesar` -> `Julius Caesar`
 
 ## era 2000, cluster 44
 - `Romans` -> `Roman`
 - `Sagan` -> `Carl Sagan`
-- `Brahe` -> `Tycho Brahe`
 
 ## era 2000, cluster 45
 - `Americans` -> `American`
@@ -737,7 +712,7 @@ draft: true
 - `Red Cross` -> `American Red Cross`
 
 ## era 2010, cluster 0
-- `Austen` -> `Jane Austen`
+- `Hemingway` -> `Ernest Hemingway`
 
 ## era 2010, cluster 1
 - `Soviets` -> `Soviet`
@@ -756,6 +731,7 @@ draft: true
 ## era 2010, cluster 3
 - `Americans` -> `American`
 - `Adams` -> `John Quincy Adams`
+- `Einstein` -> `Albert Einstein`
 
 ## era 2010, cluster 4
 - `New York` -> `New York City`
@@ -769,20 +745,16 @@ draft: true
 - `Dodger` -> `Dodgers`
 - `Packers` -> `Green Bay Packers`
 - `Ali` -> `Muhammad Ali`
-- `Braves` -> `Atlanta Braves`
+- `Cowboys` -> `Dallas Cowboys`
 
 ## era 2010, cluster 6
 - `Christians` -> `Christian`
 - `Psalm` -> `Psalms`
 - `Romans` -> `Roman`
 - `Muslim` -> `Muslims`
-- `Pilate` -> `Pontius Pilate`
 
 ## era 2010, cluster 7
 - `Washington` -> `George Washington`
-
-## era 2010, cluster 8
-- `Dior` -> `Christian Dior`
 
 ## era 2010, cluster 9
 - `Williams` -> `William`
@@ -799,25 +771,23 @@ draft: true
 ## era 2010, cluster 12
 - `Frost` -> `Robert Frost`
 - `Dickinson` -> `Emily Dickinson`
-- `Donne` -> `John Donne`
-- `Edgar Allan` -> `Edgar Allan Poe`
-- `Plath` -> `Sylvia Plath`
-- `Blake` -> `William Blake`
-- `Lazarus` -> `Emma Lazarus`
+- `Whitman` -> `Walt Whitman`
 
 ## era 2010, cluster 13
-- `Curie` -> `Marie Curie`
 - `Olympic` -> `Olympics`
+- `Ginsburg` -> `Ruth Bader Ginsburg`
 - `Lincoln` -> `Mary Todd Lincoln`
-- `Mead` -> `Margaret Mead`
 
 ## era 2010, cluster 14
 - `Greeks` -> `Greek`
+- `Wales` -> `New South Wales`
 
 ## era 2010, cluster 15
 - `Emmys` -> `Emmy`
 - `Oscars` -> `Oscar`
+- `Americans` -> `American`
 - `Golden Globe` -> `Golden Globes`
+- `Nine` -> `Brooklyn Nine`
 
 ## era 2010, cluster 16
 - `Greeks` -> `Greek`
@@ -836,7 +806,6 @@ draft: true
 ## era 2010, cluster 19
 - `Oscars` -> `Oscar`
 - `Washington` -> `Denzel Washington`
-- `Ford` -> `Harrison Ford`
 
 ## era 2010, cluster 20
 - `Brit` -> `Brits`
@@ -852,13 +821,14 @@ draft: true
 
 ## era 2010, cluster 23
 - `Strauss` -> `Richard Strauss`
+- `Grieg` -> `Edvard Grieg`
 - `Holst` -> `Gustav Holst`
+- `Bernstein` -> `Leonard Bernstein`
 
 ## era 2010, cluster 24
 - `Greeks` -> `Greek`
 - `Romans` -> `Roman`
 - `Egyptians` -> `Egyptian`
-- `Great` -> `Alexander the Great`
 - `Persians` -> `Persian`
 
 ## era 2010, cluster 25
@@ -866,8 +836,7 @@ draft: true
 - `Venice` -> `Merchant of Venice`
 
 ## era 2010, cluster 26
-- `Twain` -> `Mark Twain`
-- `Tom` -> `Uncle Tom`
+- `Fitzgerald` -> `Scott Fitzgerald`
 
 ## era 2010, cluster 27
 - `Olympics` -> `Olympic`
@@ -878,10 +847,9 @@ draft: true
 - `George` -> `Curious George`
 
 ## era 2010, cluster 29
-- `Chagall` -> `Marc Chagall`
-- `Hopper` -> `Edward Hopper`
-- `Duchamp` -> `Marcel Duchamp`
+- `Munch` -> `Edvard Munch`
 - `Norman Rockwell` -> `Norman Rockwell Museum`
+- `Matisse` -> `Henri Matisse`
 
 ## era 2010, cluster 30
 - `New York` -> `New York City`
@@ -898,7 +866,7 @@ draft: true
 
 ## era 2010, cluster 33
 - `Oscars` -> `Oscar`
-- `Washington` -> `Denzel Washington`
+- `Bond` -> `James Bond`
 
 ## era 2010, cluster 35
 - `Republicans` -> `Republican`
@@ -906,18 +874,25 @@ draft: true
 - `Jackson` -> `Andrew Jackson`
 - `Ford` -> `Gerald Ford`
 - `Carter` -> `Jimmy Carter`
-- `Gore` -> `Al Gore`
+- `Wilson` -> `Woodrow Wilson`
+- `Truman` -> `Harry Truman`
+- `Jefferson` -> `Thomas Jefferson`
 - `Democrats` -> `Democrat`
-- `Cleveland` -> `Grover Cleveland`
 - `Van Buren` -> `Martin Van Buren`
-- `Mondale` -> `Walter Mondale`
 
 ## era 2010, cluster 36
 - `Pennsylvania` -> `University of Pennsylvania`
+- `Oregon` -> `University of Oregon`
+
+## era 2010, cluster 37
+- `Mendel` -> `Gregor Mendel`
+- `Crick` -> `Francis Crick`
 
 ## era 2010, cluster 38
 - `Americans` -> `American`
+- `Jefferson` -> `Thomas Jefferson`
 - `Native Americans` -> `Native American`
+- `Jackson` -> `Andrew Jackson`
 
 ## era 2010, cluster 39
 - `Americans` -> `American`
@@ -925,6 +900,7 @@ draft: true
 ## era 2010, cluster 40
 - `Americans` -> `American`
 - `House` -> `White House`
+- `Marshall` -> `Thurgood Marshall`
 
 ## era 2010, cluster 41
 - `Speedway` -> `Las Vegas Motor Speedway`
@@ -932,14 +908,14 @@ draft: true
 ## era 2010, cluster 43
 - `Americans` -> `American`
 - `Paine` -> `Thomas Paine`
+- `Jefferson` -> `Thomas Jefferson`
+- `Emerson` -> `Ralph Waldo Emerson`
 - `Nixon` -> `Richard Nixon`
 - `War` -> `Civil War`
-- `Sartre` -> `Paul Sartre`
 
 ## era 2010, cluster 44
 - `Greeks` -> `Greek`
 - `Romans` -> `Roman`
-- `Sagan` -> `Carl Sagan`
 
 ## era 2010, cluster 45
 - `Americans` -> `American`
@@ -970,7 +946,7 @@ draft: true
 
 ## era 2020, cluster 0
 - `Joyce` -> `James Joyce`
-- `Austen` -> `Jane Austen`
+- `Eliot` -> `George Eliot`
 
 ## era 2020, cluster 1
 - `Soviets` -> `Soviet`
@@ -985,7 +961,6 @@ draft: true
 
 ## era 2020, cluster 3
 - `Americans` -> `American`
-- `Ralph` -> `Sheryl Lee Ralph`
 
 ## era 2020, cluster 4
 - `New York` -> `New York City`
@@ -1002,7 +977,6 @@ draft: true
 - `Muslim` -> `Muslims`
 - `Psalm` -> `Psalms`
 - `Galilee` -> `Sea of Galilee`
-- `Pilate` -> `Pontius Pilate`
 
 ## era 2020, cluster 7
 - `Wednesday` -> `Ash Wednesday`
@@ -1021,16 +995,14 @@ draft: true
 ## era 2020, cluster 12
 - `Frost` -> `Robert Frost`
 - `Dickinson` -> `Emily Dickinson`
-- `Lear` -> `Edward Lear`
 - `Plath` -> `Sylvia Plath`
+- `Lear` -> `Edward Lear`
 - `Blake` -> `William Blake`
-- `Lazarus` -> `Emma Lazarus`
-- `Burns` -> `Robert Burns`
 - `Sandburg` -> `Carl Sandburg`
+- `Dickens` -> `Charles Dickens`
 
 ## era 2020, cluster 13
 - `House` -> `White House`
-- `Curie` -> `Marie Curie`
 - `Kennedy` -> `Jacqueline Kennedy`
 
 ## era 2020, cluster 14
@@ -1052,15 +1024,15 @@ draft: true
 
 ## era 2020, cluster 17
 - `Tonys` -> `Tony`
-- `Simon` -> `Neil Simon`
 
 ## era 2020, cluster 18
 - `American` -> `Native American`
 - `England` -> `New England`
+- `Vegas` -> `Las Vegas`
 
 ## era 2020, cluster 19
 - `Oscars` -> `Oscar`
-- `Washington` -> `Denzel Washington`
+- `Bond` -> `James Bond`
 
 ## era 2020, cluster 20
 - `Brit` -> `Brits`
@@ -1078,6 +1050,7 @@ draft: true
 - `England` -> `New England`
 
 ## era 2020, cluster 23
+- `Debussy` -> `Claude Debussy`
 - `Figaro` -> `Marriage of Figaro`
 
 ## era 2020, cluster 24
@@ -1086,28 +1059,32 @@ draft: true
 - `Egyptians` -> `Egyptian`
 - `Etruscans` -> `Etruscan`
 - `Persian` -> `Persians`
-- `Caesar` -> `Julius Caesar`
-- `Great` -> `Alexander the Great`
 
 ## era 2020, cluster 25
 - `Caesar` -> `Julius Caesar`
 - `Verona` -> `Two Gentlemen of Verona`
 - `Venice` -> `Merchant of Venice`
 
+## era 2020, cluster 26
+- `Fitzgerald` -> `Scott Fitzgerald`
+
 ## era 2020, cluster 27
 - `Olympics` -> `Olympic`
 - `Mario` -> `Super Mario`
+- `Catan` -> `Settlers of Catan`
 
 ## era 2020, cluster 28
 - `Oz` -> `Wizard of Oz`
 - `Smith` -> `Dodie Smith`
 
 ## era 2020, cluster 29
-- `Hopper` -> `Edward Hopper`
+- `Munch` -> `Edvard Munch`
 - `Warhol` -> `Andy Warhol`
+- `Dal` -> `Salvador Dal`
 
 ## era 2020, cluster 30
 - `American` -> `Americans`
+- `Devil Dog` -> `Devil Dog Diner`
 
 ## era 2020, cluster 31
 - `Emmys` -> `Emmy`
@@ -1125,23 +1102,26 @@ draft: true
 
 ## era 2020, cluster 35
 - `Jackson` -> `Andrew Jackson`
-- `Cleveland` -> `Grover Cleveland`
 - `Reagan` -> `Ronald Reagan`
 - `Ford` -> `Gerald Ford`
+- `Cleveland` -> `Grover Cleveland`
 - `Obama` -> `Barack Obama`
+- `Wilson` -> `Woodrow Wilson`
 - `Washington` -> `George Washington`
-- `Gore` -> `Al Gore`
 - `Carter` -> `Jimmy Carter`
 - `Biden` -> `Joe Biden`
 
-## era 2020, cluster 36
-- `Mississippi` -> `University of Mississippi`
+## era 2020, cluster 37
+- `Pasteur` -> `Louis Pasteur`
+- `Tesla` -> `Nikola Tesla`
+- `Crick` -> `Francis Crick`
 
 ## era 2020, cluster 38
 - `Americans` -> `American`
 - `Native Americans` -> `Native American`
 - `Jefferson` -> `Thomas Jefferson`
 - `England` -> `New England`
+- `Jackson` -> `Andrew Jackson`
 
 ## era 2020, cluster 39
 - `Americans` -> `American`
@@ -1153,11 +1133,13 @@ draft: true
 
 ## era 2020, cluster 41
 - `Royce` -> `Rolls Royce`
+- `V` -> `Saturn V`
 
 ## era 2020, cluster 43
 - `Greeks` -> `Greek`
 - `Jefferson` -> `Thomas Jefferson`
 - `Martin Luther` -> `Martin Luther King`
+- `Kant` -> `Immanuel Kant`
 
 ## era 2020, cluster 44
 - `Romans` -> `Roman`
@@ -1166,7 +1148,6 @@ draft: true
 ## era 2020, cluster 45
 - `Neanderthals` -> `Neanderthal`
 - `American` -> `Americans`
-- `Jung` -> `Carl Jung`
 
 ## era 2020, cluster 46
 - `Great Lake` -> `Great Lakes`
@@ -1180,7 +1161,7 @@ draft: true
 ## era 2020, cluster 48
 - `Romans` -> `Roman`
 - `Britain` -> `Great Britain`
-- `Pisa` -> `Leonardo of Pisa`
+- `Pisa` -> `Fibonacci Leonardo of Pisa`
 
 ## era 2020, cluster 49
 - `Darwin` -> `Charles Darwin`
