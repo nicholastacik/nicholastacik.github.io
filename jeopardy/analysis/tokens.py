@@ -96,7 +96,9 @@ def extract_phrases(text):
     word immediately followed by "'t" is a contraction stem (e.g. "Don't" ->
     "Don"), not an entity, and is skipped.
     """
-    text = text or ""
+    # Strip parentheses so J-Archive's optional answer parts join into one name:
+    # "(Henry) Fielding" -> "Henry Fielding", not bare "Henry" + "Fielding".
+    text = (text or "").replace("(", "").replace(")", "")
     out = []
     for m in _PHRASE_RE.finditer(text):
         tail = text[m.end():m.end() + 2]
