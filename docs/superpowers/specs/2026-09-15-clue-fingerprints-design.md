@@ -22,15 +22,23 @@ different selections over the *same* clues. So store each clue **once** and have
 selection rule. This supersedes the earlier (rejected) "fold sample clues into fingerprints" idea,
 which would have collapsed the quiz pool.
 
-### 1. `category_clues.parquet` — the shared clue store
-Per cluster, the deduped pool of clues that resolve to a displayed entity (plus the general pool).
-One row per clue:
-`clue_id, cluster_id, phrase, clue, answer, year, category, game_id, round, row, column`
+### 1. `clues_store.parquet` — intrinsic clue fields (identity only, no cluster/entity)
+A physical clue can belong to its original cluster **and** to Misc (≈20k such clues), so
+`cluster_id`/`phrase` must NOT live on the clue — they belong on the references (§1b). The store
+holds each distinct clue once, keyed by identity:
+`clue_id, clue, answer, year, category, game_id, round, row, column`
 - **`clue_id`** = stable per-clue identity `"{game_id}:{round}:{row}:{column}"` (game_id alone
   identifies a game, not a clue). Final-Jeopardy clues (null row/column) use `row=col=0`.
-- **`phrase`** = the resolved canonical entity, or null for the general (un-highlighted) pool.
 - `category` is kept — the original Jeopardy category often carries essential constraints and the
   quiz already displays it.
+
+### 1b. References — `(cluster_id, phrase)` → clue IDs (carry the context)
+Cluster/entity membership lives here, so the same `clue_id` can be referenced from its original
+cluster's entity **and** from Misc:
+- **Quiz refs** (replacing `category_sample_clues`): per `(cluster_id, phrase)` its date-eligible
+  clue IDs, and per `cluster_id` the general (`phrase=null`) clue IDs — both selection rules
+  preserved, now as ID lists.
+- **Fingerprint refs**: see §3 (`example_clue_ids` per `(cluster_id, phrase)`).
 
 ### 2. Resolution & the window contract (explicit)
 - **Clue → entity provenance** is deterministic and window-aware without blind dict-union: resolve
@@ -58,18 +66,21 @@ One row per `(cluster_id, phrase)`, nested lists (resolves the earlier one-row-v
 - Keep at most 6 cues, **require `support >= 2`** (genuinely recurring), and **allow fewer than 6**
   (or zero). Drop a unigram that is fully subsumed by a kept bigram (keep "Tom Sawyer", drop "Tom"
   and "Sawyer"); drop the entity's own name tokens and a small Jeopardy-filler stoplist.
-- **`example_clue_ids`**: up to ~4 representative clue IDs (ranked by cue coverage) so the
-  window-aware, recency-preserving filter in the tool still has candidates in recent windows.
+- **`example_clue_ids`**: selected as **the entity's single newest clue, plus up to 3 more ranked
+  by cue coverage, deduplicated**. Ranking by coverage alone does not guarantee a recent candidate
+  (all top-coverage clues could be old); reserving the newest at build time does. With cumulative
+  windows this guarantees the tool's window filter has a recent-eligible example whenever one
+  exists in the corpus.
 
 Built by a new offline CLI command **`fingerprints`** (`jeopardy/analysis/fingerprints.py`),
-which also writes `category_clues.parquet`. Reuses `_cluster_resolution` for provenance so
+which also writes `clues_store.parquet` and the quiz refs. Reuses `_cluster_resolution` for provenance so
 fingerprints, the clue store, and the displayed entities stay consistent. Only entities in
 `category_tokens.parquet` get a fingerprint.
 
 **J-Archive link:** `https://www.j-archive.com/showgame.php?game_id={game_id}` per example clue.
 
 ### Relationship to the existing sample-clue feature
-`category_sample_clues.parquet` is replaced by references into `category_clues.parquet`: the quiz
+`category_sample_clues.parquet` is replaced by references into `clues_store.parquet`: the quiz
 keeps **both** its per-entity date-eligible selection **and** the general pool (coverage and the
 un-highlighted "any answer" behavior are unchanged), now expressed as clue-ID lists. Net effect on
 page size is roughly neutral (clue text stored once, referenced twice).
@@ -79,8 +90,8 @@ page size is roughly neutral (clue text stored once, referenced twice).
   in this project): no fingerprint block; fall through to Wikipedia with a neutral note
   ("shows up in clues but is rarely the answer"). Absence of answer examples does **not** imply
   misclassification.
-- **1 clue:** show it as the single example; cues only if a term still repeats within it (rare) —
-  otherwise show the example with no cue chips.
+- **1 clue:** show it as the single example with **no cue chips** — a cue requires `support >= 2`
+  *distinct* clues, so a single clue never yields recurring cues regardless of repeated words.
 - **No qualifying repeated terms:** show example clues with no cue chips (cues are optional).
 
 ## Tool UI (detail pane)
@@ -91,13 +102,19 @@ and must survive the failure/hang of, the Wikipedia request:
 2. THEN kick off the async Wikipedia fetch and render its summary **below** when it resolves; on
    failure, the fingerprint remains fully usable.
 
-Embedded as `clues` (id → fields), `fingerprints` (cluster → phrase → {cues, example_clue_ids}),
-and the quiz's clue-ID references, in the research JSON payload. The tool looks up clue text by ID.
+Embedded in the research JSON as: `fingerprints` (cluster → phrase → {cues, example_clue_ids}),
+the quiz refs (cluster → phrase/general → clue IDs), and a `clues` map (id → fields) containing
+**only the union of clue IDs actually referenced** by a fingerprint example or a quiz ref — never
+the full pool (see size). The tool looks up clue text by ID.
 
 ## Reproducibility & size
-`category_clues.parquet` + `category_fingerprints.parquet` are committed, regenerated by
-`jeopardy fingerprints` (offline; deterministic — TF-IDF is stable, no RNG). Verify the embedded
-page stays near ~3 MB after build; trim cue/example caps if it exceeds ~3.5 MB.
+`clues_store.parquet` (full pool), the quiz refs, and `category_fingerprints.parquet` are
+committed, regenerated by `jeopardy fingerprints` (offline; deterministic — TF-IDF is stable, no
+RNG). The full clue pool (~33k answer-clues, ~2.9 MB of text alone) stays in the **offline**
+artifact; the **embedded** page carries only the union of *referenced* clue IDs (fingerprint
+examples + quiz selections) — pruning unreferenced clues is what actually bounds size (trimming
+example/cue caps does not, if unreferenced clues remain). Verify the page stays near ~3 MB; if it
+exceeds ~3.5 MB, lower the per-entity example/quiz caps (fewer referenced IDs).
 
 ## Testing
 - Cue extraction: a repeated distinctive term surfaces with correct `support`/`total`; the
@@ -105,8 +122,11 @@ page stays near ~3 MB after build; trim cue/example caps if it exceeds ~3.5 MB.
   a unigram subsumed by a kept bigram is dropped; zero/one-clue and no-repeated-term states behave.
 - Clue store / provenance: `clue_id` is stable and unique per clue; a merged-answer clue attaches
   to the canonical entity; a recent-only entity is covered; `category`/`game_id`/`year` present.
-- Window contract: example filtering keeps `year >= cutoff` and always includes the newest
-  eligible clue; falls back (labeled) when none eligible.
+- Window contract: `example_clue_ids` always includes the entity's newest clue even when several
+  older clues have higher cue coverage; the tool's filter keeps `year >= cutoff` incl. the newest
+  eligible, and falls back (labeled) when none eligible.
+- Embed pruning: the `clues` payload contains exactly the union of referenced IDs — no unreferenced
+  clue is embedded.
 - Research build: payload has `clues` + `fingerprints`; `render_html` contains cue-chip + J-Archive
   markup; existing render tests still pass.
 - **Offline browser check** (new): with network/Wikipedia blocked, fingerprints still render and
@@ -119,7 +139,7 @@ page stays near ~3 MB after build; trim cue/example caps if it exceeds ~3.5 MB.
 
 ## Decisions (settled per spec review)
 1. Cue method = distinctive TF-IDF terms **with support counts** + example clues + J-Archive links.
-2. **Shared clue store** (`category_clues.parquet`, stable `clue_id`); fingerprints and quiz both
+2. **Shared clue store** (`clues_store.parquet`, stable `clue_id`, intrinsic fields only); fingerprints and quiz both
    reference IDs but keep separate selection rules; quiz retains per-entity + general pools.
 3. Cues all-time; **examples window-aware with the newest-eligible guarantee**.
 4. Fingerprint renders immediately and independently of Wikipedia (which loads below, async).
