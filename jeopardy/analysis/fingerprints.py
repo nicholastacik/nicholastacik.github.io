@@ -146,8 +146,15 @@ def run_fingerprints(min_freq=5):
     clusters = pd.concat([clusters, misc], ignore_index=True)
     decisions = load_entity_decisions(config.ENTITY_DECISIONS_PATH)
     store, entity_clues, quiz_refs = build_clue_index(
-        clusters, clues, decisions, quiz_k=1, quiz_general_n=2, min_freq=min_freq)
-    cues = build_cues(entity_clues, n_cues=6, n_examples=1)
+        clusters, clues, decisions, quiz_k=2, quiz_general_n=12, min_freq=min_freq)
+    cues = build_cues(entity_clues, n_cues=6, n_examples=4)
+
+    tokens = pd.read_parquet(config.CATEGORY_TOKENS_PATH)
+    displayed = {(int(c), p) for c, p in zip(tokens["cluster_id"], tokens["phrase"])}
+    cues = {k: v for k, v in cues.items() if k in displayed}
+    quiz_refs = {cid: {ph: ids for ph, ids in refs.items()
+                       if ph is None or (int(cid), ph) in displayed}
+                 for cid, refs in quiz_refs.items()}
 
     quiz_rows = [{"cluster_id": cid, "phrase": ph, "clue_ids": ids}
                  for cid, refs in quiz_refs.items() for ph, ids in refs.items()]
@@ -164,6 +171,8 @@ def run_fingerprints(min_freq=5):
 
     config.CLUES_STORE_PATH.parent.mkdir(parents=True, exist_ok=True)
     store.to_parquet(config.CLUES_STORE_PATH, index=False)
-    pd.DataFrame(quiz_rows).to_parquet(config.CATEGORY_QUIZ_REFS_PATH, index=False)
-    pd.DataFrame(fp_rows).to_parquet(config.CATEGORY_FINGERPRINTS_PATH, index=False)
+    pd.DataFrame(quiz_rows, columns=["cluster_id", "phrase", "clue_ids"]).to_parquet(
+        config.CATEGORY_QUIZ_REFS_PATH, index=False)
+    pd.DataFrame(fp_rows, columns=["cluster_id", "phrase", "cues", "example_clue_ids"]).to_parquet(
+        config.CATEGORY_FINGERPRINTS_PATH, index=False)
     print(f"Wrote {len(store):,} clues, {len(quiz_rows):,} quiz refs, {len(fp_rows):,} fingerprints")

@@ -43,7 +43,6 @@ ERA_CUTOFFS = [1980, 1990, 2000, 2010, 2020]
 CATEGORY_ERAS_PATH = _POST_DIR / "category_eras.parquet"
 DEDUP_MERGES_PATH = _POST_DIR / "notes" / "dedup-merges.md"
 ENTITY_DECISIONS_PATH = _POST_DIR / "entity_decisions.csv"
-CATEGORY_SAMPLE_CLUES_PATH = _POST_DIR / "category_sample_clues.parquet"
 CLUES_STORE_PATH = _POST_DIR / "clues_store.parquet"
 CATEGORY_QUIZ_REFS_PATH = _POST_DIR / "category_quiz_refs.parquet"
 CATEGORY_FINGERPRINTS_PATH = _POST_DIR / "category_fingerprints.parquet"
