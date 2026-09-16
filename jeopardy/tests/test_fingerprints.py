@@ -1,5 +1,5 @@
 import pandas as pd
-from jeopardy.analysis.fingerprints import clue_ids, build_clue_index
+from jeopardy.analysis.fingerprints import clue_ids, build_clue_index, build_cues
 
 _D = pd.Timestamp("2005-06-01")
 
@@ -50,3 +50,39 @@ def test_quiz_refs_map_merged_answer_to_canonical_and_keep_general():
     ids = set(store["clue_id"])
     assert all(cid in ids for cid in refs["Vincent van Gogh"])   # refs point into the store
     assert ("Vincent van Gogh") in {p for (c, p) in entity_clues}  # full pool captured for cues
+
+
+def _mk(cid, phrase, clues):
+    return {(cid, phrase): [{"clue_id": f"{cid}:{phrase}:{i}", "year": 2000 + i, "clue": c}
+                            for i, c in enumerate(clues)]}
+
+
+def test_cue_needs_two_distinct_clues_with_support_counts():
+    # "Hannibal" recurs across 3 of Mark Twain's 4 clues; a one-off word does not qualify.
+    ec = _mk(0, "Mark Twain", [
+        "Born in Hannibal Missouri", "This Hannibal native", "The Hannibal author", "A riverboat pilot",
+    ])
+    ec.update(_mk(0, "Other", ["totally unrelated widget gadget"]))  # corpus contrast
+    fp = build_cues(ec, n_cues=6, n_examples=4)[(0, "Mark Twain")]
+    hann = [c for c in fp["cues"] if c["term"] == "hannibal"]
+    assert hann and hann[0]["support"] == 3 and hann[0]["total"] == 4
+    assert all(c["support"] >= 2 for c in fp["cues"])
+    assert "twain" not in [c["term"] for c in fp["cues"]]   # entity's own name excluded
+
+
+def test_single_clue_entity_has_no_cues():
+    ec = _mk(0, "Solo", ["the same the same the same word word"])
+    ec.update(_mk(0, "Filler", ["different other text here"]))
+    fp = build_cues(ec)[(0, "Solo")]
+    assert fp["cues"] == []                       # one clue -> never a recurring cue
+    assert fp["example_clue_ids"] == ["0:Solo:0"]  # the one clue is the example
+
+
+def test_example_ids_reserve_the_newest_even_with_low_coverage():
+    # 3 old clues heavy with cue terms, 1 newest clue with none: newest must still be an example.
+    ec = _mk(0, "Ex", [
+        "cue cue cue alpha", "cue cue beta", "cue cue gamma", "totally different newest",
+    ])
+    ec.update(_mk(0, "Filler2", ["xxxx yyyy zzzz"]))
+    fp = build_cues(ec, n_cues=6, n_examples=4)[(0, "Ex")]
+    assert "0:Ex:3" in fp["example_clue_ids"]      # newest (index 3) reserved
