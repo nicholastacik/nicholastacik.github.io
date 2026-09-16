@@ -96,10 +96,42 @@ def test_stopword_spanning_bigram_df_aligns_with_vectorizer():
     assert "bell tolls" not in [c["term"] for c in fp["cues"]]   # generic across cluster -> gated
 
 
+def test_select_cues_evicts_unigram_ranked_before_its_bigram():
+    # "sawyer" (rank 0) is kept first, then "tom sawyer" (rank 1) evicts it; a freed slot refills
+    # from the next distinct term. No unigram/bigram redundancy in either ranking order.
+    from jeopardy.analysis.fingerprints import _select_cues
+    cand = [{"term": t, "support": 2, "total": 3} for t in
+            ["sawyer", "tom sawyer", "hannibal", "finn", "twain river", "twain"]]
+    kept = [c["term"] for c in _select_cues(cand, 6)]
+    assert "tom sawyer" in kept and "sawyer" not in kept   # bigram evicts the earlier unigram
+    assert "twain river" in kept and "twain" not in kept    # unigram after its bigram also skipped
+    assert len(kept) == 4                                    # sawyer/twain removed, no dup refill available
+
+
+def test_all_time_resolution_keeps_clues_across_years():
+    # An entity resolvable at all-time must retain ALL its clues (old + new); the per-window
+    # setdefault loop must not let a recent window overwrite the all-time mapping and strip clues.
+    clusters = pd.concat([_clusters(),
+                          pd.DataFrame([{"game_id": 500, "round": "Jeopardy", "category": "ART",
+                                         "cluster_id": 0}])], ignore_index=True)
+    clues = _clues()  # 8 clues 2005 -> "Vincent van Gogh"
+    recent = clues.iloc[[0]].copy()
+    recent["game_id"] = 500
+    recent["air_date"] = pd.Timestamp("2024-01-01")
+    clues = pd.concat([clues, recent], ignore_index=True)
+    store, entity_clues, quiz_refs = build_clue_index(clusters, clues, decisions={}, min_freq=5)
+    vg = [k for k in entity_clues if k[1] == "Vincent van Gogh"]
+    assert vg
+    years = {r["year"] for r in entity_clues[vg[0]]}
+    assert 2024 in years and 2005 in years   # newest clue not lost to a window overwrite
+
+
 def test_generic_gate_skipped_for_small_clusters():
     # With too few entities, DF isn't a reliable generic signal, so the gate is skipped and a
     # legitimately recurring term survives even at 100% cluster frequency.
-    ec = _mk(0, "Solo", ["rare widget here", "rare widget again", "the widget"])
+    # "widget" recurs across the entity's clues with a DIFFERENT neighbor each time, so no bigram
+    # repeats to suppress it -> the bare unigram is the cue, and the small-cluster gate is skipped.
+    ec = _mk(0, "Solo", ["alpha widget one", "beta widget two", "gamma widget three"])
     ec.update(_mk(0, "Other", ["unrelated text entirely"]))
     fp = build_cues(ec, n_cues=6, n_examples=4, generic_min_entities=10)[(0, "Solo")]
     assert "widget" in [c["term"] for c in fp["cues"]]   # gate skipped (2 < 10 entities)
