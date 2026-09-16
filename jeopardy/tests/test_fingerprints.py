@@ -25,14 +25,21 @@ def test_clue_ids_stable_and_unique():
     ids = clue_ids(_clues())
     assert ids.iloc[0] == "0:Jeopardy:1:1"
     assert ids.nunique() == len(ids)  # each (game,round,row,col) distinct here
+    fj = pd.DataFrame([{"game_id": 5, "round": "Final", "row": None, "column": None,
+                        "air_date": _D, "clue": "final", "answer": "z"}])
+    assert clue_ids(fj).iloc[0] == "5:Final:0:0"   # null row/col -> 0
 
 
 def test_store_has_intrinsic_fields_only_and_deduped():
-    store, entity_clues, quiz_refs = build_clue_index(_clusters(), _clues(), decisions={}, min_freq=5)
+    clues = _clues()
+    dup = clues.iloc[[0]].copy()   # same game_id/round/row/column -> same clue_id
+    clues = pd.concat([clues, dup], ignore_index=True)
+    store, entity_clues, quiz_refs = build_clue_index(_clusters(), clues, decisions={}, min_freq=5)
     assert list(store.columns) == ["clue_id", "clue", "answer", "year", "category",
                                    "game_id", "round", "row", "column"]
     assert "cluster_id" not in store.columns and "phrase" not in store.columns
-    assert store["clue_id"].is_unique
+    assert store["clue_id"].is_unique                      # the injected duplicate collapsed
+    assert (store["clue_id"] == "0:Jeopardy:1:1").sum() == 1
 
 
 def test_quiz_refs_map_merged_answer_to_canonical_and_keep_general():
