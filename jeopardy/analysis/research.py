@@ -760,9 +760,9 @@ _HTML_TEMPLATE = """<!doctype html>
           const examples = (fp.exampleClueIds || []).map(clueById).filter(Boolean)
             .filter(c => c.year >= currentEra);
           const shown = examples.length ? examples
-            : (fp.exampleClueIds || []).map(clueById).filter(Boolean).slice(-1);
+            : (fp.exampleClueIds || []).map(clueById).filter(Boolean).slice(0, 1);
           shown.slice(0, 3).forEach(c => {
-            const url = DATA.jarchive.replace('{game_id}', c.game_id);
+            const url = escapeHtml(DATA.jarchive.replace('{game_id}', c.game_id));
             html += `<div class="fp-clue"><p class="clue-text">${escapeHtml(c.clue)}</p>` +
               `<p class="meta">${escapeHtml(c.answer)} &middot; ${escapeHtml(c.category)} &middot; ${c.year} ` +
               `&middot; <a class="j-archive" href="${url}" target="_blank" rel="noopener">J-Archive &#8599;</a></p></div>`;
@@ -781,8 +781,13 @@ _HTML_TEMPLATE = """<!doctype html>
         renderMain();
         renderFingerprint(entity);
         if (window.matchMedia('(max-width: 980px)').matches) detailPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        let summary = wikiCache.has(entity.phrase) ? wikiCache.get(entity.phrase) : await fetchWiki(entity.phrase);
-        wikiCache.set(entity.phrase, summary);
+        let summary;
+        if (wikiCache.has(entity.phrase)) {
+          summary = wikiCache.get(entity.phrase);
+        } else {
+          summary = await fetchWiki(entity.phrase);
+          wikiCache.set(entity.phrase, summary);
+        }
         if (selectedEntity !== entity) return;
         const slot = document.getElementById('wiki-slot');
         if (!slot) return;
