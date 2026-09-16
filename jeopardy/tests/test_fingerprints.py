@@ -126,3 +126,33 @@ def test_select_cues_drops_unigram_only_for_a_surviving_bigram():
              {"term": "river", "support": 2, "total": 3}]
     kept2 = [c["term"] for c in _select_cues(cand2, n_cues=6)]
     assert kept2 == ["tom sawyer", "river"]
+
+
+def test_run_fingerprints_store_is_pruned_to_referenced(tmp_path, monkeypatch):
+    import jeopardy.analysis.fingerprints as fp
+    clusters = _clusters()
+    clusters["centroid_dist"] = 0.0
+    clues = _clues()
+    # one extra clue that resolves to NO displayed entity and is not in any general sample cap
+    # -> must NOT appear in the written store.
+    extra = pd.DataFrame([{"game_id": 999, "round": "Jeopardy", "category": "ART", "row": 5.0,
+                           "column": 5.0, "air_date": _D, "clue": "orphan clue", "answer": "nobody"}])
+    clues = pd.concat([clues, extra], ignore_index=True)
+
+    monkeypatch.setattr(fp.config, "CATEGORY_CLUSTERS_PATH", tmp_path / "cl.parquet")
+    monkeypatch.setattr(fp.config, "PARQUET_PATH", tmp_path / "clues.parquet")
+    monkeypatch.setattr(fp.config, "ENTITY_DECISIONS_PATH", tmp_path / "dec.csv")
+    monkeypatch.setattr(fp.config, "CLUES_STORE_PATH", tmp_path / "store.parquet")
+    monkeypatch.setattr(fp.config, "CATEGORY_QUIZ_REFS_PATH", tmp_path / "qr.parquet")
+    monkeypatch.setattr(fp.config, "CATEGORY_FINGERPRINTS_PATH", tmp_path / "fp.parquet")
+    clusters.to_parquet(tmp_path / "cl.parquet")
+    clues.to_parquet(tmp_path / "clues.parquet")
+
+    fp.run_fingerprints(min_freq=5)
+    store = pd.read_parquet(tmp_path / "store.parquet")
+    qr = pd.read_parquet(tmp_path / "qr.parquet")
+    fpr = pd.read_parquet(tmp_path / "fp.parquet")
+    referenced = set(i for ids in qr["clue_ids"] for i in ids) | \
+                 set(i for ids in fpr["example_clue_ids"] for i in ids)
+    assert set(store["clue_id"]) == referenced          # exactly the referenced set
+    assert "999:Jeopardy:5:5" not in set(store["clue_id"])  # orphan pruned

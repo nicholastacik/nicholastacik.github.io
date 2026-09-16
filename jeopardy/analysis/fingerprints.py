@@ -153,6 +153,14 @@ def run_fingerprints(min_freq=5):
     fp_rows = [{"cluster_id": cid, "phrase": ph, "cues": v["cues"],
                 "example_clue_ids": v["example_clue_ids"]} for (cid, ph), v in cues.items()]
 
+    referenced = set()
+    for refs in quiz_refs.values():
+        for ids in refs.values():
+            referenced.update(ids)
+    for v in cues.values():
+        referenced.update(v["example_clue_ids"])
+    store = store[store["clue_id"].isin(referenced)].reset_index(drop=True)
+
     config.CLUES_STORE_PATH.parent.mkdir(parents=True, exist_ok=True)
     store.to_parquet(config.CLUES_STORE_PATH, index=False)
     pd.DataFrame(quiz_rows).to_parquet(config.CATEGORY_QUIZ_REFS_PATH, index=False)
