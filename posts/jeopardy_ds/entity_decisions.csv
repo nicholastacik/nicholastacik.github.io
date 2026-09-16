@@ -3945,3 +3945,39 @@ cluster_id,phrase,keep,canonical,source
 26,Pulitzer,true,Pulitzer Prize,llm-alias
 40,Pulitzer,true,Pulitzer Prize,llm-alias
 40,Nobel,true,Nobel Prize,llm-alias
+-1,Oscar,false,Oscar,llm-mismerge
+-1,Mary,false,Mary,llm-mismerge
+2,Oscar,false,Oscar,llm-mismerge
+3,Jimmy,false,Jimmy,llm-mismerge
+26,Robert,false,Robert,llm-mismerge
+26,George,false,George,llm-mismerge
+29,Mary,false,Mary,llm-mismerge
+35,George Bush,false,George Bush,llm-mismerge
+2,Henry,false,Henry,llm-mismerge
+3,Samuel,false,Samuel,llm-mismerge
+26,Henry,false,Henry,llm-mismerge
+3,Jackson,false,Jackson,llm-mismerge
+3,Matthew,false,Matthew,llm-mismerge
+13,Margaret,false,Margaret,llm-mismerge
+26,William,false,William,llm-mismerge
+29,Paul,false,Paul,llm-mismerge
+27,Ping,false,Ping,llm-mismerge
+33,Lewis,false,Lewis,llm-mismerge
+43,Bush,false,Bush,llm-mismerge
+2,European,false,European,llm-mismerge
+3,Al,false,Al,llm-mismerge
+3,Bush,false,Bush,llm-mismerge
+26,Tom,false,Tom,llm-mismerge
+30,Brown,false,Brown,llm-mismerge
+32,Joe,false,Joe,llm-mismerge
+32,Alice,false,Alice,llm-mismerge
+32,Adam,false,Adam,llm-mismerge
+37,George,false,George,llm-mismerge
+3,Mary,false,Mary,llm-mismerge
+21,William,false,William,llm-mismerge
+32,Bob,false,Bob,llm-mismerge
+40,David,false,David,llm-mismerge
+45,Johnson,false,Johnson,llm-mismerge
+17,George,false,George,llm-mismerge
+26,Alice,false,Alice,llm-mismerge
+39,Paul,false,Paul,llm-mismerge
