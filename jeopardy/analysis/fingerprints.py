@@ -147,7 +147,7 @@ def run_fingerprints(min_freq=5):
     decisions = load_entity_decisions(config.ENTITY_DECISIONS_PATH)
     store, entity_clues, quiz_refs = build_clue_index(
         clusters, clues, decisions, quiz_k=1, quiz_general_n=2, min_freq=min_freq)
-    cues = build_cues(entity_clues, n_cues=2, n_examples=1)
+    cues = build_cues(entity_clues, n_cues=6, n_examples=1)
 
     quiz_rows = [{"cluster_id": cid, "phrase": ph, "clue_ids": ids}
                  for cid, refs in quiz_refs.items() for ph, ids in refs.items()]
