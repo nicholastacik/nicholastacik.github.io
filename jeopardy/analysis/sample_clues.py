@@ -1,17 +1,6 @@
 """Sample clues per (type, entity) for the research tool's self-test feature."""
-import pandas as pd
-
-from jeopardy import config
 from jeopardy.analysis.dedup import canonicalize
-from jeopardy.analysis.misc_pool import misc_membership
-from jeopardy.analysis.tokens import (
-    DEDUP_CANDIDATE_K,
-    apply_entity_decisions,
-    build_surface_counts,
-    extract_phrases,
-    load_entity_decisions,
-    _cluster_phrase_counts,
-)
+from jeopardy.analysis.tokens import DEDUP_CANDIDATE_K, apply_entity_decisions
 
 
 def _spread(items, n):
@@ -53,60 +42,3 @@ def _cluster_resolution(raw_counts, cluster_decisions, min_freq):
         if final is not None and final_counts.get(final, 0) >= min_freq:
             resolution[surface] = final
     return resolution
-
-
-def build_sample_clues(clusters_df, clues_df, decisions, k=3, general_n=25, min_freq=5):
-    keys = ["game_id", "round", "category"]
-    merged = clues_df.merge(clusters_df[keys + ["cluster_id"]], on=keys, how="inner")
-    merged["year"] = pd.to_datetime(merged["air_date"]).dt.year
-    merged = merged[merged["year"].notna()]
-    base_rows = merged[merged["cluster_id"] != config.MISC_ID]
-    surface = build_surface_counts(
-        list(base_rows["clue"].fillna("")) + list(base_rows["answer"].fillna(""))
-    )
-    out_rows = []
-    for cid, sub in merged.groupby("cluster_id"):
-        cdec = decisions.get(int(cid), {})
-        # Resolve entities per era window (not just all-time), so an entity that ranks high only
-        # in a recent window (e.g. "Stranger Things" since 2020) still gets sample clues.
-        resolution = {}
-        for cutoff in config.ERA_CUTOFFS:
-            era_sub = sub[sub["year"] >= cutoff]
-            if era_sub.empty:
-                continue
-            resolution.update(_cluster_resolution(_cluster_phrase_counts(era_sub, surface), cdec, min_freq))
-        by_entity = {}
-        general = []
-        for row in sub.sort_values("year").itertuples():
-            answer = row.answer if isinstance(row.answer, str) else ""
-            entity = None
-            for phrase in extract_phrases(answer):
-                if phrase in resolution:
-                    entity = resolution[phrase]
-                    break
-            rec = {"clue": row.clue, "answer": answer, "year": int(row.year), "category": row.category}
-            if entity is not None:
-                by_entity.setdefault(entity, []).append(rec)
-            general.append(rec)
-        seen = set()
-        for entity, recs in by_entity.items():
-            for rec in _sample(recs, k):
-                seen.add((rec["clue"], rec["answer"]))
-                out_rows.append({"cluster_id": int(cid), "phrase": entity, **rec})
-        pool = [r for r in general if (r["clue"], r["answer"]) not in seen]
-        for rec in _sample(pool, general_n):
-            out_rows.append({"cluster_id": int(cid), "phrase": None, **rec})
-    return pd.DataFrame(out_rows, columns=["cluster_id", "phrase", "clue", "answer", "year", "category"])
-
-
-def run_sample_clues(min_freq=5):
-    clusters = pd.read_parquet(config.CATEGORY_CLUSTERS_PATH)
-    clues = pd.read_parquet(config.PARQUET_PATH)
-    misc = misc_membership(clusters, config.MISC_FRACTION, config.MISC_ID)
-    clusters = pd.concat([clusters, misc], ignore_index=True)
-    decisions = load_entity_decisions(config.ENTITY_DECISIONS_PATH)
-    df = build_sample_clues(clusters, clues, decisions, k=2, general_n=12, min_freq=min_freq)
-    config.CATEGORY_SAMPLE_CLUES_PATH.parent.mkdir(parents=True, exist_ok=True)
-    df.to_parquet(config.CATEGORY_SAMPLE_CLUES_PATH, index=False)
-    print(f"Wrote {len(df):,} sample clues across {df['cluster_id'].nunique()} types "
-          f"-> {config.CATEGORY_SAMPLE_CLUES_PATH}")
