@@ -350,8 +350,9 @@ _HTML_TEMPLATE = """<!doctype html>
   .cue-chip .support { color: var(--ash); }
   .cue-why { margin: 2px 0 14px; font-size: 13px; line-height: 1.55; color: var(--paper); }
   .cue-why .fallback { color: var(--ash); }
-  .fp-label { cursor: help; }
+  .fp-label { cursor: pointer; }
   .fp-info { color: var(--ash); font-size: 10px; vertical-align: super; }
+  .fp-help { color: var(--ash); font-size: 12px; line-height: 1.5; margin: 2px 0 12px; max-width: 46ch; }
   .fp-none { color: var(--ash); font-size: 13px; font-style: italic; margin: 4px 0 10px; }
   .fp-clue { border-left: 3px solid var(--gold); padding: 8px 12px; margin: 8px 0; background: var(--panel); }
   .fp-clue .meta { font-family: var(--mono); font-size: 11px; color: var(--ash); }
@@ -818,10 +819,11 @@ _HTML_TEMPLATE = """<!doctype html>
         const fp = byPhrase[entity.phrase];
         let html = '<p class="eyebrow">The answer</p>' + `<h3>${escapeHtml(entity.phrase)}</h3>`;
         if (fp) {
-          html += '<div class="fingerprint"><p class="eyebrow fp-label" ' +
-            'title="The words Jeopardy uses most when this is the answer — the recurring angles worth recognizing. ' +
-            'Counted across all years; &ldquo;N of M&rdquo; = it appeared in N of this answer\\'s M all-time clues. Tap a cue to see why.">' +
-            'Clue Fingerprint <span class="fp-info">&#9432;</span></p>';
+          html += '<div class="fingerprint"><p class="eyebrow fp-label" id="fp-label" role="button" tabindex="0">' +
+            'Clue Fingerprint <span class="fp-info">&#9432;</span></p>' +
+            '<p id="fp-help" class="fp-help" hidden>The words Jeopardy uses most when this is the answer &mdash; ' +
+            'the recurring angles worth recognizing. Counted across all years; &ldquo;N of M&rdquo; = it appeared in ' +
+            'N of this answer&rsquo;s M all-time clues. Tap a cue to see why it connects.</p>';
           if (fp.cues && fp.cues.length) {
             html += fp.cues.map(c => `<button type="button" class="cue-chip" data-term="${escapeHtml(c.term)}">${escapeHtml(c.term)}` +
               ` <span class="support">&middot; ${c.support} of ${c.total}</span></button>`).join('');
@@ -845,6 +847,11 @@ _HTML_TEMPLATE = """<!doctype html>
         }
         html += '<div id="wiki-slot"><p class="pulse">Asking Wikipedia&hellip;</p></div>';
         detailPanel.innerHTML = html;
+        const fpLabel = document.getElementById('fp-label');
+        if (fpLabel) fpLabel.addEventListener('click', () => {
+          const help = document.getElementById('fp-help');
+          if (help) help.hidden = !help.hidden;
+        });
         detailPanel.querySelectorAll('.cue-chip').forEach(btn => {
           btn.addEventListener('click', () => showCueWhy(entity.phrase, btn.dataset.term, btn));
         });
