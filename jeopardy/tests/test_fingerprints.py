@@ -156,3 +156,29 @@ def test_run_fingerprints_store_is_pruned_to_referenced(tmp_path, monkeypatch):
                  set(i for ids in fpr["example_clue_ids"] for i in ids)
     assert set(store["clue_id"]) == referenced          # exactly the referenced set
     assert "999:Jeopardy:5:5" not in set(store["clue_id"])  # orphan pruned
+
+
+def test_run_fingerprints_pruned_to_displayed_entities(tmp_path, monkeypatch):
+    import jeopardy.analysis.fingerprints as fp
+    clusters = _clusters()
+    clusters["centroid_dist"] = 0.0
+    clues = _clues()  # resolves to "Vincent van Gogh" in cluster 0
+    monkeypatch.setattr(fp.config, "CATEGORY_CLUSTERS_PATH", tmp_path / "cl.parquet")
+    monkeypatch.setattr(fp.config, "PARQUET_PATH", tmp_path / "clues.parquet")
+    monkeypatch.setattr(fp.config, "ENTITY_DECISIONS_PATH", tmp_path / "dec.csv")
+    monkeypatch.setattr(fp.config, "CATEGORY_TOKENS_PATH", tmp_path / "tok.parquet")
+    monkeypatch.setattr(fp.config, "CLUES_STORE_PATH", tmp_path / "store.parquet")
+    monkeypatch.setattr(fp.config, "CATEGORY_QUIZ_REFS_PATH", tmp_path / "qr.parquet")
+    monkeypatch.setattr(fp.config, "CATEGORY_FINGERPRINTS_PATH", tmp_path / "fp.parquet")
+    clusters.to_parquet(tmp_path / "cl.parquet")
+    clues.to_parquet(tmp_path / "clues.parquet")
+    # tokens list a DIFFERENT (non-resolved) entity only -> van Gogh must be pruned out
+    pd.DataFrame({"era": [1980], "cluster_id": [0], "rank": [1], "phrase": ["Someone Else"],
+                  "count": [9], "tfidf_weight": [0.0]}).to_parquet(tmp_path / "tok.parquet")
+    fp.run_fingerprints(min_freq=5)
+    fpr = pd.read_parquet(tmp_path / "fp.parquet")
+    assert "Vincent van Gogh" not in set(fpr["phrase"])   # not displayed -> no fingerprint
+    qr = pd.read_parquet(tmp_path / "qr.parquet")
+    per_entity = qr[qr["phrase"].notna()]
+    assert "Vincent van Gogh" not in set(per_entity["phrase"])  # per-entity quiz ref pruned too
+    assert qr["phrase"].isna().any()                      # general pool still present
