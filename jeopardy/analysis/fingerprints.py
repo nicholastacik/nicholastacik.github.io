@@ -107,6 +107,34 @@ def _select_cues(candidates, n_cues):
     return kept
 
 
+def _merge_overlapping(cues, recs):
+    # The vectorizer only emits up to bigrams, so a 3-word name arrives as two overlapping
+    # bigrams ("harriet beecher" + "beecher stowe"). Stitch a b + b c -> a b c when the trigram
+    # actually recurs, keeping the first position and dropping the second.
+    merged = True
+    while merged:
+        merged = False
+        for i, a in enumerate(cues):
+            ap = a["term"].split()
+            for j, b in enumerate(cues):
+                if i == j:
+                    continue
+                bp = b["term"].split()
+                if ap[-1] != bp[0]:
+                    continue
+                phrase = " ".join(ap + bp[1:])
+                support = sum(1 for r in recs if _contains(phrase, r["clue"]))
+                if support < 2:
+                    continue
+                cues[i] = {"term": phrase, "support": int(support), "total": a["total"]}
+                cues.pop(j)
+                merged = True
+                break
+            if merged:
+                break
+    return cues
+
+
 def build_cues(entity_clues, n_cues=6, n_examples=4, generic_df_frac=0.2, generic_min_entities=10):
     from sklearn.feature_extraction.text import TfidfVectorizer
     keys = list(entity_clues)
@@ -149,7 +177,7 @@ def build_cues(entity_clues, n_cues=6, n_examples=4, generic_df_frac=0.2, generi
             if support < 2:
                 continue
             candidates.append({"term": term, "support": int(support), "total": int(total)})
-        cues = _select_cues(candidates, n_cues)
+        cues = _merge_overlapping(_select_cues(candidates, n_cues), recs)
         cue_terms = [c["term"] for c in cues]
         newest = max(recs, key=lambda r: r["year"])
         by_cov = sorted(recs, key=lambda r: -sum(1 for t in cue_terms if _contains(t, r["clue"])))

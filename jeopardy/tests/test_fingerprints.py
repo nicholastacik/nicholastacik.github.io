@@ -126,6 +126,20 @@ def test_all_time_resolution_keeps_clues_across_years():
     assert 2024 in years and 2005 in years   # newest clue not lost to a window overwrite
 
 
+def test_overlapping_bigrams_merge_into_trigram():
+    # "harriet beecher" + "beecher stowe" are two overlapping bigrams of one 3-word name; they
+    # collapse into "harriet beecher stowe" (the vectorizer only emits up to bigrams).
+    ec = _mk(0, "Uncle Tom's Cabin", [
+        "by Harriet Beecher Stowe here", "Harriet Beecher Stowe wrote it",
+        "penned by Harriet Beecher Stowe", "the Harriet Beecher Stowe classic",
+    ])
+    ec.update(_mk(0, "Filler", ["nothing here at all now"]))
+    fp = build_cues(ec, n_cues=6, n_examples=4, generic_min_entities=10)[(0, "Uncle Tom's Cabin")]
+    terms = [c["term"] for c in fp["cues"]]
+    assert "harriet beecher stowe" in terms
+    assert "harriet beecher" not in terms and "beecher stowe" not in terms
+
+
 def test_generic_gate_skipped_for_small_clusters():
     # With too few entities, DF isn't a reliable generic signal, so the gate is skipped and a
     # legitimately recurring term survives even at 100% cluster frequency.
