@@ -86,3 +86,24 @@ def test_example_ids_reserve_the_newest_even_with_low_coverage():
     ec.update(_mk(0, "Filler2", ["xxxx yyyy zzzz"]))
     fp = build_cues(ec, n_cues=6, n_examples=4)[(0, "Ex")]
     assert "0:Ex:3" in fp["example_clue_ids"]      # newest (index 3) reserved
+
+
+def test_bigram_kept_and_covered_unigrams_dropped():
+    # "Tom" and "Sawyer" recur together as "Tom Sawyer" across 3 clues; the bigram is kept and
+    # the covered unigrams are dropped.
+    ec = _mk(0, "Book", ["Tom Sawyer paints", "Tom Sawyer fence", "Tom Sawyer river"])
+    ec.update(_mk(0, "Filler", ["unrelated words here now"]))
+    fp = build_cues(ec, n_cues=6, n_examples=4)[(0, "Book")]
+    terms = [c["term"] for c in fp["cues"]]
+    assert "tom sawyer" in terms
+    assert "tom" not in terms and "sawyer" not in terms
+
+
+def test_bigram_support_requires_token_adjacency():
+    # "great lakes" must NOT be credited to a clue that only has "lakes" (no adjacency).
+    ec = _mk(0, "Geo", ["the great lakes region", "great lakes shipping", "just lakes alone"])
+    ec.update(_mk(0, "Filler", ["nothing to see"]))
+    fp = build_cues(ec, n_cues=6, n_examples=4)[(0, "Geo")]
+    gl = [c for c in fp["cues"] if c["term"] == "great lakes"]
+    if gl:
+        assert gl[0]["support"] == 2  # only the two adjacent-occurrence clues, not the "lakes alone" one
