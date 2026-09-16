@@ -340,6 +340,14 @@ _HTML_TEMPLATE = """<!doctype html>
   .sample-card .scope { font-family: var(--mono); font-size: 11px; color: var(--ash); margin: 0 0 8px; }
   .sample-card .answer-text { font-size: 15px; color: var(--gold); margin: 10px 0 0; }
 
+  .fingerprint { margin: 0 0 18px; }
+  .fingerprint .eyebrow { color: var(--gold); }
+  .cue-chip { display: inline-block; font-family: var(--mono); font-size: 11px; background: var(--panel-2);
+    border: 1px solid var(--line); border-radius: var(--radius); padding: 3px 8px; margin: 0 6px 6px 0; }
+  .cue-chip .support { color: var(--ash); }
+  .fp-clue { border-left: 3px solid var(--gold); padding: 8px 12px; margin: 8px 0; background: var(--panel); }
+  .fp-clue .meta { font-family: var(--mono); font-size: 11px; color: var(--ash); }
+
   .tag-brick {
     display: inline-block;
     font-family: var(--mono);
@@ -648,7 +656,7 @@ _HTML_TEMPLATE = """<!doctype html>
         }
         let html = `<div class="main-head"><h2>${escapeHtml(d.name)}</h2>` +
           `<p class="sub">${d.applicability} recurring entities &middot; ${pctLabel(d.prevalence)} of categories in this window</p></div>`;
-        const hasSamples = ((DATA.sampleClues && DATA.sampleClues[String(d.cluster_id)]) || []).length > 0;
+        const hasSamples = !!(DATA.quiz && DATA.quiz[String(d.cluster_id)]);
         if (hasSamples) {
           html += '<div class="sample-box" id="sample-box">' +
             '<button type="button" class="sample-clue-btn" id="sample-clue-btn">Sample clue &#9860;</button>' +
@@ -684,15 +692,17 @@ _HTML_TEMPLATE = """<!doctype html>
         if (sampleBtn) sampleBtn.addEventListener('click', () => rollSampleClue(clusterId));
       }
 
+      function clueById(id) { return DATA.clues && DATA.clues[id]; }
+
       function eligibleClues(clusterId) {
-        const pool = (DATA.sampleClues && DATA.sampleClues[String(clusterId)]) || [];
-        const byEra = pool.filter(c => c.year >= currentEra);
+        const refs = (DATA.quiz && DATA.quiz[String(clusterId)]) || {};
+        const toClues = ids => (ids || []).map(clueById).filter(Boolean);
         if (selectedEntity) {
-          const scoped = byEra.filter(c => c.phrase === selectedEntity.phrase);
+          const scoped = toClues(refs[selectedEntity.phrase]).filter(c => c.year >= currentEra);
           if (scoped.length) return { clues: scoped, scoped: true, fellBack: false };
-          return { clues: byEra, scoped: false, fellBack: true };
+          return { clues: toClues(refs[""]).filter(c => c.year >= currentEra), scoped: false, fellBack: true };
         }
-        return { clues: byEra, scoped: false, fellBack: false };
+        return { clues: toClues(refs[""]).filter(c => c.year >= currentEra), scoped: false, fellBack: false };
       }
 
       function rollSampleClue(clusterId) {
@@ -737,54 +747,55 @@ _HTML_TEMPLATE = """<!doctype html>
           '<p class="placeholder">Click an answer to pull its Wikipedia summary &mdash; fetched live, right now, from your browser.</p>';
       }
 
-      function renderDetailLoading(entity) {
-        detailPanel.classList.remove('flash');
-        detailPanel.innerHTML = '<p class="eyebrow">The answer</p>' +
-          `<h3>${escapeHtml(entity.phrase)}</h3>` +
-          `<p class="pulse">Asking Wikipedia about &ldquo;${escapeHtml(entity.phrase)}&rdquo;&hellip;</p>`;
-      }
-
-      function renderDetail(entity, summary) {
+      function renderFingerprint(entity) {
+        const byPhrase = (DATA.fingerprints && DATA.fingerprints[String(selectedTypeId)]) || {};
+        const fp = byPhrase[entity.phrase];
         let html = '<p class="eyebrow">The answer</p>' + `<h3>${escapeHtml(entity.phrase)}</h3>`;
-        if (summary && summary.extract) {
-          const thumb = summary.thumbnail && summary.thumbnail.source;
-          const url = summary.content_urls && summary.content_urls.desktop && summary.content_urls.desktop.page;
-          if (thumb) html += `<img src="${escapeHtml(thumb)}" alt="${escapeHtml(entity.phrase)}">`;
-          html += `<p class="extract">${escapeHtml(summary.extract)}</p>`;
-          if (url) html += `<a href="${escapeHtml(url)}" target="_blank" rel="noopener">Read the full article on Wikipedia &#8599;</a>`;
-        } else {
-          const searchUrl = 'https://en.wikipedia.org/w/index.php?search=' + encodeURIComponent(entity.phrase);
-          html += `<p class="fallback">No summary came back for &ldquo;${escapeHtml(entity.phrase)}&rdquo;. ` +
-            `<a href="${escapeHtml(searchUrl)}" target="_blank" rel="noopener">Search Wikipedia directly &#8599;</a></p>`;
+        if (fp) {
+          html += '<div class="fingerprint"><p class="eyebrow">How Jeopardy clues it</p>';
+          if (fp.cues && fp.cues.length) {
+            html += fp.cues.map(c => `<span class="cue-chip">${escapeHtml(c.term)}` +
+              ` <span class="support">&middot; ${c.support} of ${c.total}</span></span>`).join('');
+          }
+          const examples = (fp.exampleClueIds || []).map(clueById).filter(Boolean)
+            .filter(c => c.year >= currentEra);
+          const shown = examples.length ? examples
+            : (fp.exampleClueIds || []).map(clueById).filter(Boolean).slice(-1);
+          shown.slice(0, 3).forEach(c => {
+            const url = DATA.jarchive.replace('{game_id}', c.game_id);
+            html += `<div class="fp-clue"><p class="clue-text">${escapeHtml(c.clue)}</p>` +
+              `<p class="meta">${escapeHtml(c.answer)} &middot; ${escapeHtml(c.category)} &middot; ${c.year} ` +
+              `&middot; <a class="j-archive" href="${url}" target="_blank" rel="noopener">J-Archive &#8599;</a></p></div>`;
+          });
+          html += '</div>';
         }
+        html += '<div id="wiki-slot"><p class="pulse">Asking Wikipedia&hellip;</p></div>';
         detailPanel.innerHTML = html;
-        detailPanel.classList.remove('flash');
-        void detailPanel.offsetWidth;
-        detailPanel.classList.add('flash');
       }
 
       async function selectEntity(entity) {
         if (selectedEntity === entity) {
-          selectedEntity = null;
-          renderMain();
-          renderDetailEmpty();
-          return;
+          selectedEntity = null; renderMain(); renderDetailEmpty(); return;
         }
         selectedEntity = entity;
         renderMain();
-        renderDetailLoading(entity);
-        if (window.matchMedia('(max-width: 980px)').matches) {
-          detailPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-        let summary;
-        if (wikiCache.has(entity.phrase)) {
-          summary = wikiCache.get(entity.phrase);
-        } else {
-          summary = await fetchWiki(entity.phrase);
-          wikiCache.set(entity.phrase, summary);
-        }
+        renderFingerprint(entity);
+        if (window.matchMedia('(max-width: 980px)').matches) detailPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        let summary = wikiCache.has(entity.phrase) ? wikiCache.get(entity.phrase) : await fetchWiki(entity.phrase);
+        wikiCache.set(entity.phrase, summary);
         if (selectedEntity !== entity) return;
-        renderDetail(entity, summary);
+        const slot = document.getElementById('wiki-slot');
+        if (!slot) return;
+        if (summary && summary.extract) {
+          const thumb = summary.thumbnail && summary.thumbnail.source;
+          const url = summary.content_urls && summary.content_urls.desktop && summary.content_urls.desktop.page;
+          slot.innerHTML = (thumb ? `<img src="${escapeHtml(thumb)}" alt="${escapeHtml(entity.phrase)}">` : '') +
+            `<p class="extract">${escapeHtml(summary.extract)}</p>` +
+            (url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener">Read the full article on Wikipedia &#8599;</a>` : '');
+        } else {
+          const s = 'https://en.wikipedia.org/w/index.php?search=' + encodeURIComponent(entity.phrase);
+          slot.innerHTML = `<p class="fallback">No Wikipedia summary. <a href="${escapeHtml(s)}" target="_blank" rel="noopener">Search &#8599;</a></p>`;
+        }
       }
 
       filterInput.addEventListener('input', () => renderSide(filterInput.value));
