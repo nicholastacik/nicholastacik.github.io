@@ -202,9 +202,22 @@ def _load_glosses(path):
     return out
 
 
-def _attach_glosses(cid, phrase, cues, glosses):
+def _load_cue_drops(path):
+    out = set()
+    if not path.exists():
+        return out
+    import csv
+    with open(path, newline="", encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            out.add((int(row["cluster_id"]), row["phrase"], row["term"]))
+    return out
+
+
+def _attach_glosses(cid, phrase, cues, glosses, cue_drops):
     out = []
     for c in cues:
+        if (cid, phrase, c["term"]) in cue_drops:
+            continue  # near-duplicate cue removed in the dedup pass
         cc = {"term": c["term"], "support": c["support"], "total": c["total"]}
         g = glosses.get((cid, phrase, c["term"]), "")
         if g and g.strip():
@@ -231,10 +244,11 @@ def run_fingerprints(min_freq=5):
                  for cid, refs in quiz_refs.items()}
 
     glosses = _load_glosses(config.CUE_GLOSSES_PATH)
+    cue_drops = _load_cue_drops(config.CUE_DROPS_PATH)
     quiz_rows = [{"cluster_id": cid, "phrase": ph, "clue_ids": ids}
                  for cid, refs in quiz_refs.items() for ph, ids in refs.items()]
     fp_rows = [{"cluster_id": cid, "phrase": ph,
-                "cues": _attach_glosses(cid, ph, v["cues"], glosses),
+                "cues": _attach_glosses(cid, ph, v["cues"], glosses, cue_drops),
                 "example_clue_ids": v["example_clue_ids"]} for (cid, ph), v in cues.items()]
 
     referenced = set()

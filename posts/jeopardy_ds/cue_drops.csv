@@ -1,0 +1,658 @@
+cluster_id,phrase,term
+-1,Apollo,missions
+-1,Connecticut,states
+-1,Google,company's
+-1,Moon,eugene
+-1,Vogue,mag
+-1,Vogue,magazine's
+0,Anna Karenina,count
+0,Count of Monte Cristo,imprisoned
+0,David Copperfield,dickens'
+0,Emma,austen novel
+0,F. Scott Fitzgerald,beautiful
+0,George Orwell,eric
+0,Great Expectations,dickens novel
+0,Great Expectations,philip
+0,Kurt Vonnegut,champions
+0,Kurt Vonnegut,trout
+0,Tale of Two Cities,madame
+0,Thomas Hardy,return
+0,Ulysses,leopold
+0,Wuthering Heights,emily
+1,Afghanistan,soviets
+1,Brazil,ii
+1,Hitler,col
+1,Hitler,von
+1,India,empire
+1,Joseph Stalin,lenin's
+1,Paris,capital city
+1,Ukraine,republics
+1,Vietnam,north south
+2,Guinness,beer
+2,Johnson,company's
+2,Liberty Bell,icon
+2,Seattle,city's
+3,Abraham Lincoln,great
+3,Albert Einstein,relative
+3,Albert Einstein,scientist
+3,Barnum,taylor
+3,Charles Lindbergh,lucky
+3,George Washington Carver,scientist
+3,Joe,figure
+3,Muhammad Ali,cassius
+3,Napoleon,little
+3,Nobel Peace Prize,desmond
+3,Shakespeare,avon
+3,Supreme Court,group
+4,Atlanta,baptist church
+4,California,castle
+4,California,tall
+4,Florida,reef
+4,France,country's
+4,Frank Lloyd Wright,architect's
+4,Massachusetts,witch
+4,Michigan,state's upper
+4,Michigan,upper lower
+4,New Jersey,thomas
+4,New Mexico,sw state
+4,Pennsylvania,cocoa
+4,Philadelphia,bell
+4,Philadelphia,parade
+4,Texas,hall
+5,All-Star Game,event
+5,Babe Ruth,home runs
+5,Cleveland,city's
+5,Dallas Cowboys,tom
+5,Green Bay Packers,bart
+5,Lakers,pat
+5,Masters,event
+5,Michael Jordan,bull
+5,Notre Dame,school's
+5,Peyton Manning,qb
+5,Pittsburgh Steelers,terry
+5,Tiger Woods,golf
+5,Tom Brady,patriot
+5,Tom Brady,qb
+5,Wayne Gretzky,nhl's
+5,Wimbledon,event
+5,World Cup,trophy
+6,Bible,translation
+6,Cain,brother
+6,Daniel,den
+6,David,philistine
+6,Hindu,religion's
+6,Islam,religion's
+6,Jacob,heaven
+6,Matthew,collectors
+6,Paul,epistle
+6,Peter,disciple
+6,Revelation,seal
+6,Solomon,wisdom
+7,Arbor Day,tree
+7,Bastille Day,national holiday
+7,Cinco de Mayo,mexican
+7,Day of the Dead,mexican
+7,Day of the Dead,ones
+7,Diwali,hindus
+7,Halloween,night
+7,Hanukkah,day jewish
+7,Hanukkah,jewish festival
+7,Labor Day,peter
+7,Passover,jewish festival
+7,Saturday,that's named
+7,Thanksgiving,celebration
+7,Veterans Day,holidays
+7,Veterans Day,nov
+8,Chippendale,british
+8,Mary Jane,brown
+8,Stetson,hats
+8,Stetson,west
+8,Yves Saint Laurent,initials
+9,American Express,slogan
+9,Anheuser-Busch,brewing
+9,Boeing,washington state's
+9,Burger King,chain's
+9,Campbell Soup Company,good
+9,Coca-Cola,beverage
+9,Costco,store
+9,Ford,car maker
+9,General Motors,auto
+9,Hallmark,cards
+9,Home Depot,chain
+9,Home Depot,store
+9,Kodak,cameras
+9,Mattel,toys
+9,Nike,shoes
+9,Sears,retail
+9,Sears,store
+9,Walmart,retail
+9,Wells Fargo,banking
+9,Wells Fargo,wagon
+10,America,trophy
+10,Antarctica,continent's
+10,Australia,continent's
+10,Canada,alexander
+10,Caribbean,body
+10,Caribbean,water
+10,Florida,state's
+10,James Cook,captain's
+10,James Cook,sea captain
+10,Maine,ship
+10,Northwest Passage,route
+10,Pacific Ocean,vasco
+10,Russia,vitus
+10,Titanic,ship
+11,Amsterdam,european city
+11,Bangkok,thai city
+11,Barcelona,catalan
+11,Beijing,china's
+11,Berlin,gate
+11,Budapest,hungary
+11,China,road
+11,Dublin,gaelic
+11,Italy,europe
+11,Japan,nation
+11,Prague,bohemian
+11,Seoul,korea's
+11,Sydney,australia's
+11,Sydney,australian
+11,Venice,italian city's
+11,Vienna,austrian city
+11,Warsaw,polish
+12,Alexander Pope,essay
+12,Alexander Pope,rape
+12,Byron,lord's
+12,Dylan Thomas,wales
+12,Edgar Allan Poe,nevermore
+12,Edward Lear,old man
+12,Edward Lear,sea
+12,Elizabeth Barrett Browning,leigh
+12,Emily Dickinson,buzz
+12,Emily Dickinson,stop
+12,Ezra Pound,mental
+12,Henry Wadsworth Longfellow,wreck
+12,Leaves of Grass,ralph waldo
+12,Leaves of Grass,whitman's
+12,Maya Angelou,sings
+12,Rudyard Kipling,ballad
+12,Sylvia Plath,poem lady
+12,T. S. Eliot,love song
+12,Tennyson,king
+12,Tennyson,lord's
+12,Walt Whitman,grass
+12,Walt Whitman,hear
+12,Walt Whitman,sing
+12,William Butler Yeats,irishman
+13,Carrie Nation,crusade
+13,Elizabeth Cady Stanton,woman's
+13,Florence Nightingale,nurse
+13,Florence Nightingale,nurses
+13,Harvard,school
+13,Helen Keller,teacher
+13,Jacqueline Kennedy,vineyard
+13,Margaret Mead,age
+13,Martha Washington,daniel
+13,Michelle Obama,mother
+13,Oprah Winfrey,talking
+13,Sojourner Truth,slave
+13,Susan B. Anthony,coin
+13,Susan B. Anthony,elizabeth
+13,Vogue,worked
+14,Black-eyed Susan,maryland's
+14,Luther Burbank,potatoes
+15,All My Children,erica
+15,Amy Poehler,update
+15,Arrested Development,george
+15,Bewitched,stephens
+15,Conan O'Brien,hosting
+15,Conan O'Brien,late-night
+15,Game of Thrones,king's
+15,Happy Days,howard
+15,Harrison Ford,george
+15,Harrison Ford,marshall
+15,Mad Men,don
+15,Mary Tyler Moore Show,laura
+15,Melrose Place,complex
+15,Saturday Night Live,regulars
+15,Simpsons,cartoon
+15,Tina Fey,liz
+15,Tonight Show,hosted
+15,Tonight Show,steve
+16,Greek,old
+17,Andrew Lloyd Webber,composer's
+17,Angels in America,roy
+17,Arthur Miller,playwright's
+17,August Wilson,playwright won
+17,Book of Mormon,trey
+17,Chekhov,orchard
+17,Chekhov,playwright's
+17,Chicago,cell
+17,Edward Albee,women
+17,Eugene O'Neill,playwright's
+17,Fiddler on the Roof,village
+17,George Bernard Shaw,playwright's
+17,London,city's
+17,Neil Simon,playwright's
+17,Oklahoma,oh
+17,Oscar Wilde,importance
+17,Shakespeare,anne
+17,Stephen Sondheim,composer's
+17,Stephen Sondheim,music
+17,Street,thoroughfare
+17,Tennessee Williams,playwright's
+17,Tony Award,perry
+17,Wicked,wizard
+18,Arkansas,crater
+18,Colorado,rocky mountain
+18,Kentucky,horse
+18,Louisiana,parishes
+18,Minnesota,lake lake
+18,New Mexico,sun symbol
+18,New York,eastman
+18,Vermont,green mountain
+18,Wisconsin,dairy
+19,Alfred Hitchcock,director's
+19,Batman,city
+19,Ben Affleck,good
+19,Brad Pitt,louise
+19,Clint Eastwood,wales
+19,George Clooney,michael
+19,Humphrey Bogart,wife
+19,Jack Nicholson,pieces
+19,James Bond,roger
+19,John Wayne,true
+19,Katharine Hepburn,oscars
+19,King Kong,beast
+19,Matt Damon,good
+19,Matt Damon,pizza
+19,Mel Gibson,mad
+19,Mel Gibson,weapon
+19,Paul Newman,cassidy
+19,Robert Redford,film festival
+19,Shakespeare,joseph
+19,Star Wars,george
+19,The Godfather,don
+19,Tom Cruise,mission
+19,Will Smith,fresh
+19,Will Smith,men
+19,Woody Allen,director's
+21,Charlemagne,frankish
+21,Henry VIII,catherine
+21,Isabella I of Castile,joan
+21,Julius Caesar,invaded
+21,Julius Caesar,leader
+21,Louis XIV,french king
+21,Louis XVI,execution
+21,Mary,scottish
+21,Mongol,warriors
+21,Peter the Great,russia's
+21,Queen Victoria,albert's
+21,Scotland,robert
+22,Brazil,basin
+22,Brazil,nut
+22,Caesar salad,lettuce
+22,Denmark,ix
+22,Italy,countries
+22,Italy,wines
+22,Japan,beef
+22,Kraft,company's
+22,London,steak
+22,Mexico,brewed
+22,Mexico,cow's
+22,New Orleans,southern city
+22,New York,state's
+22,Parmesan,true
+22,Spain,country's
+22,Wisconsin,dairy
+23,Bizet,composer's opera
+23,Bizet,honor
+23,Brahms,asleep
+23,Brahms,falling
+23,Carmen,bizet's
+23,Chopin,polish
+23,Claude Debussy,lune
+23,Claude Debussy,prelude
+23,Edvard Grieg,norway
+23,Franz Liszt,piano
+23,George Gershwin,bess
+23,George Gershwin,blue
+23,Handel,hallelujah
+23,Handel,oratorios
+23,Messiah,oratorios
+23,Metropolitan Opera,company's
+23,Nikolai Rimsky-Korsakov,flight
+23,Pagliacci,clowns
+23,Prokofiev,peter
+23,Prokofiev,stone
+23,Richard Strauss,spake
+23,Stravinsky,spring
+23,Swan Lake,prince
+23,Vienna,capital
+23,Vivaldi,concerto
+23,Vivaldi,ordained
+24,Apollo,greek god
+24,Ares,greek god
+24,Artemis,apollo's
+24,Cleopatra,egypt
+24,Hades,place
+24,Hercules,cleaning
+24,Hermes,gods
+24,King Arthur,stone
+24,Loki,norse god
+24,Medusa,gorgons
+24,Odin,legged
+24,Paris,trojan
+24,Poseidon,greek god
+24,Sparta,warlike
+24,Thor,god's
+24,Venus,roman goddess
+25,A Midsummer Night's Dream,fairy
+25,Brutus,caesar's
+25,Desdemona,moor
+25,Goneril,daughters
+25,Julius Caesar,march
+25,Petruchio,tame
+25,Regan,dad
+25,Regan,sister
+25,Tempest,prospero's
+25,Troilus,trojan
+26,Agatha Christie,styles
+26,Cormac Mc,country
+26,Edgar Allan Poe,murders
+26,Edith Wharton,age
+26,Edith Wharton,houses
+26,Henry James,turn
+26,James Baldwin,notes
+26,James Baldwin,tell
+26,John Steinbeck,wrath
+26,Jules Verne,earth
+26,Little Women,louisa
+26,Mark Twain,finn
+26,Nobel Prize,win
+26,Sherlock Holmes,sleuth
+26,Thomas Hardy,novel far
+26,Thomas Hardy,obscure
+26,Toni Morrison,song
+26,Walter Scott,scotsman's
+26,War and Peace,pages
+26,Willa Cather,death comes
+26,World War I,arms
+26,World War I,ford's
+27,Nintendo,donkey
+27,Nintendo,super
+27,Pong,table
+27,Trivial Pursuit,question
+27,Twister,tie
+27,Uno,card
+28,101 Dalmatians,smith's
+28,Beatrix Potter,jeremy
+28,Bugs Bunny,cartoons
+28,Bugs Bunny,hare
+28,Calvin and Hobbes,toy
+28,Charlie Bucket,glass
+28,Charlie Bucket,great
+28,Curious George,hat
+28,Curious George,simian
+28,Dr. Seuss,wrote
+28,Horton,egg
+28,Lion King,life
+28,Peter Pan,grow
+28,The Little Mermaid,hans christian
+28,The Little Mermaid,witch
+29,Andy Warhol,soup cans
+29,Botticelli,birth
+29,Edgar Degas,ballerina
+29,Edgar Degas,dancer
+29,Edouard Manet,grass
+29,Edvard Munch,norwegian's
+29,Edvard Munch,scandinavian
+29,El Greco,spanish
+29,Francisco Goya,spanish
+29,Georges Seurat,pointillist
+29,Georgia O'Keeffe,flower
+29,Henri Matisse,decorated
+29,Impressionist,edouard
+29,Leonardo da Vinci,magi
+29,Louvre,wing
+29,Peter Paul Rubens,flemish artist
+29,Pierre-Auguste Renoir,impression
+29,Pierre-Auguste Renoir,impressionist's
+29,Raphael,renaissance artist
+29,Rembrandt,dr tulp
+29,Rembrandt,dutchman
+29,Salvador Dal,surreal
+29,Salvador Dali,spain
+29,Salvador Dali,surreal
+29,Vermeer,reading
+30,Coast Guard,service
+30,Federal Reserve,banks
+30,First Amendment,freedom
+30,Marines,armed
+30,Miranda warning,remain
+30,Secret Service,protecting
+30,Senate,advice
+30,Supreme Court,member
+30,Treasury Department,printing
+31,Big Bang Theory,cooper
+31,Buffy the Vampire Slayer,michelle
+31,Dallas,ranch
+31,Family Guy,peter
+31,Gossip Girl,blake
+31,Happy Days,howard
+31,House,doc
+31,House,hugh
+31,I Love Lucy,vivian
+31,Mad Men,advertising
+31,Mary Tyler Moore Show,ted
+31,Mork,colorado
+31,Parks and Recreation,ron
+33,Ben Affleck,george
+33,Cary Grant,archibald
+33,George Clooney,good luck
+33,Harrison Ford,runner
+33,Harrison Ford,solo
+33,Jack Nicholson,stars
+33,Kevin Costner,dances
+33,Knives Out,chris
+33,Leonardo DiCaprio,road
+33,Matt Damon,good
+33,Matt Damon,mr
+33,Once Upon a Time in Hollywood,sergio
+33,Robin Williams,good
+33,Star Wars,help
+33,Star Wars,you're
+33,The Godfather,offer
+33,The Godfather,refuse
+33,The Shawshank Redemption,redding
+33,Tom Cruise,ethan
+33,Will Smith,men
+33,Wizard of Oz,margaret
+33,Woody Allen,director's
+34,Celsius,scales
+34,Isaac Newton,law
+34,Kelvin,scale named
+34,Mars,planets
+34,Mercury,planets
+34,Mesozoic,periods
+34,Mohs scale,measured
+34,Venus,degrees fahrenheit
+35,California,earl
+35,Grover Cleveland,terms
+35,Herbert Hoover,engineer
+35,Jimmy Carter,peanut
+35,Richard Nixon,linda
+35,Secretary of State,posts
+35,Theodore Roosevelt,party
+35,Thomas Jefferson,virginian
+35,Ulysses S. Grant,surrender
+35,William Howard Taft,teddy
+36,Georgetown,washington school
+36,Notre Dame,indiana
+36,Stanford,california school
+36,University of Massachusetts,colony
+36,Vassar,sisters colleges
+36,West Point,service academy
+36,Yale,conn
+37,Albert Einstein,physics
+37,Albert Einstein,special theory
+37,Alexander Graham Bell,phone
+37,Copernicus,bodies
+37,Edmond Halley,astronomy
+37,Edmond Halley,comets
+37,Galileo,bodies
+37,Isaac Newton,gravitation
+37,Ivan Pavlov,reflex
+37,James Watt,engines
+37,Java,computer
+37,Linus Pauling,chemical
+37,Linus Pauling,chemistry
+37,Louis Pasteur,frenchman
+37,Marconi,karl
+37,Marconi,radio
+37,Marie Curie,daughter
+37,Niels Bohr,dane
+37,Robert Goddard,launching
+37,Samuel Morse,eli
+37,Samuel Morse,messages
+38,America,trophy
+38,Army,military
+38,Army,service
+38,England,country's
+38,France,country's
+38,Georgia,colonies
+38,Gettysburg,penn battle
+38,Pennsylvania,quaker
+38,Robert E. Lee,court house
+38,Tennessee,davy
+38,Thomas Jefferson,statute
+38,Ulysses S. Grant,commander
+40,Apollo program,lunar
+40,Booker T. Washington,educator's
+40,Louisiana,earl
+40,Miss America,holder
+40,Pulitzer Prize,win
+40,Richard Nixon,debate
+41,Airbus,planes
+41,Amtrak,corp
+41,Chrysler,auto
+41,Chrysler,pt
+41,Corvette,america's
+41,Delta,airline's
+41,Hyundai,korea's
+41,Mustang,horse
+41,Mustang,sporty
+41,Pontiac,indian
+41,Porsche,maker
+41,Qantas,airline's
+41,Spruce Goose,flight
+41,Volkswagen,bug
+42,Africa,continent's
+42,Africa,continents
+42,Argentina,south america
+42,Australia,beneath
+42,Australia,radiant
+42,Belgium,walloons
+42,Canada,area it's
+42,Colombia,south america
+42,Indonesia,javanese
+42,Iran,persian
+42,Iran,reza
+42,Mediterranean,body
+42,New Zealand,maoris
+42,Spain,iberia
+43,Adam Smith,nations
+43,Adam Smith,theory
+43,Benjamin Franklin,poor
+43,Confucius,thinker
+43,David Hume,human
+43,David Hume,nature
+43,God,phrase
+43,Harry Truman,em
+43,Harry Truman,think
+43,Harry Truman,truth
+43,John Locke,concerning
+43,John Locke,essay
+43,John Locke,human
+43,Kierkegaard,dane
+43,London,city
+43,Mark Twain,report
+43,Napoleon,french
+43,Nietzsche,dead
+43,Nietzsche,good
+43,Plato,greek
+43,Richard Nixon,silent
+43,Socrates,greek
+43,Teddy Roosevelt,carry
+43,Thomas Jefferson,good thing
+43,Thomas Jefferson,little
+43,Thomas Paine,times
+43,Thoreau,civil
+43,Winston Churchill,fight
+43,Winston Churchill,shall
+44,Apollo,lunar
+44,Carl Sagan,astronomy
+44,Carl Sagan,society
+44,Gemini,sign
+44,Gemini,twins
+44,Leo,lion's
+44,Libra,balance
+44,Libra,sign
+44,Moon,celestial
+44,Neptune,planets
+44,Sagittarius,centaur
+44,Saturn,ring
+44,Scorpio,stung
+44,Sirius,bright star
+44,Sun,objects
+44,Voyager,spacecraft
+45,Alzheimer's Disease,loss
+45,Eustachian Tube,ears
+45,Heimlich Maneuver,method
+45,Hippocrates,medical
+46,Africa,continent's
+46,Antarctica,continent's
+46,Argentina,south america's
+46,Argentina,south american
+46,Australia,continent's
+46,Europe,continent's
+46,Great Lakes,group
+46,India,plateau
+46,Indian Ocean,sunda
+46,Norway,northerly
+46,South America,continent's
+46,Switzerland,canton
+47,Adele,deep
+47,Aerosmith,don't want
+47,Ariana Grande,free
+47,Beatles,drummer
+47,Billie Eilish,fall
+47,Black,rolling
+47,Bruno Mars,heaven
+47,Elton John,road
+47,Elvis Presley,blue
+47,Eminem,rap
+47,Jay-Z,shawn
+47,Johnny Cash,prison
+47,Lady Gaga,face
+47,Lady Gaga,way
+47,Mariah Carey,want
+47,Paul Simon,away
+47,Rihanna,eh
+47,Rolling Stones,group's
+47,Van Halen,sammy
+48,Descartes,frenchman
+48,Earth,average distance
+48,Euclid,book
+48,Fahrenheit,point
+49,Alaska,mammal
+49,Amazon,river's
+49,Antarctica,continent's
+49,Arctic,trip
+49,Australia,mammals
+49,Bactrian camel,hump
+49,Canada,birds
+49,China,giant
+49,Florida,alligators
+49,Galapagos,islands
+49,Great Dane,breeds
+49,North America,continents
