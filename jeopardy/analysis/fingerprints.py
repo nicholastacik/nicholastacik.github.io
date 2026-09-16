@@ -98,15 +98,6 @@ def _select_cues(candidates, n_cues):
     return kept
 
 
-def _entity_terms(recs):
-    out = set()
-    for r in recs:
-        toks = _CUE_TOKEN.findall((r["clue"] or "").lower())
-        out.update(toks)
-        out.update(toks[i] + " " + toks[i + 1] for i in range(len(toks) - 1))
-    return out
-
-
 def build_cues(entity_clues, n_cues=6, n_examples=4, generic_df_frac=0.2, generic_min_entities=10):
     from sklearn.feature_extraction.text import TfidfVectorizer
     keys = list(entity_clues)
@@ -115,22 +106,25 @@ def build_cues(entity_clues, n_cues=6, n_examples=4, generic_df_frac=0.2, generi
                           token_pattern=r"[A-Za-z][A-Za-z'\-]+")
     matrix = vec.fit_transform(docs)
     terms = np.array(vec.get_feature_names_out())
-    # Per-cluster document frequency: a term in many of a cluster's entities' clue-pools is
+    # Per-cluster document frequency: a term present in many of a cluster's entities is
     # type-generic (e.g. "author"/"novel" for Books & Authors), not entity-distinctive - drop it.
-    entity_terms = {k: _entity_terms(entity_clues[k]) for k in keys}
-    cluster_df, cluster_n = {}, {}
-    for (cid, _phrase), tset in entity_terms.items():
-        cluster_n[cid] = cluster_n.get(cid, 0) + 1
-        df = cluster_df.setdefault(cid, {})
-        for t in tset:
-            df[t] = df.get(t, 0) + 1
+    # Counted from the TF-IDF matrix itself so the term-space matches the vectorizer exactly
+    # (including its stopword-skipping bigrams).
+    presence = (matrix > 0)
+    cluster_rows = {}
+    for i, (cid, _phrase) in enumerate(keys):
+        cluster_rows.setdefault(cid, []).append(i)
+    cluster_dfvec, cluster_n = {}, {}
+    for cid, rows in cluster_rows.items():
+        cluster_n[cid] = len(rows)
+        cluster_dfvec[cid] = np.asarray(presence[rows].sum(axis=0)).ravel()
     out = {}
     for i, k in enumerate(keys):
         cid, phrase = k
         recs = entity_clues[k]
         total = len(recs)
         name_toks = {t.lower() for t in phrase.split()}
-        df, n = cluster_df[cid], cluster_n[cid]
+        dfvec, n = cluster_dfvec[cid], cluster_n[cid]
         row = matrix.getrow(i).toarray().ravel()
         candidates = []
         for j in row.argsort()[::-1]:
@@ -140,7 +134,7 @@ def build_cues(entity_clues, n_cues=6, n_examples=4, generic_df_frac=0.2, generi
             tparts = term.split()
             if any(t in name_toks for t in tparts) or any(t in _FILLER for t in tparts):
                 continue
-            if n >= generic_min_entities and df.get(term, 0) / n > generic_df_frac:
+            if n >= generic_min_entities and dfvec[j] / n > generic_df_frac:
                 continue
             support = sum(1 for r in recs if _contains(term, r["clue"]))
             if support < 2:

@@ -85,6 +85,17 @@ def test_cluster_generic_term_is_dropped():
     assert "hannibal" in terms            # in 1/13 -> distinctive, kept
 
 
+def test_stopword_spanning_bigram_df_aligns_with_vectorizer():
+    # sklearn strips stopwords before forming bigrams, so "bell tolls" is counted even when the
+    # source says "bell that tolls". DF is read from the TF-IDF matrix, so such a generic bigram
+    # is still gated. Here "bell tolls" appears (stopword-spanned) in every cluster entity.
+    ec = _mk(0, "Focus", ["the bell that tolls loud", "a bell surely tolls", "bell always tolls here"])
+    for i in range(12):
+        ec.update(_mk(0, f"E{i}", ["the bell that tolls", "a bell simply tolls", "bell now tolls"]))
+    fp = build_cues(ec, n_cues=6, n_examples=4, generic_df_frac=0.2, generic_min_entities=10)[(0, "Focus")]
+    assert "bell tolls" not in [c["term"] for c in fp["cues"]]   # generic across cluster -> gated
+
+
 def test_generic_gate_skipped_for_small_clusters():
     # With too few entities, DF isn't a reliable generic signal, so the gate is skipped and a
     # legitimately recurring term survives even at 100% cluster frequency.
