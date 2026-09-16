@@ -191,6 +191,28 @@ def build_cues(entity_clues, n_cues=6, n_examples=4, generic_df_frac=0.2, generi
     return out
 
 
+def _load_glosses(path):
+    out = {}
+    if not path.exists():
+        return out
+    import csv
+    with open(path, newline="", encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            out[(int(row["cluster_id"]), row["phrase"], row["term"])] = row["gloss"]
+    return out
+
+
+def _attach_glosses(cid, phrase, cues, glosses):
+    out = []
+    for c in cues:
+        cc = {"term": c["term"], "support": c["support"], "total": c["total"]}
+        g = glosses.get((cid, phrase, c["term"]), "")
+        if g and g.strip():
+            cc["gloss"] = g.strip()
+        out.append(cc)
+    return out
+
+
 def run_fingerprints(min_freq=5):
     clusters = pd.read_parquet(config.CATEGORY_CLUSTERS_PATH)
     clues = pd.read_parquet(config.PARQUET_PATH)
@@ -208,9 +230,11 @@ def run_fingerprints(min_freq=5):
                        if ph is None or (int(cid), ph) in displayed}
                  for cid, refs in quiz_refs.items()}
 
+    glosses = _load_glosses(config.CUE_GLOSSES_PATH)
     quiz_rows = [{"cluster_id": cid, "phrase": ph, "clue_ids": ids}
                  for cid, refs in quiz_refs.items() for ph, ids in refs.items()]
-    fp_rows = [{"cluster_id": cid, "phrase": ph, "cues": v["cues"],
+    fp_rows = [{"cluster_id": cid, "phrase": ph,
+                "cues": _attach_glosses(cid, ph, v["cues"], glosses),
                 "example_clue_ids": v["example_clue_ids"]} for (cid, ph), v in cues.items()]
 
     referenced = set()

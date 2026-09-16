@@ -36,11 +36,18 @@ def build_research_data(tokens_df, eras_df, labels, fingerprints_df=None, quiz_r
             })
         entries.sort(key=lambda d: d["applicability"], reverse=True)
         by_era[str(int(era))] = entries
+    def _clean_cue(c):
+        out = {"term": c["term"], "support": int(c["support"]), "total": int(c["total"])}
+        g = c.get("gloss")
+        if g is not None and not (isinstance(g, float) and pd.isna(g)) and str(g).strip():
+            out["gloss"] = str(g)
+        return out
+
     fingerprints = {}
     if fingerprints_df is not None:
         for _, r in fingerprints_df.iterrows():
             fingerprints.setdefault(str(int(r["cluster_id"])), {})[r["phrase"]] = {
-                "cues": list(r["cues"]), "exampleClueIds": list(r["example_clue_ids"])}
+                "cues": [_clean_cue(c) for c in r["cues"]], "exampleClueIds": list(r["example_clue_ids"])}
     quiz = {}
     if quiz_refs_df is not None:
         for _, r in quiz_refs_df.iterrows():
@@ -347,6 +354,8 @@ _HTML_TEMPLATE = """<!doctype html>
     cursor: pointer; }
   .cue-chip:hover { border-color: var(--gold-dim); color: var(--paper); }
   .cue-chip.active { border-color: var(--gold); background: var(--panel); color: var(--paper); }
+  .cue-plain { cursor: default; }
+  .cue-plain:hover { border-color: var(--line); color: inherit; }
   .cue-chip .support { color: var(--ash); }
   .cue-why { margin: 2px 0 14px; font-size: 13px; line-height: 1.55; color: var(--paper); }
   .cue-why .fallback { color: var(--ash); }
@@ -547,31 +556,9 @@ _HTML_TEMPLATE = """<!doctype html>
       const detailPanel = document.getElementById('detail-panel');
       const eraToggle = document.getElementById('era-toggle');
       const wikiCache = new Map();
-      const cueCache = new Map();
       let activeCueBtn = null;
 
-      async function fetchCueWhy(entityPhrase, term) {
-        const key = entityPhrase + '\\u0000' + term;
-        if (cueCache.has(key)) return cueCache.get(key);
-        let result = null;
-        try {
-          const q = entityPhrase + ' ' + term;
-          const s = await fetch('https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=' +
-            encodeURIComponent(q) + '&format=json&origin=*');
-          if (s.ok) {
-            const hit = (await s.json())?.query?.search?.[0];
-            if (hit && hit.snippet) {
-              const tmp = document.createElement('textarea');
-              tmp.innerHTML = hit.snippet.replace(/<[^>]+>/g, '');
-              result = { title: hit.title, snippet: tmp.value.trim() };
-            }
-          }
-        } catch (e) { /* fall through to null */ }
-        cueCache.set(key, result);
-        return result;
-      }
-
-      async function showCueWhy(entityPhrase, term, btn) {
+      function showCueGloss(gloss, btn) {
         const slot = document.getElementById('cue-why');
         if (!slot) return;
         if (activeCueBtn === btn) {
@@ -579,18 +566,7 @@ _HTML_TEMPLATE = """<!doctype html>
         }
         if (activeCueBtn) activeCueBtn.classList.remove('active');
         activeCueBtn = btn; btn.classList.add('active');
-        slot.innerHTML = '<div class="cue-why"><p class="pulse">Why &ldquo;' + escapeHtml(term) + '&rdquo;&hellip;</p></div>';
-        const why = await fetchCueWhy(entityPhrase, term);
-        if (activeCueBtn !== btn) return;
-        if (why && why.snippet) {
-          const url = 'https://en.wikipedia.org/wiki/' + encodeURIComponent(why.title.replace(/ /g, '_'));
-          slot.innerHTML = '<div class="cue-why"><p>' + escapeHtml(why.snippet) + '&hellip; ' +
-            '<a href="' + escapeHtml(url) + '" target="_blank" rel="noopener">' + escapeHtml(why.title) + ' &#8599;</a></p></div>';
-        } else {
-          const sUrl = 'https://en.wikipedia.org/w/index.php?search=' + encodeURIComponent(entityPhrase + ' ' + term);
-          slot.innerHTML = '<div class="cue-why"><p class="fallback">No quick explanation found. ' +
-            '<a href="' + escapeHtml(sUrl) + '" target="_blank" rel="noopener">Search Wikipedia &#8599;</a></p></div>';
-        }
+        slot.innerHTML = '<div class="cue-why"><p>' + escapeHtml(gloss) + '</p></div>';
       }
 
       let currentEra = DATA.eras.includes(2010) ? 2010 : DATA.eras[0];
@@ -825,8 +801,12 @@ _HTML_TEMPLATE = """<!doctype html>
             'the recurring angles worth recognizing. Counted across all years; &ldquo;N of M&rdquo; = it appeared in ' +
             'N of this answer&rsquo;s M all-time clues. Tap a cue to see why it connects.</p>';
           if (fp.cues && fp.cues.length) {
-            html += fp.cues.map(c => `<button type="button" class="cue-chip" data-term="${escapeHtml(c.term)}">${escapeHtml(c.term)}` +
-              ` <span class="support">&middot; ${c.support} of ${c.total}</span></button>`).join('');
+            html += fp.cues.map(c => {
+              const label = escapeHtml(c.term) + ` <span class="support">&middot; ${c.support} of ${c.total}</span>`;
+              return c.gloss
+                ? `<button type="button" class="cue-chip" data-gloss="${escapeHtml(c.gloss)}">${label}</button>`
+                : `<span class="cue-chip cue-plain">${label}</span>`;
+            }).join('');
             html += '<div id="cue-why"></div>';
           } else {
             html += '<p class="fp-none">No single recurring angle &mdash; this answer gets clued many different ways.</p>';
@@ -852,8 +832,8 @@ _HTML_TEMPLATE = """<!doctype html>
           const help = document.getElementById('fp-help');
           if (help) help.hidden = !help.hidden;
         });
-        detailPanel.querySelectorAll('.cue-chip').forEach(btn => {
-          btn.addEventListener('click', () => showCueWhy(entity.phrase, btn.dataset.term, btn));
+        detailPanel.querySelectorAll('button.cue-chip').forEach(btn => {
+          btn.addEventListener('click', () => showCueGloss(btn.dataset.gloss, btn));
         });
       }
 

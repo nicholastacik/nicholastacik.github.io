@@ -261,3 +261,32 @@ def test_run_fingerprints_pruned_to_displayed_entities(tmp_path, monkeypatch):
     per_entity = qr[qr["phrase"].notna()]
     assert "Vincent van Gogh" not in set(per_entity["phrase"])  # per-entity quiz ref pruned too
     assert qr["phrase"].isna().any()                      # general pool still present
+
+
+def test_run_fingerprints_attaches_glosses(tmp_path, monkeypatch):
+    import csv as _csv
+    import jeopardy.analysis.fingerprints as fp
+    clusters = _clusters(); clusters["centroid_dist"] = 0.0
+    clues = _clues()  # resolves to "Vincent van Gogh"; a cue term will be "dutch" or similar
+    for a in ("CATEGORY_CLUSTERS_PATH", "PARQUET_PATH", "ENTITY_DECISIONS_PATH", "CATEGORY_TOKENS_PATH",
+              "CLUES_STORE_PATH", "CATEGORY_QUIZ_REFS_PATH", "CATEGORY_FINGERPRINTS_PATH", "CUE_GLOSSES_PATH"):
+        monkeypatch.setattr(fp.config, a, tmp_path / (a.lower() + ".x"))
+    clusters.to_parquet(fp.config.CATEGORY_CLUSTERS_PATH)
+    clues.to_parquet(fp.config.PARQUET_PATH)
+    pd.DataFrame({"era": [1980], "cluster_id": [0], "rank": [1], "phrase": ["Vincent van Gogh"],
+                  "count": [8], "tfidf_weight": [0.0]}).to_parquet(fp.config.CATEGORY_TOKENS_PATH)
+    # first run to discover the actual cue terms, then gloss one and re-run
+    fp.run_fingerprints(min_freq=5)
+    fpr = pd.read_parquet(fp.config.CATEGORY_FINGERPRINTS_PATH)
+    cues0 = list(fpr[fpr.phrase == "Vincent van Gogh"].iloc[0]["cues"])
+    assert len(cues0) > 0
+    term = cues0[0]["term"]
+    with open(fp.config.CUE_GLOSSES_PATH, "w", newline="", encoding="utf-8") as f:
+        w = _csv.writer(f); w.writerow(["cluster_id", "phrase", "term", "gloss"])
+        w.writerow([0, "Vincent van Gogh", term, "A test gloss."])
+    fp.run_fingerprints(min_freq=5)
+    fpr2 = pd.read_parquet(fp.config.CATEGORY_FINGERPRINTS_PATH)
+    cues1 = {c["term"]: c for c in list(fpr2[fpr2.phrase == "Vincent van Gogh"].iloc[0]["cues"])}
+    assert cues1[term].get("gloss") == "A test gloss."     # gloss merged onto the right cue
+    others = [t for t, c in cues1.items() if t != term and c.get("gloss")]
+    assert not others                                       # only the glossed term has a gloss
