@@ -524,6 +524,73 @@ _HTML_TEMPLATE = """<!doctype html>
     }
     .main { border-right: none; }
   }
+
+  .practice-open {
+    margin-left: auto;
+    font-family: var(--mono); font-size: 12.5px; letter-spacing: 0.03em;
+    background: var(--gold); border: 1px solid var(--gold); color: var(--ink);
+    font-weight: 600; border-radius: var(--radius); padding: 6px 16px; cursor: pointer;
+  }
+  .practice-open:hover { background: var(--paper); border-color: var(--paper); }
+  .practice-overlay {
+    position: fixed; inset: 0; z-index: 50; background: rgba(6, 12, 38, 0.96);
+    display: flex; align-items: flex-start; justify-content: center; overflow-y: auto;
+  }
+  .practice-overlay[hidden] { display: none; }
+  .practice-inner {
+    width: min(680px, 100%); margin: clamp(16px, 5vh, 64px) 16px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: clamp(18px, 3vw, 30px);
+  }
+  .practice-head { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+  .practice-exit {
+    font-family: var(--mono); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em;
+    background: var(--panel-2); border: 1px solid var(--line); color: var(--ash);
+    border-radius: var(--radius); padding: 6px 12px; cursor: pointer;
+  }
+  .practice-exit:hover { color: var(--paper); border-color: var(--gold-dim); }
+  .practice-progress { font-family: var(--mono); font-size: 12px; color: var(--ash); }
+  .practice-tally { font-family: var(--mono); font-size: 12px; color: var(--gold); margin-left: auto; }
+  .practice-notice {
+    margin-bottom: 14px; padding: 8px 12px; border: 1px solid var(--brick);
+    border-radius: var(--radius); color: var(--brick); font-size: 13px;
+  }
+  .practice-title { font-family: var(--display); text-transform: uppercase; letter-spacing: 0.03em; font-size: 26px; margin: 0 0 6px; }
+  .practice-sub { color: var(--ash); font-family: var(--mono); font-size: 12px; margin: 0 0 18px; }
+  .practice-topics { display: flex; flex-direction: column; gap: 4px; max-height: 40vh; overflow-y: auto; margin-bottom: 18px; }
+  .ptopic { font-size: 14px; cursor: pointer; }
+  .practice-opts { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; font-size: 14px; }
+  .popt-label { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ash); }
+  .pextra { display: block; font-size: 14px; margin-bottom: 18px; cursor: pointer; }
+  .pextra-note { color: var(--ash); font-size: 12px; }
+  .practice-actions { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .practice-start {
+    font-family: var(--mono); font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase;
+    background: var(--gold); border: 1px solid var(--gold); color: var(--ink); font-weight: 600;
+    border-radius: var(--radius); padding: 9px 18px; cursor: pointer;
+  }
+  .practice-start:hover { background: var(--paper); border-color: var(--paper); }
+  .practice-start:disabled { opacity: 0.45; cursor: not-allowed; }
+  .practice-start:disabled:hover { background: var(--gold); border-color: var(--gold); }
+  .practice-startnote { color: var(--brick); font-size: 13px; }
+  .practice-reset {
+    font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em;
+    background: transparent; border: 1px solid var(--line); color: var(--ash);
+    border-radius: var(--radius); padding: 6px 12px; cursor: pointer;
+  }
+  .practice-reset:hover { color: var(--brick); border-color: var(--brick); }
+  .pcard-scope { font-family: var(--mono); font-size: 11px; color: var(--ash); margin: 0 0 10px; }
+  .pcard-clue { font-size: 18px; line-height: 1.5; margin: 0 0 18px; }
+  .pcard-answer { font-size: 16px; color: var(--gold); margin: 0 0 16px; }
+  .pcard-grades { display: flex; gap: 10px; flex-wrap: wrap; }
+  .pgrade {
+    font-size: 14px; background: var(--panel-2); border: 1px solid var(--line); color: var(--paper);
+    border-radius: var(--radius); padding: 10px 16px; cursor: pointer;
+  }
+  .pgrade:hover { border-color: var(--gold); }
+  .pgrade span { font-family: var(--mono); font-size: 11px; color: var(--ash); margin-left: 6px; }
+  .psummary-tally { font-size: 16px; margin: 0 0 8px; }
+  .psummary-sched { color: var(--ash); font-size: 14px; margin: 0 0 18px; }
 </style>
 </head>
 <body>
@@ -539,6 +606,7 @@ _HTML_TEMPLATE = """<!doctype html>
   <div class="era-bar" role="group" aria-label="Study era">
     <span class="era-bar-label">Study window (cumulative)</span>
     <div id="era-toggle" class="era-toggle"></div>
+    <button type="button" id="practice-open" class="practice-open">Practice &#9654;</button>
   </div>
   <div class="layout">
     <aside class="side" aria-label="Categories">
@@ -549,6 +617,17 @@ _HTML_TEMPLATE = """<!doctype html>
     </aside>
     <main id="main-panel" class="main" aria-label="Ranked entities"></main>
     <section id="detail-panel" class="detail" aria-label="Wikipedia facts"></section>
+  </div>
+  <div id="practice" class="practice-overlay" role="dialog" aria-modal="true" aria-label="Practice session" hidden>
+    <div class="practice-inner">
+      <header class="practice-head">
+        <button type="button" id="practice-exit" class="practice-exit">Exit</button>
+        <span id="practice-progress" class="practice-progress"></span>
+        <span id="practice-tally" class="practice-tally"></span>
+      </header>
+      <div id="practice-notice" class="practice-notice" hidden></div>
+      <div id="practice-body" class="practice-body"></div>
+    </div>
   </div>
   <footer class="footer">
     Categories mined from j-archive.com box scores; ranked entities are the phrases that keep
@@ -878,6 +957,174 @@ _HTML_TEMPLATE = """<!doctype html>
       }
 
       filterInput.addEventListener('input', () => renderSide(filterInput.value));
+
+      // ---- Practice mode ----
+      const PKEY = 'jeopardy-practice-v1';
+      const practice = {
+        screen: 'start', config: null, store: { v: 1, cards: {} },
+        session: null, current: null, revealed: false,
+        tally: { knew: 0, unsure: 0, missed: 0 }, seen: new Set(),
+        saveFailed: false, returnFocus: null,
+      };
+      const overlay = document.getElementById('practice');
+      const pBody = document.getElementById('practice-body');
+      const pProgress = document.getElementById('practice-progress');
+      const pTally = document.getElementById('practice-tally');
+      const pNotice = document.getElementById('practice-notice');
+      const bgEls = ['.topbar', '.era-bar', '.layout', '.footer']
+        .map(sel => document.querySelector(sel)).filter(Boolean);
+      function setBackgroundInert(on) {
+        for (const el of bgEls) {
+          if (on) { el.setAttribute('aria-hidden', 'true'); el.setAttribute('inert', ''); }
+          else { el.removeAttribute('aria-hidden'); el.removeAttribute('inert'); }
+        }
+      }
+
+      // Task 7 replaces this stub with the real card loop.
+      function nextCard() { /* replaced in Task 7 */ }
+
+      function loadStore() {
+        try { return sanitizeStore(JSON.parse(localStorage.getItem(PKEY))); }
+        catch (e) { return { v: 1, cards: {} }; }
+      }
+      function saveCard(id, rec) {
+        practice.store.cards[id] = rec;
+        try { localStorage.setItem(PKEY, JSON.stringify(practice.store)); }
+        catch (e) {
+          practice.saveFailed = true;
+          pNotice.textContent = "Progress isn't being saved (storage unavailable).";
+          pNotice.hidden = false;
+        }
+      }
+      function resetProgress() {
+        try { localStorage.removeItem(PKEY); } catch (e) { /* ignore */ }
+        practice.store = { v: 1, cards: {} };
+      }
+      function practicePool(clusterIds, era) {
+        const ids = new Set();
+        for (const cid of clusterIds) {
+          const refs = (DATA.quiz && DATA.quiz[String(cid)]) || {};
+          for (const key in refs) for (const id of refs[key]) ids.add(id);
+        }
+        const out = [];
+        for (const id of ids) { const c = clueById(id); if (c && c.year >= era) out.push(id); }
+        return out;
+      }
+
+      function renderStart(prefill) {
+        practice.screen = 'start';
+        pProgress.textContent = ''; pTally.textContent = '';
+        const list = DATA.byEra[String(currentEra)] || [];
+        const nameById = {};
+        for (const d of list) nameById[d.cluster_id] = d.name;
+        const clusters = Object.keys(DATA.quiz || {}).map(Number)
+          .filter(cid => nameById[cid] !== undefined)
+          .sort((a, b) => (nameById[a] || '').localeCompare(nameById[b] || ''));
+        const isOn = cid => !prefill || prefill.clusterIds.indexOf(cid) !== -1;
+        const size = prefill ? prefill.size : 20;
+        const extra = prefill ? prefill.extra : false;
+        let html = '<h2 class="practice-title">Practice</h2>' +
+          '<p class="practice-sub">Study window: ' +
+          (currentEra === DATA.eras[0] ? 'All-time' : 'Since ' + currentEra) + '</p>' +
+          '<div class="practice-topics" role="group" aria-label="Topics">' +
+          '<label class="ptopic"><input type="checkbox" id="ptopic-all"' +
+          (clusters.every(isOn) ? ' checked' : '') + '> <b>Select all / none</b></label>';
+        for (const cid of clusters) {
+          html += '<label class="ptopic"><input type="checkbox" class="ptopic-cb" value="' + cid + '"' +
+            (isOn(cid) ? ' checked' : '') + '> ' + escapeHtml(nameById[cid]) + '</label>';
+        }
+        html += '</div>' +
+          '<div class="practice-opts"><span class="popt-label">Cards</span>' +
+          [10, 20, 30].map(n => '<label><input type="radio" name="psize" value="' + n + '"' +
+            (n === size ? ' checked' : '') + '> ' + n + '</label>').join('') + '</div>' +
+          '<label class="pextra"><input type="checkbox" id="pextra"' + (extra ? ' checked' : '') + '> Extra practice ' +
+          '<span class="pextra-note">(drill everything; correct answers don\\'t change your schedule)</span></label>' +
+          '<div class="practice-actions">' +
+          '<button type="button" id="practice-start" class="practice-start">Start session</button>' +
+          '<span id="practice-startnote" class="practice-startnote">' +
+          (prefill && prefill.note ? escapeHtml(prefill.note) : '') + '</span></div>' +
+          '<button type="button" id="practice-reset" class="practice-reset">Reset progress</button>';
+        pBody.innerHTML = html;
+        const all = document.getElementById('ptopic-all');
+        const cbs = () => Array.from(pBody.querySelectorAll('.ptopic-cb'));
+        all.addEventListener('change', () => { cbs().forEach(cb => { cb.checked = all.checked; }); updateStartAvailability(); });
+        cbs().forEach(cb => cb.addEventListener('change', () => {
+          all.checked = cbs().every(c => c.checked); updateStartAvailability();
+        }));
+        document.getElementById('pextra').addEventListener('change', updateStartAvailability);
+        pBody.querySelectorAll('input[name=psize]').forEach(r => r.addEventListener('change', updateStartAvailability));
+        document.getElementById('practice-start').addEventListener('click', startSession);
+        document.getElementById('practice-reset').addEventListener('click', () => {
+          if (window.confirm('Erase all saved practice progress?')) { resetProgress(); updateStartAvailability(); }
+        });
+        updateStartAvailability();
+      }
+
+      function currentSelection() {
+        const cids = Array.from(pBody.querySelectorAll('.ptopic-cb')).filter(cb => cb.checked).map(cb => Number(cb.value));
+        const extra = document.getElementById('pextra').checked;
+        const sizeEl = pBody.querySelector('input[name=psize]:checked');
+        return { cids, extra, size: Number(sizeEl ? sizeEl.value : 20) };
+      }
+      function updateStartAvailability() {
+        const sel = currentSelection();
+        const avail = assembleSession(practicePool(sel.cids, currentEra), practice.store.cards,
+          Date.now(), 1, sel.extra, Math.random).length;
+        const btn = document.getElementById('practice-start');
+        const note = document.getElementById('practice-startnote');
+        btn.disabled = avail === 0;
+        note.textContent = avail !== 0 ? '' : (sel.extra
+          ? 'No clues match — widen your era or topics.'
+          : 'Nothing due — turn on Extra practice, or widen your era / topics.');
+      }
+
+      function startSession() {
+        const sel = currentSelection();
+        const ids = assembleSession(practicePool(sel.cids, currentEra), practice.store.cards,
+          Date.now(), sel.size, sel.extra, Math.random);
+        if (!ids.length) { updateStartAvailability(); return; }
+        practice.config = { clusterIds: sel.cids, size: sel.size, extra: sel.extra, era: currentEra };
+        practice.session = initSession(ids);
+        practice.tally = { knew: 0, unsure: 0, missed: 0 };
+        practice.seen = new Set();
+        nextCard();
+      }
+
+      function trapTab(e) {
+        if (e.key !== 'Tab') return;
+        const items = Array.from(overlay.querySelectorAll('button, input, a[href], [tabindex]:not([tabindex="-1"])'))
+          .filter(el => !el.disabled && el.offsetParent !== null);
+        if (!items.length) return;
+        const first = items[0], last = items[items.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+      function practiceKeys(e) {
+        if (e.key === 'Escape') { closePractice(); return; }
+        trapTab(e);
+        // Card-screen shortcuts (Space / 1-2-3) are added in Task 7.
+      }
+      function openPractice() {
+        practice.returnFocus = document.activeElement;
+        practice.store = loadStore();
+        practice.saveFailed = false; pNotice.hidden = true;
+        overlay.hidden = false;
+        document.body.style.overflow = 'hidden';
+        setBackgroundInert(true);
+        renderStart();
+        document.addEventListener('keydown', practiceKeys);
+        const firstFocus = pBody.querySelector('input, button');
+        if (firstFocus) firstFocus.focus();
+      }
+      function closePractice() {
+        overlay.hidden = true;
+        document.body.style.overflow = '';
+        setBackgroundInert(false);
+        document.removeEventListener('keydown', practiceKeys);
+        if (practice.returnFocus && practice.returnFocus.focus) practice.returnFocus.focus();
+      }
+      document.getElementById('practice-exit').addEventListener('click', closePractice);
+      document.getElementById('practice-open').addEventListener('click', openPractice);
 
       renderEraToggle();
       renderSide('');
