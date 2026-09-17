@@ -542,9 +542,10 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 **Interfaces:**
 - Consumes: page globals `assembleSession`, `sanitizeStore` (Task 2, 4); existing page helpers `escapeHtml`, `clueById`, and the module-scope `currentEra`, `DATA`.
 - Produces (inside the existing IIFE, used by Task 7):
-  - `practice` state object; `overlay`, `pBody`, `pProgress`, `pTally`, `pNotice` element refs.
+  - `practice` state object; `overlay`, `pBody`, `pProgress`, `pTally`, `pNotice` element refs; `bgEls` + `setBackgroundInert(on)`.
   - `loadStore()`, `saveCard(id, rec)`, `resetProgress()`, `practicePool(clusterIds, era)`.
-  - `openPractice()`, `closePractice()`, `practiceKeys(e)` (Escape + focus-trap; the card-screen shortcuts are added in Task 7), `renderStart()`, `startSession()`.
+  - `openPractice()`, `closePractice()`, `practiceKeys(e)` (Escape + focus-trap; the card-screen shortcuts are added in Task 7), `renderStart(prefill?)`, `currentSelection()`, `updateStartAvailability()`, `startSession()`.
+  - `renderStart(prefill)` optionally restores controls from `prefill = {clusterIds, size, extra, note}` (used when "Practice again" finds nothing due). `updateStartAvailability()` disables Start (with a note) whenever the current topic/Extra selection yields no eligible clue; it is called on every selection change.
   - `startSession()` calls `nextCard()` (defined in Task 7). This task provides a temporary `nextCard` stub so Start is testable in isolation; Task 7 replaces it.
 
 - [ ] **Step 1: Write the failing test**
@@ -618,6 +619,8 @@ In `jeopardy/analysis/research.py`, inside `<style>`, immediately before the clo
     border-radius: var(--radius); padding: 9px 18px; cursor: pointer;
   }
   .practice-start:hover { background: var(--paper); border-color: var(--paper); }
+  .practice-start:disabled { opacity: 0.45; cursor: not-allowed; }
+  .practice-start:disabled:hover { background: var(--gold); border-color: var(--gold); }
   .practice-startnote { color: var(--brick); font-size: 13px; }
   .practice-reset {
     font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em;
@@ -712,7 +715,14 @@ Insert the following **before** those four `render*()` init calls (so the functi
       const pProgress = document.getElementById('practice-progress');
       const pTally = document.getElementById('practice-tally');
       const pNotice = document.getElementById('practice-notice');
-      const layoutEl = document.querySelector('.layout');
+      const bgEls = ['.topbar', '.era-bar', '.layout', '.footer']
+        .map(sel => document.querySelector(sel)).filter(Boolean);
+      function setBackgroundInert(on) {
+        for (const el of bgEls) {
+          if (on) { el.setAttribute('aria-hidden', 'true'); el.setAttribute('inert', ''); }
+          else { el.removeAttribute('aria-hidden'); el.removeAttribute('inert'); }
+        }
+      }
 
       // Task 7 replaces this stub with the real card loop.
       function nextCard() { /* replaced in Task 7 */ }
@@ -745,7 +755,7 @@ Insert the following **before** those four `render*()` init calls (so the functi
         return out;
       }
 
-      function renderStart() {
+      function renderStart(prefill) {
         practice.screen = 'start';
         pProgress.textContent = ''; pTally.textContent = '';
         const list = DATA.byEra[String(currentEra)] || [];
@@ -754,53 +764,70 @@ Insert the following **before** those four `render*()` init calls (so the functi
         const clusters = Object.keys(DATA.quiz || {}).map(Number)
           .filter(cid => nameById[cid] !== undefined)
           .sort((a, b) => (nameById[a] || '').localeCompare(nameById[b] || ''));
+        const isOn = cid => !prefill || prefill.clusterIds.indexOf(cid) !== -1;
+        const size = prefill ? prefill.size : 20;
+        const extra = prefill ? prefill.extra : false;
         let html = '<h2 class="practice-title">Practice</h2>' +
           '<p class="practice-sub">Study window: ' +
           (currentEra === DATA.eras[0] ? 'All-time' : 'Since ' + currentEra) + '</p>' +
           '<div class="practice-topics" role="group" aria-label="Topics">' +
-          '<label class="ptopic"><input type="checkbox" id="ptopic-all" checked> <b>Select all / none</b></label>';
+          '<label class="ptopic"><input type="checkbox" id="ptopic-all"' +
+          (clusters.every(isOn) ? ' checked' : '') + '> <b>Select all / none</b></label>';
         for (const cid of clusters) {
-          html += '<label class="ptopic"><input type="checkbox" class="ptopic-cb" value="' + cid + '" checked> ' +
-            escapeHtml(nameById[cid]) + '</label>';
+          html += '<label class="ptopic"><input type="checkbox" class="ptopic-cb" value="' + cid + '"' +
+            (isOn(cid) ? ' checked' : '') + '> ' + escapeHtml(nameById[cid]) + '</label>';
         }
         html += '</div>' +
           '<div class="practice-opts"><span class="popt-label">Cards</span>' +
-          '<label><input type="radio" name="psize" value="10"> 10</label>' +
-          '<label><input type="radio" name="psize" value="20" checked> 20</label>' +
-          '<label><input type="radio" name="psize" value="30"> 30</label></div>' +
-          '<label class="pextra"><input type="checkbox" id="pextra"> Extra practice ' +
+          [10, 20, 30].map(n => '<label><input type="radio" name="psize" value="' + n + '"' +
+            (n === size ? ' checked' : '') + '> ' + n + '</label>').join('') + '</div>' +
+          '<label class="pextra"><input type="checkbox" id="pextra"' + (extra ? ' checked' : '') + '> Extra practice ' +
           '<span class="pextra-note">(drill everything; correct answers don\\'t change your schedule)</span></label>' +
           '<div class="practice-actions">' +
           '<button type="button" id="practice-start" class="practice-start">Start session</button>' +
-          '<span id="practice-startnote" class="practice-startnote"></span></div>' +
+          '<span id="practice-startnote" class="practice-startnote">' +
+          (prefill && prefill.note ? escapeHtml(prefill.note) : '') + '</span></div>' +
           '<button type="button" id="practice-reset" class="practice-reset">Reset progress</button>';
         pBody.innerHTML = html;
         const all = document.getElementById('ptopic-all');
         const cbs = () => Array.from(pBody.querySelectorAll('.ptopic-cb'));
-        all.addEventListener('change', () => { cbs().forEach(cb => { cb.checked = all.checked; }); });
-        cbs().forEach(cb => cb.addEventListener('change', () => { all.checked = cbs().every(c => c.checked); }));
+        all.addEventListener('change', () => { cbs().forEach(cb => { cb.checked = all.checked; }); updateStartAvailability(); });
+        cbs().forEach(cb => cb.addEventListener('change', () => {
+          all.checked = cbs().every(c => c.checked); updateStartAvailability();
+        }));
+        document.getElementById('pextra').addEventListener('change', updateStartAvailability);
+        pBody.querySelectorAll('input[name=psize]').forEach(r => r.addEventListener('change', updateStartAvailability));
         document.getElementById('practice-start').addEventListener('click', startSession);
         document.getElementById('practice-reset').addEventListener('click', () => {
-          if (window.confirm('Erase all saved practice progress?')) resetProgress();
+          if (window.confirm('Erase all saved practice progress?')) { resetProgress(); updateStartAvailability(); }
         });
+        updateStartAvailability();
+      }
+
+      function currentSelection() {
+        const cids = Array.from(pBody.querySelectorAll('.ptopic-cb')).filter(cb => cb.checked).map(cb => Number(cb.value));
+        const extra = document.getElementById('pextra').checked;
+        const sizeEl = pBody.querySelector('input[name=psize]:checked');
+        return { cids, extra, size: Number(sizeEl ? sizeEl.value : 20) };
+      }
+      function updateStartAvailability() {
+        const sel = currentSelection();
+        const avail = assembleSession(practicePool(sel.cids, currentEra), practice.store.cards,
+          Date.now(), 1, sel.extra, Math.random).length;
+        const btn = document.getElementById('practice-start');
+        const note = document.getElementById('practice-startnote');
+        btn.disabled = avail === 0;
+        note.textContent = avail !== 0 ? '' : (sel.extra
+          ? 'No clues match — widen your era or topics.'
+          : 'Nothing due — turn on Extra practice, or widen your era / topics.');
       }
 
       function startSession() {
-        const cids = Array.from(pBody.querySelectorAll('.ptopic-cb')).filter(cb => cb.checked).map(cb => Number(cb.value));
-        const sizeEl = pBody.querySelector('input[name=psize]:checked');
-        const size = Number(sizeEl ? sizeEl.value : 20);
-        const extra = document.getElementById('pextra').checked;
-        const era = currentEra;
-        const pool = practicePool(cids, era);
-        const ids = assembleSession(pool, practice.store.cards, Date.now(), size, extra, Math.random);
-        const note = document.getElementById('practice-startnote');
-        if (!ids.length) {
-          note.textContent = extra
-            ? 'No clues match — widen your era or topics.'
-            : 'Nothing due — turn on Extra practice, or widen your era / topics.';
-          return;
-        }
-        practice.config = { clusterIds: cids, size, extra, era };
+        const sel = currentSelection();
+        const ids = assembleSession(practicePool(sel.cids, currentEra), practice.store.cards,
+          Date.now(), sel.size, sel.extra, Math.random);
+        if (!ids.length) { updateStartAvailability(); return; }
+        practice.config = { clusterIds: sel.cids, size: sel.size, extra: sel.extra, era: currentEra };
         practice.session = initSession(ids);
         practice.tally = { knew: 0, unsure: 0, missed: 0 };
         practice.seen = new Set();
@@ -827,7 +854,7 @@ Insert the following **before** those four `render*()` init calls (so the functi
         practice.saveFailed = false; pNotice.hidden = true;
         overlay.hidden = false;
         document.body.style.overflow = 'hidden';
-        if (layoutEl) layoutEl.setAttribute('aria-hidden', 'true');
+        setBackgroundInert(true);
         renderStart();
         document.addEventListener('keydown', practiceKeys);
         const firstFocus = pBody.querySelector('input, button');
@@ -836,7 +863,7 @@ Insert the following **before** those four `render*()` init calls (so the functi
       function closePractice() {
         overlay.hidden = true;
         document.body.style.overflow = '';
-        if (layoutEl) layoutEl.removeAttribute('aria-hidden');
+        setBackgroundInert(false);
         document.removeEventListener('keydown', practiceKeys);
         if (practice.returnFocus && practice.returnFocus.focus) practice.returnFocus.focus();
       }
@@ -852,7 +879,7 @@ Expected: PASS — the new `test_render_html_has_practice_entry_and_start_screen
 
 - [ ] **Step 8: Manual browser check**
 
-Run: `uv run --group analysis python -m jeopardy research` (regenerates `posts/jeopardy_ds/research/index.html`), open it, click **Practice**. Verify: overlay opens; topics listed with Select all/none working; size + Extra toggle present; Reset asks for confirm; Escape and Exit close and return focus to the Practice button; clicking Start with topics selected does not error (card screen is a stub until Task 7).
+Run: `uv run --group analysis python -m jeopardy research` (regenerates `posts/jeopardy_ds/research/index.html`), open it, click **Practice**. Verify: overlay opens; topics listed with Select all/none working; size + Extra toggle present; Reset asks for confirm; Escape and Exit close and return focus to the Practice button; clicking Start with topics selected does not error (card screen is a stub until Task 7). Also verify **Start disables live**: unchecking every topic disables Start and shows the note; re-checking one (or toggling Extra practice) re-enables it. Confirm the background is inert — Tab does not reach the era pills or category list behind the overlay. Do **not** commit the regenerated page in this task — it still has the stub card loop; Task 7 regenerates and commits the finished page.
 
 - [ ] **Step 9: Commit**
 
@@ -978,13 +1005,21 @@ Replace it with:
         document.getElementById('practice-again').addEventListener('click', () => {
           const ids = assembleSession(practicePool(practice.config.clusterIds, practice.config.era),
             practice.store.cards, Date.now(), practice.config.size, practice.config.extra, Math.random);
-          if (!ids.length) { renderStart(); return; }
+          if (!ids.length) {
+            // Nothing left due — return to setup but keep this session's topics/size/extra.
+            renderStart({ clusterIds: practice.config.clusterIds, size: practice.config.size,
+              extra: practice.config.extra, note: 'Nothing left due — adjust topics/era or turn on Extra practice.' });
+            const startBtn = document.getElementById('practice-start');
+            if (startBtn) startBtn.focus();
+            return;
+          }
           practice.session = initSession(ids);
           practice.tally = { knew: 0, unsure: 0, missed: 0 };
           practice.seen = new Set();
           nextCard();
         });
         document.getElementById('practice-done').addEventListener('click', closePractice);
+        document.getElementById('practice-again').focus();
       }
 ```
 
@@ -1008,11 +1043,13 @@ Replace with:
         trapTab(e);
         if (practice.screen !== 'card') return;
         const tag = (e.target.tagName || '').toLowerCase();
-        if (tag === 'input' || tag === 'textarea') return;
+        const interactive = tag === 'button' || tag === 'a' || tag === 'input' || tag === 'textarea';
         if (!practice.revealed) {
-          // The reveal button handles its own Space natively; only fill in when focus is elsewhere.
-          if (e.key === ' ' && e.target.id !== 'pcard-reveal') { e.preventDefault(); reveal(); }
+          // Space reveals — but never override native activation of a focused button/link
+          // (Exit, Reveal, etc. must keep their default Space/Enter behavior).
+          if (e.key === ' ' && !interactive) { e.preventDefault(); reveal(); }
         } else if (e.key === '1' || e.key === '2' || e.key === '3') {
+          // Digit keys aren't native button activators, so grading by number is safe regardless of focus.
           grade({ '1': 'knew', '2': 'unsure', '3': 'missed' }[e.key]);
         }
       }
@@ -1034,16 +1071,23 @@ Expected: PASS — full Python suite.
 - [ ] **Step 7: Manual browser check**
 
 Run: `uv run --group analysis python -m jeopardy research`, open `posts/jeopardy_ds/research/index.html`, click **Practice** → Start. Verify:
-- Clue shows answer-hidden; **Reveal** (or Space) shows answer + J-Archive link; focus lands on Knew it.
+- Clue shows answer-hidden; **Reveal** (or Space when focus is not on a button) shows answer + J-Archive link; focus lands on Knew it.
 - 1/2/3 grade and advance; header shows `done / size cards` and retries; a Missed card reappears once (~3 later); repeatedly missing it does not extend the session forever.
-- Session ends → summary with tally + "N cards scheduled to come back later"; **Practice again** starts a fresh session, **Done** exits.
+- Session ends → summary with tally + "N cards scheduled to come back later"; **focus lands on Practice again**; it starts a fresh session, **Done** exits.
+- **Practice again with nothing left due** (pick one topic + 10 cards, clear them, then Practice again): returns to setup with **that same topic and size still selected** (not reset to all/20) and a "Nothing left due…" note, with focus on Start.
+- **Space does not hijack buttons:** focus **Exit** and press Space → the overlay closes (answer is not revealed); the same for a focused Reveal/grade button using its native activation.
 - Reload the page, reopen Practice, Start: previously-missed cards resurface first (persistence works). In a private window or with storage blocked, grading still works and the "Progress isn't being saved" notice appears.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 8: Regenerate the deployed page and commit**
+
+Quarto copies `posts/jeopardy_ds/research/index.html` verbatim (see `_quarto.yml`), so the committed artifact — not just the Python source — is what deploys. Regenerate it and stage it alongside the source:
 
 ```bash
-git add jeopardy/analysis/research.py jeopardy/tests/test_research.py
+uv run --group analysis python -m jeopardy research
+git add jeopardy/analysis/research.py jeopardy/tests/test_research.py posts/jeopardy_ds/research/index.html
 git commit -m "feat: practice card loop, grading, persistence, summary
+
+Regenerates the research page so the deployed site ships Practice mode.
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ```
@@ -1071,3 +1115,10 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 **3. Type consistency:** Function names and signatures are identical across tasks and the spec's Interfaces block: `applyGrade(card, grade, now, promote)`, `assembleSession(pool, store, now, size, extra, rng)`, `gradeCurrent(session, grade)`, `sessionProgress(session)`, `sanitizeStore(parsed)`. The store shape `{v:1, cards:{id:{box,due,seen}}}` and localStorage key `jeopardy-practice-v1` match everywhere. The export line accumulates the same names the Python injection strips.
 
 **Note for executor:** Tasks 6 and 7 edit the same inline `<script>`; the Task 7 stub-replacement anchors on the exact stub comment from Task 6, so run them in order.
+
+**Spec-review fixes folded into the code steps** (verified against a temporary fixture):
+- **Deployed page committed** — Task 7 Step 8 regenerates and stages `posts/jeopardy_ds/research/index.html` (Quarto ships the committed artifact).
+- **"Practice again" with nothing due preserves settings** — `renderStart(prefill)` restores topics/size/extra and shows a note instead of resetting to all/20.
+- **Focus into summary / setup** — `renderSummary` focuses **Practice again**; the return-to-setup path focuses **Start**; background is made `inert` (not just `aria-hidden`) via `setBackgroundInert`.
+- **Space never overrides native button/link activation** — `practiceKeys` only reveals on Space when focus is on a non-interactive element.
+- **Start disables live** — `updateStartAvailability()` recomputes eligibility on every topic/Extra/size change, not only on click.
