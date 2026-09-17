@@ -1,9 +1,18 @@
 """Generate the interactive research tool (type -> entities -> live Wikipedia facts)."""
 import json
+from pathlib import Path
 
 import pandas as pd
 
 from jeopardy import config
+
+_PRACTICE_JS_PATH = Path(__file__).resolve().parent / "practice.js"
+
+
+def _practice_js() -> str:
+    src = _PRACTICE_JS_PATH.read_text(encoding="utf-8")
+    # Strip ES-module export lines so the declarations inline as page-level globals.
+    return "\n".join(ln for ln in src.splitlines() if not ln.lstrip().startswith("export "))
 
 
 def build_research_data(tokens_df, eras_df, labels, fingerprints_df=None, quiz_refs_df=None, clues_df=None):
@@ -546,6 +555,7 @@ _HTML_TEMPLATE = """<!doctype html>
     reappearing as answers within a cluster. Wikipedia facts are fetched live in your browser on
     each click &mdash; nothing here is cached, curated, or fact-checked.
   </footer>
+  <script>__PRACTICE_JS__</script>
   <script>
     const DATA = __DATA_JSON__;
 
@@ -883,7 +893,8 @@ _HTML_TEMPLATE = """<!doctype html>
 def render_html(data: dict) -> str:
     """Render the self-contained research page with `data` embedded as JSON."""
     payload = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
-    return _HTML_TEMPLATE.replace("__DATA_JSON__", payload)
+    html = _HTML_TEMPLATE.replace("__PRACTICE_JS__", _practice_js())
+    return html.replace("__DATA_JSON__", payload)
 
 
 def run_research():
