@@ -70,4 +70,19 @@ function sessionProgress(session) {
   return { done: session.size - remaining.size, size: session.size, retriesPending };
 }
 
-export { INTERVAL_DAYS, nextBox, dueAfter, applyGrade, assembleSession, initSession, gradeCurrent, sessionProgress };
+function sanitizeStore(parsed) {
+  if (!parsed || parsed.v !== 1 || typeof parsed.cards !== "object" || parsed.cards === null) {
+    return { v: 1, cards: {} };
+  }
+  const cards = {};
+  for (const id in parsed.cards) {
+    const c = parsed.cards[id];
+    if (!c || typeof c !== "object") continue;
+    if (!Number.isInteger(c.box) || c.box < 0 || c.box > 4) continue;
+    if (!Number.isFinite(c.due) || !Number.isFinite(c.seen)) continue;
+    cards[id] = { box: c.box, due: c.due, seen: c.seen };
+  }
+  return { v: 1, cards };
+}
+
+export { INTERVAL_DAYS, nextBox, dueAfter, applyGrade, assembleSession, initSession, gradeCurrent, sessionProgress, sanitizeStore };

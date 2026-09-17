@@ -93,3 +93,24 @@ test("missing the final card yields exactly one retry", () => {
   s = gradeCurrent(s, "missed");                 // retried -> dropped, session ends
   assert.deepEqual(s.queue, []);
 });
+
+import { sanitizeStore } from "./practice.js";
+
+test("sanitizeStore returns empty on wrong/missing version or bad shape", () => {
+  assert.deepEqual(sanitizeStore(null), { v: 1, cards: {} });
+  assert.deepEqual(sanitizeStore({ v: 2, cards: { a: { box: 0, due: 1, seen: 1 } } }), { v: 1, cards: {} });
+  assert.deepEqual(sanitizeStore({ cards: {} }), { v: 1, cards: {} });
+  assert.deepEqual(sanitizeStore({ v: 1, cards: null }), { v: 1, cards: {} });
+});
+
+test("sanitizeStore drops invalid records, keeps valid ones", () => {
+  const parsed = { v: 1, cards: {
+    good: { box: 2, due: 100, seen: 50 },
+    badBox: { box: 9, due: 100, seen: 50 },
+    floatBox: { box: 1.5, due: 100, seen: 50 },
+    nanDue: { box: 0, due: NaN, seen: 50 },
+    infSeen: { box: 0, due: 100, seen: Infinity },
+    notObj: 5,
+  } };
+  assert.deepEqual(sanitizeStore(parsed), { v: 1, cards: { good: { box: 2, due: 100, seen: 50 } } });
+});
