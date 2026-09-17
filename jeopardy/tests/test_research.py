@@ -182,3 +182,14 @@ def test_render_html_injects_practice_module():
     assert "function assembleSession" in html      # module inlined
     assert "function sanitizeStore" in html
     assert "\nexport {" not in html                # ES-module export line stripped
+
+
+def test_render_html_has_practice_entry_and_start_screen():
+    data = build_research_data(_tokens_df(), _eras_df(), _labels())
+    html = render_html(data)
+    for marker in [
+        'id="practice-open"', 'id="practice"', 'aria-modal="true"',
+        'openPractice', 'closePractice', 'renderStart', 'startSession',
+        'practicePool', 'id="pextra"', 'name="psize"', 'practice-reset',
+    ]:
+        assert marker in html, marker
