@@ -42,11 +42,15 @@ chess.com blunder trainer, which will reuse it with a different position source.
 
 - **Position source:** the existing opening studies. Reuses content, useful now,
   and is the exact plumbing the blunder trainer reuses later.
-- **Grading:** strict — the exact book move is correct; anything else is wrong.
-  The engine is **not** used to grade correctness.
-- **Engine's role:** on a wrong move only, evaluate the resulting position and
-  show the refutation + eval swing (the "punishment"), demonstrating why the
-  book move matters. The study's authored `comment` supplies the positive "why."
+- **Grading:** strict — the exact book move is correct; anything else is a
+  **repertoire mismatch** (not necessarily a chess mistake). The engine is
+  **not** used to grade correctness.
+- **Engine's role:** on a mismatch only, analyze whether the played move is
+  actually worse. The engine's move is described as the **best response**, and an
+  eval-drop / "punishment" is **only asserted when the analysis supports it** —
+  an off-book move, or another of the study's own variations, can be equal or
+  better, in which case the feedback says so honestly. The study's authored
+  `comment` supplies the positive "why" of the book move.
 - **Session shape:** one line at a time; the user selects which line.
 - **Engine provider:** pluggable `EvalProvider` interface; default
   **chess-api.com** (Stockfish 18, browser-oriented), with **stockfish.online**
@@ -74,69 +78,127 @@ chess/tests/
 ```
 
 ### `tree.ts` — line enumeration (added)
-- `enumerateLines(root: TreeNode): { label: string; path: Path }[]` — every
-  root-to-leaf path, each with a human label (e.g. "Mainline", "vs Petrov"),
-  derived from the first move that diverges from the mainline. Pure; unit-tested.
+- `enumerateLines(root: TreeNode): { id: string; label: string; path: Path }[]`
+  — every root-to-leaf path. `label` is a human name (e.g. "Mainline",
+  "vs Petrov") for **display only**. `id` is a **stable identity** derived from
+  the path's canonical SAN sequence plus the training side; it is what gets
+  persisted for completion, so two paths that share a first-divergence label
+  remain distinct, and completion survives label-wording changes. Editing or
+  extending a line changes its SAN sequence and therefore its `id`: the old
+  completion record simply no longer matches (a changed line is a new line); no
+  migration is attempted in v1. Pure; unit-tested — including two paths that
+  collide on label but not on `id`.
 
 ### `practice.ts` — drill state machine (pure)
 The heart. No DOM, no network — takes a chosen line and the study's `side`, and
 drives the drill so the UI is a thin renderer and the logic is fully testable.
 
+**Every advance goes through the controller** — no state is mutated elsewhere.
 - Types:
-  - `interface Grade { kind: "correct" | "wrong"; expected: string /* book SAN */ }`
-  - `interface PracticeState { fen: string; ply: number; toMove: "user" | "opponent"; done: boolean; mistakes: number }`
+  - `type Grade = { kind: "correct"; expected: string } | { kind: "mismatch"; expected: string /* book SAN */; played: string }`
+    — a mismatch names a *repertoire* mismatch, not a "bad move" (see the
+    engine-role decision).
+  - `interface PracticeState { fen: string; ply: number; toMove: "user" | "opponent" | "done"; mistakes: number; revealed: number; cleanFirstTry: number }`
+  - `interface Summary { plies: number; cleanFirstTry: number; mistakes: number; revealed: number }`
 - `createDrill(line: Path, userSide: "white" | "black")` returns a controller:
-  - `state(): PracticeState`
-  - `opponentMove(): { san: string } | null` — when it's the opponent's turn,
-    the book move to auto-play (null if it's the user's turn or the line is done).
-  - `submit(san: string): Grade` — grade the user's move against the book move;
-    on "correct" advance the ply, on "wrong" increment `mistakes` and hold.
-  - `reveal(): string` — the book SAN, for the "give up" path.
-  - Positions are derived by replaying the line prefix with `chess.js`
-    (`positionAt`), reusing the existing tree/replay code.
+  - `state(): PracticeState` — `toMove` is `"done"` at the leaf.
+  - `playOpponent(): { san: string } | null` — when `toMove === "opponent"`,
+    **applies** the book reply, advances the ply, and returns it; `null`
+    otherwise. The UI only animates the returned SAN — it never advances state.
+  - `submit(san: string): Grade` — compares against the book move. `"correct"`
+    **advances** the ply (recording `cleanFirstTry` iff no prior mismatch/reveal
+    at this ply); `"mismatch"` increments `mistakes` and **holds** the position
+    for a retry — it never advances.
+  - `reveal(): string` — returns the book SAN, **applies it**, advances, and
+    marks the ply `revealed` (so it can never count as clean). The give-up path.
+  - `summary(): Summary` — valid once `toMove === "done"`.
+  - Positions derive from replaying the line prefix with `chess.js`
+    (`positionAt`), reusing existing tree/replay code.
+- **Completion** is defined at the leaf: after the final book move — whichever
+  side makes it — `toMove` becomes `"done"` and `summary()` is valid. Both a
+  final user move and a final opponent move are covered by tests.
 - The user's side is the study's `side`; a `side: "both"` study defaults to
   white for v1 (the line selector can offer the choice later).
 
 ### `evalProvider.ts` — engine access
 - `interface EvalProvider { evaluate(fen: string): Promise<EngineEval> }`
 - `interface EngineEval { bestMove: string /* UCI */; cp: number | null; mate: number | null; depth: number }`
-  — `cp` is centipawns from the side-to-move's perspective (normalized in the
-  adapter so the UI never worries about sign convention).
-- `class ChessApiProvider implements EvalProvider` — POSTs
-  `{ fen, depth }` to `https://chess-api.com/v1` and maps the response into
-  `EngineEval`. **Exact request/response shape and the eval sign convention MUST
-  be confirmed against chess-api.com during implementation** (a first plan step
-  is a live probe of the endpoint; `stockfish.online`'s shape is already
-  confirmed: `{ evaluation, mate, bestmove: "bestmove e2e4 ponder ...", continuation }`).
-- A `localStorage` cache wraps the provider: key by FEN+depth, so a repeated
-  wrong move in the same position costs no network call.
+  — **`cp`/`mate` are always from White's perspective** (chess-api.com's
+  documented convention; the adapter guarantees it so callers never guess the
+  sign). Exactly one of `cp`/`mate` is non-null.
+- `class ChessApiProvider implements EvalProvider` — POSTs `{ fen, depth }` to
+  `https://chess-api.com/v1` and maps the response into a White-perspective
+  `EngineEval`. The White-perspective contract is per chess-api.com's docs and is
+  **verified by a first-plan-step live probe** (which also pins the exact
+  request/response fields). `stockfish.online` is a confirmed drop-in alternate
+  (`{ evaluation, mate, bestmove: "bestmove e2e4 ponder ...", continuation }`).
+- A `localStorage` cache wraps the provider, keyed by `fen`+`depth`.
 
-### `board.ts` — movable mode (changed)
+### Mismatch analysis (how the "swing" is computed)
+On a repertoire mismatch the UI computes a **swing**, not an absolute score, and
+always in the **trainee's** perspective — two evaluations, not one:
+- **Baseline** = evaluate the *decision position* (the FEN **before** the move) —
+  this yields the best move and the score under best play.
+- **Played** = evaluate the FEN **after** the trainee's move.
+- Both `EngineEval`s are White-perspective; convert each to the trainee's
+  perspective (negate iff the trainee plays Black), then
+  `swing = trainee(baseline) − trainee(played)`.
+- **Verdict from the swing:** small (≤ ~50cp) → "off-book but fine — a playable
+  alternative" (no punishment claimed); larger → "drops ~N pawns; the best reply
+  is `bestMove`." A move *better* than book (negative swing) is reported honestly
+  as "actually stronger than the book move here."
+- **Mate handling:** if either eval is a mate score, describe it in mate terms
+  ("this gets mated in N" / "the book move forces mate in N") — never subtract a
+  mate from a centipawn score.
+
+### `board.ts` — movable mode + teardown (changed)
 - Add `createMovableBoard(el, { orientation, onMove })` (or a `movable` option on
-  the existing factory) that configures chessground with `movable.free = false`,
+  the existing factory) configuring chessground with `movable.free = false`,
   `movable.dests` from `chess.js` legal moves for the side to move, a promotion
-  picker, and an `onMove(from, to, promotion)` callback. The view-only board is
-  unchanged. The trainer sets legal dests for the user's turn only.
+  picker, and an `onMove(from, to, promotion)` callback. The trainer sets legal
+  dests for the user's turn only.
+- **`BoardHandle` gains `destroy(): void`.** Chessground's movable mode installs
+  document/window listeners; `destroy()` calls chessground's own `destroy` to
+  remove them. Every board (view-only included) implements it, and the caller
+  MUST call it before replacing a board or tearing down the view — see the
+  teardown contract in `ui.ts`.
 
 ### `ui.ts` — Practice mode (changed)
 - A "Practice" button in the study view enters practice mode: render a line
   picker (`enumerateLines`), then the drill (movable board + a status/feedback
   panel + Reveal / Restart / Exit controls).
-- Injected deps, mirroring the existing `makeBoard` pattern, so the whole mode is
+- Injected deps mirror the existing `makeBoard` pattern so the mode is
   jsdom-testable with fakes:
   `interface PracticeDeps { makeBoard: ...; evalProvider: EvalProvider }`.
+- **Teardown contract (one owner of listeners at a time):** entering practice
+  from the viewer removes the viewer's `keydown` handler and `destroy()`s the
+  view-only board before creating the movable one; exiting practice (or routing
+  away) `destroy()`s the movable board and removes practice listeners before the
+  viewer is re-created. The existing MutationObserver-based teardown is extended
+  to cover the practice board.
+- **Stale-analysis guard:** each `evaluate` request is tagged with a token
+  `(sessionId, ply, attempt)`. A resolved result is applied only if the token
+  still matches the current drill state; otherwise it is dropped — so a slow
+  response can't overwrite feedback after the user has retried, advanced,
+  restarted, or exited. (Same shape as the `generation` guard already in
+  `codenames/src/main.ts`.)
 
 ## Data flow (one drill)
 
 1. User picks a study → **Practice** → picks a line.
 2. `createDrill(line, side)`; render the start position on a movable board.
 3. If it's the opponent's move, auto-play `opponentMove()` and advance.
-4. On the user's move, `board.onMove` → convert to SAN (`chess.js`) → `submit(san)`.
-   - **correct** → confirm, advance, continue (auto-play the next opponent move).
-   - **wrong** → keep the position, increment mistakes, and **auto** call
-     `evalProvider.evaluate(fenAfterWrongMove)` → render "your move drops to X;
-     opponent plays Y; the book move is `expected`." User retries or `reveal()`s.
-5. At the leaf → summary; mark the line completed in `localStorage`.
+4. On the user's move, `board.onMove` → SAN (`chess.js`) → `submit(san)`.
+   - **correct** → confirm, advance, then `playOpponent()` for the next reply.
+   - **mismatch** → hold the position, increment mistakes, and **auto** run the
+     mismatch analysis (§Mismatch analysis): evaluate the decision position and
+     the after-move position, tag both with the `(sessionId, ply, attempt)`
+     token, and — only if the token still matches on resolve — render the verdict
+     ("not your line here; book is `expected`" plus, per the swing, either "your
+     move is fine/stronger" or "drops ~N — best reply is Z"). User retries or
+     `reveal()`s.
+5. At the leaf (`toMove === "done"`) → render `summary()`; mark the line
+   completed in `localStorage` by its stable `id`.
 
 ## Error handling
 
@@ -154,27 +216,48 @@ drives the drill so the UI is a thin renderer and the logic is fully testable.
 
 `localStorage`, two namespaces, both tolerant of absent/corrupt values:
 - eval cache: `chess:eval:<fen>:<depth>` → `EngineEval`.
-- completed lines: `chess:practice:<studyId>` → set of line labels completed.
+- completed lines: `chess:practice:<studyId>` → set of line **ids** completed
+  (the stable `enumerateLines` id, never the display label).
 
 ## Testing
 
-- `tree.test.ts`: `enumerateLines` yields the right paths + labels on a
-  fixture with variations.
-- `practice.test.ts`: opponent auto-move selection; correct advances; wrong
-  holds and counts; reveal; end-of-line; black-side drills (user plays Black).
+- `tree.test.ts`: `enumerateLines` yields the right paths; **two paths that
+  collide on label get distinct `id`s**, and an `id` is stable across a label
+  rewording.
+- `practice.test.ts`: `playOpponent` applies + returns the book reply; `submit`
+  correct advances and records clean-first-try; mismatch holds + counts and does
+  **not** advance; `reveal` applies + marks the ply non-clean; **completion at
+  the final ply for both a final user move and a final opponent move**;
+  `summary()` accounting (clean/mistakes/revealed); black-side drills (user
+  plays Black).
 - `evalProvider.test.ts`: the adapter maps a **recorded** chess-api.com response
-  into `EngineEval` (sign convention included); no live network in tests.
-- `ui-practice.test.ts`: entering practice renders the line picker; a wrong move
-  triggers an `evaluate` call on the fake provider and renders the punishment; a
-  correct move advances — all with a fake board + fake provider.
-- Engine failure path: fake provider that rejects → UI still shows the book move
-  and a graceful note.
+  into a White-perspective `EngineEval`; both a cp and a mate response covered;
+  no live network.
+- Mismatch analysis: baseline−played swing in the trainee's perspective for both
+  a White and a Black trainee; a better-than-book move reads as "stronger"; a
+  mate score is described in mate terms, never subtracted from a cp.
+- `ui-practice.test.ts`: entering practice removes the viewer `keydown` handler
+  and `destroy()`s the view-only board; the line picker renders; a mismatch
+  triggers the analysis calls on the fake provider and renders the verdict; a
+  correct move advances; exiting `destroy()`s the movable board. Fakes throughout.
+- **Async race tests (deferred promises):** resolve analysis requests out of
+  order, and resolve one *after* Exit/Restart — assert stale results are dropped
+  and never overwrite current feedback.
+- Engine failure path: fake provider rejects → UI still shows the book move and a
+  graceful note; the drill stays usable.
 
 ## Risks & mitigations
 
-- **chess-api.com shape/sign uncertainty.** Mitigation: first plan step is a
-  live probe; the `EvalProvider` interface isolates it, and stockfish.online is a
-  confirmed drop-in.
+- **chess-api.com shape uncertainty.** The eval sign is documented
+  (White-perspective), so the normalization contract is written now; the
+  remaining unknown is the exact request/response field names. Mitigation: first
+  plan step is a live probe to pin them; the `EvalProvider` interface isolates
+  the adapter, and stockfish.online is a confirmed drop-in.
+- **Async races between analysis and drill state.** Mitigation: the
+  `(sessionId, ply, attempt)` token guard drops stale results; covered by
+  deferred-promise tests (out-of-order and after-exit).
+- **Leaked listeners across mode/route changes.** Mitigation: `BoardHandle.destroy()`
+  plus the explicit one-owner teardown contract; asserted in `ui-practice.test.ts`.
 - **Free third-party engine longevity/limits.** Mitigation: pluggable provider +
   localStorage cache + engine only on mistakes (low volume) + graceful
   degradation; bundled-WASM fallback documented for later.
