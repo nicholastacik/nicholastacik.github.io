@@ -226,6 +226,15 @@ def _attach_glosses(cid, phrase, cues, glosses, cue_drops):
     return out
 
 
+def _select_display(cues, display_n):
+    # From the wider candidate pool, prefer cues that earned a gloss (an explained cue is more
+    # useful than a generic one), keeping rank order within each group; fill to display_n with
+    # un-glossed cues only if fewer than display_n are glossed.
+    glossed = [c for c in cues if c.get("gloss")]
+    plain = [c for c in cues if not c.get("gloss")]
+    return (glossed + plain)[:display_n]
+
+
 def run_fingerprints(min_freq=5):
     clusters = pd.read_parquet(config.CATEGORY_CLUSTERS_PATH)
     clues = pd.read_parquet(config.PARQUET_PATH)
@@ -234,7 +243,7 @@ def run_fingerprints(min_freq=5):
     decisions = load_entity_decisions(config.ENTITY_DECISIONS_PATH)
     store, entity_clues, quiz_refs = build_clue_index(
         clusters, clues, decisions, quiz_k=2, quiz_general_n=12, min_freq=min_freq)
-    cues = build_cues(entity_clues, n_cues=6, n_examples=4)
+    cues = build_cues(entity_clues, n_cues=8, n_examples=4)  # wider pool; display-selection prunes to 6
 
     tokens = pd.read_parquet(config.CATEGORY_TOKENS_PATH)
     displayed = {(int(c), p) for c, p in zip(tokens["cluster_id"], tokens["phrase"])}
@@ -248,7 +257,7 @@ def run_fingerprints(min_freq=5):
     quiz_rows = [{"cluster_id": cid, "phrase": ph, "clue_ids": ids}
                  for cid, refs in quiz_refs.items() for ph, ids in refs.items()]
     fp_rows = [{"cluster_id": cid, "phrase": ph,
-                "cues": _attach_glosses(cid, ph, v["cues"], glosses, cue_drops),
+                "cues": _select_display(_attach_glosses(cid, ph, v["cues"], glosses, cue_drops), 6),
                 "example_clue_ids": v["example_clue_ids"]} for (cid, ph), v in cues.items()]
 
     referenced = set()

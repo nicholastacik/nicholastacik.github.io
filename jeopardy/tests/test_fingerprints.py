@@ -126,6 +126,18 @@ def test_all_time_resolution_keeps_clues_across_years():
     assert 2024 in years and 2005 in years   # newest clue not lost to a window overwrite
 
 
+def test_select_display_prefers_glossed_cues():
+    from jeopardy.analysis.fingerprints import _select_display
+    # pool of 4 in rank order; glossed ones (even lower-ranked) come first, filling to display_n
+    cues = [{"term": "voyage"}, {"term": "new world", "gloss": "g1"},
+            {"term": "explorer"}, {"term": "santa maria", "gloss": "g2"}]
+    out = [c["term"] for c in _select_display(cues, 3)]
+    assert out == ["new world", "santa maria", "voyage"]   # glossed first (rank order), then fill
+    # when enough glossed, no plain cue is shown
+    cues2 = [{"term": "a", "gloss": "x"}, {"term": "b"}, {"term": "c", "gloss": "y"}]
+    assert [c["term"] for c in _select_display(cues2, 2)] == ["a", "c"]
+
+
 def test_overlapping_bigrams_merge_into_trigram():
     # "harriet beecher" + "beecher stowe" are two overlapping bigrams of one 3-word name; they
     # collapse into "harriet beecher stowe" (the vectorizer only emits up to bigrams).
