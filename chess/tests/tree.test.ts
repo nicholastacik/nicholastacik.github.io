@@ -61,6 +61,10 @@ describe("replay", () => {
   it("throws on an illegal move", () => {
     expect(() => replay(["e5"])).toThrow();
   });
+
+  it("throws on a null move token (chess.js otherwise accepts '--')", () => {
+    expect(() => replay(["e4", "--", "d4"])).toThrow();
+  });
 });
 
 describe("navigation", () => {
@@ -111,5 +115,12 @@ describe("validateLegality", () => {
     const errs = validateLegality(normalize(bad));
     expect(errs.length).toBe(1);
     expect(errs[0]).toContain("e4");
+  });
+
+  it("reports a null move as illegal", () => {
+    const bad: Study = { ...study, line: [{ san: "e4" }, { san: "--" }, { san: "d4" }] };
+    const errs = validateLegality(normalize(bad));
+    expect(errs.length).toBeGreaterThan(0);
+    expect(errs.some((e) => e.includes("--"))).toBe(true);
   });
 });

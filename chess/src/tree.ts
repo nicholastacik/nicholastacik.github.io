@@ -46,6 +46,9 @@ export function replay(sans: string[]): { fen: string; lastMove?: [string, strin
   const chess = new Chess();
   let lastMove: [string, string] | undefined;
   for (const san of sans) {
+    // chess.js silently accepts "--" as a null move; reject it so a study
+    // that skips a turn is caught as illegal rather than replaying cleanly.
+    if (san === "--") throw new Error(`null move not allowed: ${san}`);
     const m = chess.move(san); // throws on an illegal move (chess.js v1)
     lastMove = [m.from, m.to];
   }
