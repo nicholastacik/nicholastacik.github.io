@@ -173,3 +173,12 @@ def test_render_html_marks_non_studyable():
     # (rather than the entities count) whenever a type has no entities.
     assert "!studyable ? ' dim'" in html  # class marker conditional on emptiness
     assert "not really studyable" in html
+
+
+def test_render_html_injects_practice_module():
+    data = build_research_data(_tokens_df(), _eras_df(), _labels())
+    html = render_html(data)
+    assert "__PRACTICE_JS__" not in html          # placeholder replaced
+    assert "function assembleSession" in html      # module inlined
+    assert "function sanitizeStore" in html
+    assert "\nexport {" not in html                # ES-module export line stripped
