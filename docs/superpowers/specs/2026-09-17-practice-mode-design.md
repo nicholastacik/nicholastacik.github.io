@@ -1,7 +1,7 @@
 # Practice Mode — Design Spec
 
 **Date:** 2026-09-17
-**Status:** Approved design, pending spec review
+**Status:** Approved (design + spec-review refinements folded in)
 **Feature:** A dedicated spaced-repetition practice mode for the Jeopardy research tool ("The Board").
 
 ## Goal
@@ -39,25 +39,36 @@ entity, era, scroll all preserved — the overlay never mutates research state).
   (all types with `DATA.quiz[clusterId]` entries), labeled by type name and
   ordered as in the current era's list. A **Select all / none** toggle. Default:
   all selected.
-- **Session size:** 10 / **20** / 30 cards (20 default; ~ten minutes).
+- **Session size:** 10 / **20** / 30 **distinct** cards (20 default; ~ten minutes).
+  Retries (see In-session resurfacing) do not count against this number.
+- **Extra practice** toggle (default off): normally a session draws only *due* and
+  *unseen* cards, so once you have cleared a small pool there is nothing to study and
+  Start is disabled. Turning Extra practice on also pulls in already-scheduled
+  (not-yet-due) cards **and** switches grading to no-promote semantics (correct answers
+  leave the schedule untouched; only misses reset it) — so drilling a tiny pool like
+  "Plants & Botany · Since 2020" (five cards) can't inflate mastery to box 4 in four
+  rapid sessions.
 - The start screen shows the **current study window** (era) as read-only context;
   the session snapshots the era in effect when it starts. To change era, the user
   closes practice, adjusts the era pills, and reopens — keeps session settings fixed
   once running.
-- **Start session** button. Disabled with a note ("No clues match — widen your era
-  or topics") when the resulting pool is empty.
+- **Start session** button. Disabled with a note ("Nothing due — turn on Extra
+  practice, or widen your era / topics") when the resulting pool is empty.
 - A small **Reset progress** link (clears all saved practice history after a
   confirm) lives here.
 
 ### Screen 2 — Card loop
 
-- Header: **Exit**, a progress indicator (`3 / 20`), and a running tally
-  (`✓2 · ?1 · ✗0`).
+- Header: **Exit**, a progress indicator counting **distinct cards** with retries
+  called out separately — e.g. `12 / 20 cards · 3 retries remaining` — and a running
+  tally (`✓2 · ?1 · ✗0`).
 - Card front: the clue text, plus its category and year. Answer hidden.
-- **Reveal** button (or Space). On reveal: the answer appears (styled like the
-  existing `.answer-text` gold), plus a **J-Archive** link for the source game.
-- Three grade buttons — **Knew it / Unsure / Missed** (or keys 1 / 2 / 3) — visible
-  only after reveal. Grading advances to the next card.
+- **Reveal** button (Space on the card screen). On reveal: the answer appears (styled
+  like the existing `.answer-text` gold), plus a **J-Archive** link for the source game;
+  focus moves to the first grade button.
+- Three grade buttons — **Knew it / Unsure / Missed** (keys 1 / 2 / 3, active only after
+  reveal) — visible only after reveal. Grading advances to the next card and moves focus
+  to its Reveal button (or, on the last card, into the summary screen).
 - Cards are drawn mixed across the selected topics (see Scheduling).
 
 ### Screen 3 — Summary
@@ -104,37 +115,65 @@ Each card carries a **box** 0–4 and a **due** timestamp. Boxes map to interval
 
 ### Grade transitions
 
-A new (unseen) card is treated as box 0. On grade:
+Grading has two modes. **Normal** mode (default sessions) promotes on success;
+**Extra practice** mode never promotes, so repeated drilling of a small pool can't
+inflate mastery. A new (unseen) card is treated as box 0.
+
+**Normal mode (`promote = true`):**
 
 - **Knew it** → `box = min(4, box + 1)`
 - **Unsure** → `box` unchanged
 - **Missed** → `box = 0`
 
-Then `due = now + INTERVAL_DAYS[box] * 86_400_000`, and `seen = now`.
+Then `due = now + INTERVAL_DAYS[box] * 86_400_000`.
 
-So a brand-new card: Knew it → box 1 (due tomorrow); Unsure → box 0 (due again next
-session); Missed → box 0 (due now, and resurfaces in-session).
+**Extra practice mode (`promote = false`):**
+
+- **Knew it** / **Unsure** → `box` and `due` **unchanged** (correct answers don't
+  advance the schedule).
+- **Missed** → `box = 0`, `due = now` (misses can still reset).
+
+In both modes `seen = now`. So a brand-new card in normal mode: Knew it → box 1 (due
+tomorrow); Unsure → box 0 (due again next session); Missed → box 0 (due now, and
+resurfaces in-session).
 
 ### Session assembly
 
-Given the era/topic-filtered `pool` (clue ids), the saved `store`, `now`, `size`,
-and an injected `rng`, the session queue is built in three tiers, truncated to `size`:
+Given the era/topic-filtered `pool` (clue ids), the saved `store`, `now`, `size`, an
+`extra` flag, and an injected `rng`, `assembleSession` selects up to `size` **distinct**
+ids in tier order:
 
 1. **Due** — `store[id].due <= now`, sorted by `due` ascending.
 2. **Unseen** — `id` not in `store`, shuffled by `rng`.
-3. **Not-yet-due** — remaining seen cards, sorted by `due` ascending (fills the
-   session only when tiers 1–2 are short, so heavy re-practice still yields a full
-   session).
+3. **Not-yet-due** — remaining seen cards, sorted by `due` ascending — **only when
+   `extra` is true.** A normal session stops after tiers 1–2; if that yields nothing,
+   the caller disables Start (or the user turns on Extra practice). This is the fix for
+   mastery inflation: not-yet-due cards are reachable only in the no-promote Extra mode.
 
 Cross-topic **mixing** comes from the shuffled unseen tier spanning all selected
-clusters. If the whole pool is smaller than `size`, the session is simply shorter.
+clusters. If the available pool is smaller than `size`, the session is simply shorter.
 
 ### In-session resurfacing
 
-When a card is graded **Missed**, in addition to the box/due update above it is
-re-enqueued ~3 positions later in the *live* session queue (or at the end if fewer
-than 3 remain), so it reappears once more before the session ends. This is a UI-queue
-behavior only; it does not further change the persisted schedule.
+The live session queue is managed by the **pure module** (not ad-hoc in the glue), so
+the retry rules are testable. Each queue entry is `{ id, retried }`.
+
+When the current card is graded, `gradeCurrent(session, grade)` pops it and:
+
+- **Missed** and not yet retried → re-enqueue `{ id, retried: true }` at position
+  `min(3, remaining)` (≈3 cards later, or the end if fewer remain). This is the card's
+  **one and only** retry this session.
+- **Missed** but already retried, or any non-missed grade → drop it (no re-enqueue).
+
+So each clue gets **at most one retry per session**, even if the retry is also missed —
+repeatedly-missed cards can never keep extending the queue. Retries are a UI-queue
+behavior only; they do not further change the persisted schedule beyond the single
+box/due update the miss already applied.
+
+`sessionProgress(session)` derives `{ done, size, retriesPending }` from the queue:
+`size` = distinct ids the session started with, `done` = `size − (distinct ids still in
+queue)`, `retriesPending` = queued entries with `retried = true`. This drives the
+`12 / 20 cards · 3 retries remaining` header.
 
 ## Persistence
 
@@ -148,9 +187,20 @@ One localStorage key:
 ```
 
 - Written after each grade (single card upsert).
-- **Reset progress** removes the key after a typed/OK confirm.
-- Read is wrapped in try/catch; corrupt or absent data falls back to an empty store.
+- **Reset progress** removes the key after an OK/confirm.
 - No lifetime stats are persisted (YAGNI) — the session tally is in-memory only.
+
+**Read** is wrapped in try/catch (getItem and `JSON.parse` can both throw), then run
+through the pure `sanitizeStore` validator — valid JSON can still hold junk. It requires
+`v === 1`, and keeps only card records whose `box` is an integer in `0..4` and whose
+`due` and `seen` are finite numbers; anything else is dropped. A wrong/absent version or
+unparseable blob yields an empty store.
+
+**Write** is also wrapped in try/catch: `setItem` throws on quota exhaustion or in
+privacy modes that disable storage (`QuotaExceededError`, `SecurityError`). On the first
+write failure the session **keeps running from the in-memory store** and shows a small,
+dismissible "Progress isn't being saved" notice; grading continues to work for the rest
+of the session, it just won't persist.
 
 ## Components & file structure
 
@@ -159,11 +209,14 @@ new pure JS module. Working within the established single-file, inline-script pa
 with one targeted improvement: the branching scheduler logic is factored out so it can
 be unit-tested.
 
-- **`jeopardy/analysis/practice.js`** *(new)* — pure, DOM-free scheduler. Exposed both
-  as a browser global (`globalThis.Practice`) and as a CommonJS module
-  (`module.exports`) so the same file is injected into the page **and** required by
-  Node tests (single source of truth). No side effects, no `Date.now()` inside pure
-  functions (time is passed in).
+- **`jeopardy/analysis/practice.js`** *(new)* — pure, DOM-free scheduler and session
+  queue. Written as an **ES module** (`export`), matching the repo's existing
+  `posts/montreal_events/events/events-core.js` so Node's `node:test` can `import` it
+  directly. Function declarations are plain (`function nextBox(...)`) with a single
+  trailing `export { ... }`. `render_html` inlines the file with its `export` line(s)
+  stripped, so the declarations become page-level globals the inline glue calls — one
+  source of truth, injected into the page and imported by tests. No side effects; no
+  `Date.now()`/`Math.random()` inside pure functions (time and `rng` are passed in).
 - **`jeopardy/analysis/research.py`**:
   - `render_html` gains a `__PRACTICE_JS__` placeholder; the module file is read and
     inlined into a `<script>` before the main IIFE.
@@ -178,54 +231,90 @@ be unit-tested.
 
 ```
 INTERVAL_DAYS: number[]                       // [0, 1, 3, 7, 21]
+GRADES: 'knew' | 'unsure' | 'missed'
 
-nextBox(box: int, grade: 'knew'|'unsure'|'missed') -> int
+// scheduling
+nextBox(box: int, grade: GRADE) -> int
 dueAfter(now: ms, box: int) -> ms             // now + INTERVAL_DAYS[box]*86400000
-applyGrade(card | null, grade, now) -> { box, due, seen }   // card null = unseen (box 0)
-assembleSession(pool: id[], store, now, size, rng: ()->[0,1)) -> id[]
+applyGrade(card | null, grade: GRADE, now: ms, promote: bool) -> { box, due, seen }
+    // card null = unseen (box 0). promote=false => knew/unsure leave box+due unchanged
+    //                                              (seen=now); missed => box 0, due=now.
+assembleSession(pool: id[], store, now: ms, size: int, extra: bool, rng: ()->[0,1)) -> id[]
+    // distinct ids, tier order due→unseen→(not-yet-due only if extra), truncated to size.
+
+// session queue (in-session retries)
+initSession(ids: id[]) -> { queue: [{id, retried:false}], size: int }
+gradeCurrent(session, grade: GRADE) -> session   // pops current; requeues a first miss once
+sessionProgress(session) -> { done: int, size: int, retriesPending: int }
+
+// persistence validation
+sanitizeStore(parsed: any) -> { v: 1, cards: { [id]: {box,due,seen} } }   // drops invalid records
 ```
 
-The inline glue owns: building `pool` from `DATA`, reading/writing localStorage,
-`Date.now()`, `Math.random` (passed to `assembleSession` as `rng`), the missed
-re-enqueue, and all DOM.
+The inline glue owns: building `pool` from `DATA`, reading/writing localStorage (with
+try/catch and the save-failure notice), `Date.now()`, `Math.random` (passed to
+`assembleSession` as `rng`), modal/focus/keyboard handling, and all DOM.
 
 ## Accessibility & responsive
 
-- Overlay is `role="dialog"`, `aria-modal="true"`, labelled; Exit is keyboard-reachable
-  and Escape exits. Focus moves into the overlay on open and returns to the Practice
-  button on close.
-- Keyboard: Space reveals; 1/2/3 grade (after reveal). Buttons remain the primary path.
+Follows the W3C APG modal-dialog pattern:
+
+- **Container:** `role="dialog"`, `aria-modal="true"`, labelled by its heading.
+- **Focus containment:** while open, Tab/Shift-Tab cycle within the overlay only (focus
+  trap). The rest of the page is made inert (`inert` where supported, else
+  `aria-hidden="true"` on the layout) and background scroll is locked (`overflow:hidden`
+  on `body`).
+- **Focus movement:** on open, focus goes to the first control (start screen: the topic
+  list / Start; card screen: Reveal). On **Reveal**, focus moves to the first grade
+  button. After **grading**, focus moves to the next card's Reveal button — or, on the
+  last card, to the summary's **Practice again**. On close (Exit/Escape), focus returns
+  to the **Practice** button.
+- **Escape** closes the overlay from anywhere inside it.
+- **Keyboard shortcuts are scoped to the card screen** and ignored when focus is in an
+  input/checkbox: Space reveals; 1/2/3 grade (only after reveal). On the start screen
+  Space toggles the focused topic checkbox normally — the shortcuts never hijack it.
+  Buttons remain the primary path throughout.
 - Full-viewport overlay is inherently mobile-friendly; grade buttons are large tap
-  targets. Respects `prefers-reduced-motion` (no card-flip animation, or a reduced one).
+  targets. Respects `prefers-reduced-motion`.
 - Reuses existing CSS custom properties (`--gold`, `--panel`, etc.) for visual
   consistency with the board.
 
 ## Testing strategy
 
-- **Pure scheduler (`practice.js`)** — unit-tested with Node's built-in runner
-  (`node --test`, zero new dependencies). Cases: each grade's box transition (incl.
-  clamp at 4 and reset to 0), `dueAfter` interval math, `assembleSession` tier ordering
-  (due before unseen before not-yet-due), `size` truncation, era/topic pool respected,
-  and deterministic shuffle via injected `rng`.
+- **Pure module (`practice.js`)** — unit-tested with Node's built-in runner
+  (`node --test`, zero new dependencies), following the existing
+  `posts/montreal_events/events/events-core.test.js` (`import { test } from "node:test"`).
+  Cases:
+  - `nextBox` / `applyGrade` — each grade's transition, clamp at box 4, reset to 0, and
+    **both modes**: `promote=false` leaves box+due unchanged on knew/unsure but still
+    resets on miss.
+  - `dueAfter` — interval math for every box.
+  - `assembleSession` — tier ordering (due → unseen → not-yet-due), `extra=false`
+    excludes the not-yet-due tier, `size` truncation, distinctness, deterministic shuffle
+    via injected `rng`.
+  - `gradeCurrent` / session queue — a first miss requeues once at `min(3, remaining)`; a
+    **second miss of the same card does not requeue** (finite retries); a **one-card
+    pool** (miss → single retry → miss again → session ends); **missing the final card**
+    still yields exactly one retry. `sessionProgress` counts distinct `done` and
+    `retriesPending` correctly across these.
+  - `sanitizeStore` — drops records with out-of-range/non-integer `box`, non-finite
+    `due`/`seen`, and returns an empty store on wrong/missing `v`.
 - **Python injection** — a test asserting `render_html` inlines the practice module
   (no literal `__PRACTICE_JS__` remains) and that the Practice button / overlay markup
   is present.
 - **DOM/localStorage glue** — verified manually in-browser, consistent with how the
   rest of the page's JS (fetchWiki, eligibleClues, renderFingerprint) is verified today.
 
-*Flagged for review:* this introduces the repo's first JS test surface. The alternative
-is to keep everything inline and browser-verify only (matching current practice). I
-recommend the small `node --test` module because the scheduler is the one piece with
-real branching logic worth locking down, and it costs no dependencies.
+## Resolved decisions
 
-## Flagged decisions (confirm during spec review)
-
-1. **Testing:** add a zero-dep `node --test` module for the pure scheduler (recommended)
-   vs. inline + browser-verify only.
-2. **Practice button placement:** era bar, right-aligned (proposed) vs. topbar.
-3. **Session snapshots the era at start** (proposed) vs. live-follows the era pills.
-4. **Not-yet-due fill tier** included so sessions stay full (proposed) vs. drop it and
-   let sessions run short when nothing is due.
+1. **Testing:** ✅ zero-dep `node --test` module for the pure scheduler. (Not the repo's
+   first JS test surface — `posts/montreal_events/events/events-core.test.js` already uses
+   `node:test`; we follow its conventions.)
+2. **Practice button placement:** ✅ era bar, right-aligned.
+3. **Era handling:** ✅ session snapshots the era at start.
+4. **Not-yet-due cards:** ✅ **not** included automatically. Reachable only via the opt-in
+   **Extra practice** mode, which additionally uses no-promote grading so repeated drilling
+   of a small pool can't inflate mastery (refinement 1).
 
 ## Out of scope / future
 
