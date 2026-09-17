@@ -50,4 +50,24 @@ function assembleSession(pool, store, now, size, extra, rng) {
   return ordered.slice(0, size);
 }
 
-export { INTERVAL_DAYS, nextBox, dueAfter, applyGrade, assembleSession };
+function initSession(ids) {
+  return { queue: ids.map(id => ({ id, retried: false })), size: ids.length };
+}
+
+function gradeCurrent(session, grade) {
+  const queue = session.queue.slice();
+  const cur = queue.shift();
+  if (cur && grade === "missed" && !cur.retried) {
+    const pos = Math.min(3, queue.length);
+    queue.splice(pos, 0, { id: cur.id, retried: true });
+  }
+  return { queue, size: session.size };
+}
+
+function sessionProgress(session) {
+  const remaining = new Set(session.queue.map(e => e.id));
+  const retriesPending = session.queue.filter(e => e.retried).length;
+  return { done: session.size - remaining.size, size: session.size, retriesPending };
+}
+
+export { INTERVAL_DAYS, nextBox, dueAfter, applyGrade, assembleSession, initSession, gradeCurrent, sessionProgress };

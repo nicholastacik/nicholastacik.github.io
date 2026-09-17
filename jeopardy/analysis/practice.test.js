@@ -57,3 +57,39 @@ test("assembleSession: shuffles unseen deterministically via rng", () => {
   // rng()===0 -> Fisher-Yates swaps each i with index 0: ["a","b","c"] -> ["b","c","a"]
   assert.deepEqual(assembleSession(["a", "b", "c"], {}, 1000, 3, false, () => 0), ["b", "c", "a"]);
 });
+
+import { initSession, gradeCurrent, sessionProgress } from "./practice.js";
+
+test("gradeCurrent drops a card on a non-missed grade", () => {
+  let s = initSession(["a", "b"]);
+  s = gradeCurrent(s, "knew");
+  assert.deepEqual(s.queue.map(e => e.id), ["b"]);
+  assert.deepEqual(sessionProgress(s), { done: 1, size: 2, retriesPending: 0 });
+});
+
+test("gradeCurrent requeues a first miss once at min(3, remaining)", () => {
+  let s = initSession(["a", "b", "c", "d", "e"]);
+  s = gradeCurrent(s, "missed"); // pop a; 4 remain; insert at index 3
+  assert.deepEqual(s.queue.map(e => e.id), ["b", "c", "d", "a", "e"]);
+  assert.equal(s.queue.find(e => e.id === "a").retried, true);
+  assert.deepEqual(sessionProgress(s), { done: 0, size: 5, retriesPending: 1 });
+});
+
+test("a second miss of the same card does not requeue (finite retries)", () => {
+  let s = initSession(["a"]);
+  s = gradeCurrent(s, "missed");                 // -> [a(retried)]
+  assert.deepEqual(s.queue.map(e => e.id), ["a"]);
+  assert.deepEqual(sessionProgress(s), { done: 0, size: 1, retriesPending: 1 });
+  s = gradeCurrent(s, "missed");                 // already retried -> dropped
+  assert.deepEqual(s.queue, []);
+  assert.deepEqual(sessionProgress(s), { done: 1, size: 1, retriesPending: 0 });
+});
+
+test("missing the final card yields exactly one retry", () => {
+  let s = initSession(["a", "b"]);
+  s = gradeCurrent(s, "knew");                   // -> [b]
+  s = gradeCurrent(s, "missed");                 // pop b; 0 remain; insert at index 0
+  assert.deepEqual(s.queue.map(e => e.id), ["b"]);
+  s = gradeCurrent(s, "missed");                 // retried -> dropped, session ends
+  assert.deepEqual(s.queue, []);
+});
