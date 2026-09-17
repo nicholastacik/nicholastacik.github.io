@@ -24,5 +24,6 @@ body { margin: 0; }
 .variation-tree .move { cursor: pointer; padding: 0 0.15rem; border-radius: 3px; }
 .variation-tree .move:hover { background: #eee; }
 .variation-tree .move.current { background: #1a73e8; color: #fff; }
-.variation-tree .variation { color: #777; }
+/* Each variation is an indented sub-line branching off its parent move. */
+.variation-tree .variation { display: block; margin: 0.15rem 0 0.15rem 1.25rem; padding-left: 0.5rem; border-left: 2px solid #e0e0e0; color: #777; }
 @media (max-width: 700px) { .study-view { grid-template-columns: 1fr; } }

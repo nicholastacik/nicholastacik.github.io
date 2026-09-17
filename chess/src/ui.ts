@@ -147,44 +147,42 @@ export function renderStudyView(root: HTMLElement, study: Study, deps: StudyView
     treeEl.innerHTML = "";
     nodeSpans.clear();
 
-    function renderNode(node: TreeNode, nodePath: Path, ply: number): void {
+    // Render `node`'s move into `container`, then its continuation. A node's
+    // children are [mainline, ...alternatives]; each alternative becomes its
+    // own indented `.variation` block (rendered before the mainline continues,
+    // so it sits at the branch point), while the mainline flows on in the same
+    // container.
+    function renderNode(node: TreeNode, nodePath: Path, ply: number, container: HTMLElement): void {
       const span = document.createElement("span");
       span.className = "move";
-      span.dataset.path = String(ply);
       span.textContent = moveNumberLabel(ply, node.san as string);
       span.addEventListener("click", () => {
         path = nodePath;
         render();
       });
       nodeSpans.set(node, span);
-      treeEl.appendChild(span);
-      treeEl.appendChild(document.createTextNode(" "));
+      container.appendChild(span);
+      container.appendChild(document.createTextNode(" "));
 
       const [mainline, ...alts] = node.children;
-      // Render alternatives to the *next* move as nested, parenthesized lines.
       for (const alt of alts) {
-        const wrap = document.createElement("span");
-        wrap.className = "variation";
-        wrap.textContent = "(";
-        treeEl.appendChild(wrap);
-        renderNode(alt, [...nodePath, alt], ply + 1);
-        treeEl.appendChild(document.createTextNode(") "));
+        const variation = document.createElement("div");
+        variation.className = "variation";
+        container.appendChild(variation);
+        renderNode(alt, [...nodePath, alt], ply + 1, variation);
       }
-      if (mainline) renderNode(mainline, [...nodePath, mainline], ply + 1);
+      if (mainline) renderNode(mainline, [...nodePath, mainline], ply + 1, container);
     }
 
-    const first = tree.children[0];
-    // Render the first move plus any alternatives to it (siblings of children[0]).
-    for (let i = 1; i < tree.children.length; i++) {
-      const alt = tree.children[i]!;
-      const wrap = document.createElement("span");
-      wrap.className = "variation";
-      wrap.textContent = "(";
-      treeEl.appendChild(wrap);
-      renderNode(alt, [tree, alt], 1);
-      treeEl.appendChild(document.createTextNode(") "));
+    // Root's children are the first move plus any alternatives to it.
+    const [firstMain, ...firstAlts] = tree.children;
+    for (const alt of firstAlts) {
+      const variation = document.createElement("div");
+      variation.className = "variation";
+      treeEl.appendChild(variation);
+      renderNode(alt, [tree, alt], 1, variation);
     }
-    if (first) renderNode(first, [tree, first], 1);
+    if (firstMain) renderNode(firstMain, [tree, firstMain], 1, treeEl);
   }
 
   function updateCurrent(): void {
