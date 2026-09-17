@@ -32,7 +32,7 @@ This harness loads the **real generated page** into jsdom and drives it the way 
 node --test jeopardy/tests/browser/
         │
         ├─ (once per test file, in a before() hook)
-        │     spawn: uv run --frozen python -m jeopardy.tests.browser.render_fixture
+        │     spawn: uv run --frozen --group analysis python -m jeopardy.tests.browser.render_fixture
         │       cwd = resolved repo root (from import.meta.url), NOT the caller's cwd
         │       stdout = a small self-contained research page (fixed fixture DATA)
         │
@@ -47,7 +47,7 @@ The glue lives only in `research.py`'s template, so the harness renders through 
 ## Components & file structure
 
 - **`jeopardy/tests/browser/__init__.py`** *(new)* — package marker so `python -m jeopardy.tests.browser.render_fixture` resolves (`jeopardy/__init__.py` and `jeopardy/tests/__init__.py` already exist).
-- **`jeopardy/tests/browser/render_fixture.py`** *(new)* — builds the fixed fixture as small pandas DataFrames, calls the real `build_research_data(...)` then `render_html(...)`, and prints the HTML to stdout. Importable/runnable as a module (dir-independent). No new Python deps.
+- **`jeopardy/tests/browser/render_fixture.py`** *(new)* — builds the fixed fixture as small pandas DataFrames, calls the real `build_research_data(...)` then `render_html(...)`, and prints the HTML to stdout. Importable/runnable as a module (dir-independent). No new Python deps, but it imports `research.py` (→ pandas), so it must run under the **analysis** group: `uv run --frozen --group analysis python -m jeopardy.tests.browser.render_fixture`.
 - **`jeopardy/tests/browser/harness.js`** *(new, ESM)* — `makeDom(html, opts)` helper: constructs the JSDOM with `runScripts:"dangerously"`, a fixed `url`, optional `storageQuota`, and a `beforeParse` that installs a fixed clock, a fixed RNG, and (optionally) seeded `localStorage` **before** page scripts run; wires error capture (see below) and returns `{ dom, window, document }`. Also small DOM-driver helpers (click by id, dispatch a key, read text).
 - **`jeopardy/tests/browser/practice-ui.test.js`** *(new, ESM)* — the `node:test` suite: one `before()` renders the fixture HTML once; each test builds a fresh DOM, drives a flow, asserts, and closes the DOM.
 - **`jeopardy/tests/browser/package.json`** *(new)* — `{ "private": true, "type": "module", "devDependencies": { "jsdom": "<pinned>" } }`. Scopes the JS dependency **and** `"type":"module"` to this directory only; the bare `node:test` files elsewhere are unaffected.
@@ -90,7 +90,7 @@ Each test builds a fresh DOM from the shared fixture HTML, then:
 
 3. **Persistence across reload.** Run a session grading some cards **Missed**; read `window.localStorage`; build a **fresh JSDOM seeded with that storage** (via `beforeParse`); open Practice and Start the same topic; assert the previously-missed (now-due) cards surface first — i.e. save→load round-trips through `sanitizeStore`.
 
-4. **No-due return to setup (the fixed bug).** With a tiny/exhausted deck, click **Practice again** when nothing is due; assert `renderStart` **preserved** the earlier selection (only `Topic A` checked, size 10 — *not* reset to all/20), the "Nothing left due…" note is shown, **Start is disabled**, and `document.activeElement` is the **Extra-practice checkbox** (`#pextra`), i.e. focus stayed inside the dialog rather than falling to BODY.
+4. **No-due return to setup (the fixed bug).** With a tiny/exhausted deck, click **Practice again** when nothing is due; assert `renderStart` **preserved** the earlier selection (only `Topic A` checked, size 10 — *not* reset to all/20), **Start is disabled**, and `document.activeElement` is the **Extra-practice checkbox** (`#pextra`), i.e. focus stayed inside the dialog rather than falling to BODY. For the note, assert the **actual disabled-state message** — `"Nothing due — turn on Extra practice, or widen your era / topics."` — *not* the `renderStart` prefill note (`"Nothing left due…"`), which `updateStartAvailability()` immediately overwrites when nothing is due. (Assert the message text or its meaning; the prefill note being dead in this path is a known, harmless practice-mode quirk, not something this harness fixes.)
 
 5. **Keyboard — interception guard (narrowed per jsdom's limits).**
    - Focus the **Exit** button; dispatch a **bubbling, cancelable** `keydown` Space `KeyboardEvent`; assert `event.defaultPrevented === false` **and** the answer stays hidden. (The pre-fix handler would have `preventDefault`ed and revealed — this catches that regression. jsdom won't natively *activate* Exit via Space, so "Space closes Exit" is browser-only.)
@@ -112,9 +112,9 @@ Today `.github/workflows/publish.yml` runs `uv sync` + `quarto render` + deploy 
   1. `actions/checkout@v4`
   2. `astral-sh/setup-uv@v6`; `uv sync --frozen`
   3. `actions/setup-node@v4` with an **explicit Node version** compatible with the pinned jsdom (Node 22 LTS).
-  4. `uv run --group analysis pytest jeopardy/tests -q` — the Python suite (currently unguarded in CI).
+  4. `uv run --frozen --group scraper --group analysis python -m pytest jeopardy/tests -q` — the Python suite (currently unguarded in CI). Both groups are required: `analysis` for pandas/sklearn and `scraper` for the crawl/fetch test dependencies.
   5. `node --test jeopardy/analysis/practice.test.js` — the pure-scheduler suite.
-  6. `npm ci --prefix jeopardy/tests/browser` then `node --test jeopardy/tests/browser/` — the jsdom harness (the harness's `before()` shells `uv run --frozen python -m jeopardy.tests.browser.render_fixture`, so uv/Python from step 2 must be available).
+  6. `npm ci --prefix jeopardy/tests/browser` then `node --test jeopardy/tests/browser/` — the jsdom harness (the harness's `before()` shells `uv run --frozen --group analysis python -m jeopardy.tests.browser.render_fixture`, so uv/Python from step 2 must be available).
 
 This runs the full test matrix on every push, so regressions show red before a merge. `publish.yml` stays as-is (deploy on `main`). *Optional hardening (flagged, not included by default):* gate deploy on tests by moving the test job into `publish.yml` with `build: needs: test` — only worth it if you want a red test to block deployment.
 
@@ -125,7 +125,7 @@ The harness *is* the test. Its own correctness is established by: the six flows 
 ## Resolved decisions
 
 1. **Tool:** ✅ jsdom (one dir-scoped devDependency), not Playwright. Accepted limits documented above.
-2. **Page acquisition:** ✅ render at test time via `uv run --frozen python -m jeopardy.tests.browser.render_fixture` (drift-proof), rendered once per file and reused across fresh DOMs.
+2. **Page acquisition:** ✅ render at test time via `uv run --frozen --group analysis python -m jeopardy.tests.browser.render_fixture` (drift-proof), rendered once per file and reused across fresh DOMs.
 3. **Determinism:** ✅ fixed clock + fixed RNG installed in `beforeParse`; fixed two-topic fixture.
 4. **Keyboard scope:** ✅ assert the interception guard (`defaultPrevented===false` + answer hidden) and `1/2/3` grading in jsdom; real Space→Exit activation is browser-only.
 5. **Save-failure:** ✅ `storageQuota: 0` (real quota exception), no storage monkey-patching.
