@@ -1053,8 +1053,10 @@ _HTML_TEMPLATE = """<!doctype html>
             // Nothing left due — return to setup but keep this session's topics/size/extra.
             renderStart({ clusterIds: practice.config.clusterIds, size: practice.config.size,
               extra: practice.config.extra, note: 'Nothing left due — adjust topics/era or turn on Extra practice.' });
-            const startBtn = document.getElementById('practice-start');
-            if (startBtn) startBtn.focus();
+            // Start is disabled here (nothing due), so focus the always-enabled Extra practice
+            // checkbox — the control that recovers a deck — keeping focus inside the dialog.
+            const extraCb = document.getElementById('pextra');
+            if (extraCb) extraCb.focus();
             return;
           }
           practice.session = initSession(ids);
