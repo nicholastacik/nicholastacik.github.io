@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { INTERVAL_DAYS, nextBox, dueAfter, applyGrade } from "./practice.js";
+import { INTERVAL_DAYS, nextBox, dueAfter, applyGrade, assembleSession } from "./practice.js";
 
 const DAY = 86400000;
 
@@ -34,4 +34,26 @@ test("applyGrade extra: correct leaves box+due unchanged, updates seen", () => {
 
 test("applyGrade extra: miss still resets", () => {
   assert.deepEqual(applyGrade({ box: 4, due: 999, seen: 1 }, "missed", 1000, false), { box: 0, due: 1000, seen: 1000 });
+});
+
+test("assembleSession: due before unseen, future excluded when not extra", () => {
+  const store = { a: { box: 0, due: 500, seen: 1 }, b: { box: 1, due: 2000, seen: 1 } };
+  const ids = assembleSession(["a", "b", "c", "d"], store, 1000, 10, false, () => 0);
+  assert.equal(ids[0], "a");            // due first
+  assert.ok(!ids.includes("b"));        // future excluded when extra=false
+  assert.deepEqual(ids.slice(1).sort(), ["c", "d"]); // unseen included
+});
+
+test("assembleSession: future tier included only when extra", () => {
+  const store = { b: { box: 1, due: 2000, seen: 1 } };
+  assert.deepEqual(assembleSession(["b"], store, 1000, 10, true, () => 0), ["b"]);
+});
+
+test("assembleSession: truncates to size", () => {
+  assert.equal(assembleSession(["a", "b", "c", "d", "e"], {}, 1000, 3, false, () => 0).length, 3);
+});
+
+test("assembleSession: shuffles unseen deterministically via rng", () => {
+  // rng()===0 -> Fisher-Yates swaps each i with index 0: ["a","b","c"] -> ["b","c","a"]
+  assert.deepEqual(assembleSession(["a", "b", "c"], {}, 1000, 3, false, () => 0), ["b", "c", "a"]);
 });

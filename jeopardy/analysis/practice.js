@@ -25,4 +25,29 @@ function applyGrade(card, grade, now, promote) {
   return { box: nb, due: dueAfter(now, nb), seen: now };
 }
 
-export { INTERVAL_DAYS, nextBox, dueAfter, applyGrade };
+function _shuffle(arr, rng) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    const tmp = arr[i];
+    arr[i] = arr[j];
+    arr[j] = tmp;
+  }
+  return arr;
+}
+
+function assembleSession(pool, store, now, size, extra, rng) {
+  const due = [], unseen = [], future = [];
+  for (const id of pool) {
+    const rec = store[id];
+    if (!rec) unseen.push(id);
+    else if (rec.due <= now) due.push(id);
+    else future.push(id);
+  }
+  due.sort((x, y) => store[x].due - store[y].due);
+  _shuffle(unseen, rng);
+  future.sort((x, y) => store[x].due - store[y].due);
+  const ordered = extra ? due.concat(unseen, future) : due.concat(unseen);
+  return ordered.slice(0, size);
+}
+
+export { INTERVAL_DAYS, nextBox, dueAfter, applyGrade, assembleSession };
