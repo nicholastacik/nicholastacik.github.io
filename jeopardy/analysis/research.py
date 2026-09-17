@@ -980,8 +980,91 @@ _HTML_TEMPLATE = """<!doctype html>
         }
       }
 
-      // Task 7 replaces this stub with the real card loop.
-      function nextCard() { /* replaced in Task 7 */ }
+      function nextCard() {
+        if (!practice.session.queue.length) { renderSummary(); return; }
+        practice.current = practice.session.queue[0].id;
+        practice.revealed = false;
+        practice.screen = 'card';
+        renderCard();
+      }
+      function updateProgressHeader() {
+        const p = sessionProgress(practice.session);
+        pProgress.textContent = p.done + ' / ' + p.size + ' cards' +
+          (p.retriesPending ? ' · ' + p.retriesPending + ' retr' + (p.retriesPending === 1 ? 'y' : 'ies') + ' remaining' : '');
+        pTally.textContent = '✓' + practice.tally.knew + ' · ?' + practice.tally.unsure + ' · ✗' + practice.tally.missed;
+      }
+      function renderCard() {
+        updateProgressHeader();
+        const c = clueById(practice.current);
+        let html = '<div class="pcard"><p class="pcard-scope">' + escapeHtml(c.category) + ' · ' + c.year + '</p>' +
+          '<p class="pcard-clue">' + escapeHtml(c.clue) + '</p>';
+        if (!practice.revealed) {
+          html += '<button type="button" id="pcard-reveal" class="practice-start">Reveal</button>';
+        } else {
+          const url = escapeHtml(DATA.jarchive.replace('{game_id}', c.game_id));
+          html += '<p class="pcard-answer">' + escapeHtml(c.answer) +
+            ' · <a href="' + url + '" target="_blank" rel="noopener">J-Archive ↗</a></p>' +
+            '<div class="pcard-grades">' +
+            '<button type="button" class="pgrade" data-g="knew">Knew it <span>1</span></button>' +
+            '<button type="button" class="pgrade" data-g="unsure">Unsure <span>2</span></button>' +
+            '<button type="button" class="pgrade" data-g="missed">Missed <span>3</span></button></div>';
+        }
+        html += '</div>';
+        pBody.innerHTML = html;
+        if (!practice.revealed) {
+          const rb = document.getElementById('pcard-reveal');
+          rb.addEventListener('click', reveal);
+          rb.focus();
+        } else {
+          pBody.querySelectorAll('.pgrade').forEach(b => b.addEventListener('click', () => grade(b.dataset.g)));
+          const first = pBody.querySelector('.pgrade');
+          if (first) first.focus();
+        }
+      }
+      function reveal() { practice.revealed = true; renderCard(); }
+      function grade(g) {
+        practice.tally[g] = (practice.tally[g] || 0) + 1;
+        practice.seen.add(practice.current);
+        const rec = applyGrade(practice.store.cards[practice.current] || null, g, Date.now(), !practice.config.extra);
+        saveCard(practice.current, rec);
+        practice.session = gradeCurrent(practice.session, g);
+        nextCard();
+      }
+      function renderSummary() {
+        practice.screen = 'summary';
+        updateProgressHeader();
+        const now = Date.now();
+        let scheduled = 0;
+        for (const id of practice.seen) {
+          const r = practice.store.cards[id];
+          if (r && r.due > now) scheduled++;
+        }
+        const t = practice.tally;
+        pBody.innerHTML = '<h2 class="practice-title">Session complete</h2>' +
+          '<p class="psummary-tally">' + t.knew + ' knew · ' + t.unsure + ' unsure · ' + t.missed + ' missed</p>' +
+          '<p class="psummary-sched">' + scheduled + ' card' + (scheduled === 1 ? '' : 's') + ' scheduled to come back later.</p>' +
+          '<div class="practice-actions">' +
+          '<button type="button" id="practice-again" class="practice-start">Practice again</button>' +
+          '<button type="button" id="practice-done" class="practice-reset">Done</button></div>';
+        document.getElementById('practice-again').addEventListener('click', () => {
+          const ids = assembleSession(practicePool(practice.config.clusterIds, practice.config.era),
+            practice.store.cards, Date.now(), practice.config.size, practice.config.extra, Math.random);
+          if (!ids.length) {
+            // Nothing left due — return to setup but keep this session's topics/size/extra.
+            renderStart({ clusterIds: practice.config.clusterIds, size: practice.config.size,
+              extra: practice.config.extra, note: 'Nothing left due — adjust topics/era or turn on Extra practice.' });
+            const startBtn = document.getElementById('practice-start');
+            if (startBtn) startBtn.focus();
+            return;
+          }
+          practice.session = initSession(ids);
+          practice.tally = { knew: 0, unsure: 0, missed: 0 };
+          practice.seen = new Set();
+          nextCard();
+        });
+        document.getElementById('practice-done').addEventListener('click', closePractice);
+        document.getElementById('practice-again').focus();
+      }
 
       function loadStore() {
         try { return sanitizeStore(JSON.parse(localStorage.getItem(PKEY))); }
@@ -1102,7 +1185,17 @@ _HTML_TEMPLATE = """<!doctype html>
       function practiceKeys(e) {
         if (e.key === 'Escape') { closePractice(); return; }
         trapTab(e);
-        // Card-screen shortcuts (Space / 1-2-3) are added in Task 7.
+        if (practice.screen !== 'card') return;
+        const tag = (e.target.tagName || '').toLowerCase();
+        const interactive = tag === 'button' || tag === 'a' || tag === 'input' || tag === 'textarea';
+        if (!practice.revealed) {
+          // Space reveals — but never override native activation of a focused button/link
+          // (Exit, Reveal, etc. must keep their default Space/Enter behavior).
+          if (e.key === ' ' && !interactive) { e.preventDefault(); reveal(); }
+        } else if (e.key === '1' || e.key === '2' || e.key === '3') {
+          // Digit keys aren't native button activators, so grading by number is safe regardless of focus.
+          grade({ '1': 'knew', '2': 'unsure', '3': 'missed' }[e.key]);
+        }
       }
       function openPractice() {
         practice.returnFocus = document.activeElement;

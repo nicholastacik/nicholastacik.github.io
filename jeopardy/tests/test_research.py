@@ -193,3 +193,15 @@ def test_render_html_has_practice_entry_and_start_screen():
         'practicePool', 'id="pextra"', 'name="psize"', 'practice-reset',
     ]:
         assert marker in html, marker
+
+
+def test_render_html_has_card_loop_and_summary():
+    data = build_research_data(_tokens_df(), _eras_df(), _labels())
+    html = render_html(data)
+    for marker in [
+        'renderCard', 'renderSummary', 'updateProgressHeader',
+        'pcard-reveal', 'class="pgrade"', 'data-g="missed"',
+        'practice-again', 'scheduled to come back later',
+        "applyGrade(", "gradeCurrent(", "sessionProgress(",
+    ]:
+        assert marker in html, marker
