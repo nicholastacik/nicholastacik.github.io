@@ -105,4 +105,9 @@ describe("analyzeMismatch", () => {
     // White trainee; baseline White-persp mate +3 (White mates), played only +0.10
     expect(analyzeMismatch(ev(null, 3), ev(10), "white")).toEqual({ kind: "missed-mate", mateIn: 3, bestMoveUci: "e2e4" });
   });
+
+  it("baseline already a forced mate against the trainee → playable (not a cp misread)", () => {
+    // White trainee; baseline White-persp mate -3 (White already getting mated), played reverts to cp
+    expect(analyzeMismatch(ev(null, -3), ev(-50), "white")).toEqual({ kind: "playable", bestMoveUci: "e2e4" });
+  });
 });
