@@ -1,11 +1,13 @@
 import "./style.css";
 import { loadStudies } from "./study";
 import { renderLanding, renderStudyView } from "./ui";
-import { createBoard } from "./board";
+import { createBoard, createMovableBoard } from "./board";
+import { ChessApiProvider, CachingEvalProvider } from "./evalProvider";
 
 if (typeof document !== "undefined" && document.getElementById("app")) {
   const app = document.getElementById("app")!;
   const studies = loadStudies();
+  const evalProvider = new CachingEvalProvider(new ChessApiProvider());
 
   function route(): void {
     const hash = location.hash.replace(/^#/, "") || "/";
@@ -15,6 +17,8 @@ if (typeof document !== "undefined" && document.getElementById("app")) {
       if (study) {
         renderStudyView(app, study, {
           makeBoard: (el, orientation) => createBoard(el, orientation),
+          makeMovableBoard: (el, opts) => createMovableBoard(el, opts),
+          evalProvider,
         });
         return;
       }
