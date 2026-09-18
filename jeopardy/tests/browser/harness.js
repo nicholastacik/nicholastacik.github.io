@@ -1,4 +1,10 @@
 // Test-only helpers for driving the real generated research page in jsdom.
+// Browser-only checklist — NOT covered by jsdom (verify manually in a real browser):
+//  * native Space/Enter ACTIVATION of Exit/Reveal/grade buttons (jsdom runs activation
+//    only for real click events, not dispatched key events);
+//  * Tab focus-trap cycling (jsdom has no layout, so offsetParent is always null);
+//  * inert background non-interactivity (jsdom does not implement `inert`);
+//  * visual focus rings and prefers-reduced-motion.
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
