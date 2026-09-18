@@ -22,6 +22,7 @@ function fakeBoardFactory() {
     setPosition(fen, lastMove, o) {
       calls.push({ fen, lastMove, orientation: o });
     },
+    destroy() {},
   });
   return { make, calls };
 }

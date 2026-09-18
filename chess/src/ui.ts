@@ -16,6 +16,7 @@ export interface BoardHandle {
     lastMove: [string, string] | undefined,
     orientation: "white" | "black",
   ): void;
+  destroy(): void;
 }
 
 export interface StudyViewDeps {
