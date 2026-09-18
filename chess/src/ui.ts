@@ -345,7 +345,11 @@ function exitButton(onClick: () => void): HTMLButtonElement {
   return btn;
 }
 
-function practiceControls(onReveal: () => void, onRestart: () => void, onExit: () => void): HTMLElement {
+function practiceControls(
+  onReveal: () => void,
+  onRestart: () => void,
+  onExit: () => void,
+): { el: HTMLElement; revealBtn: HTMLButtonElement } {
   const controls = div("practice-controls");
   const reveal = document.createElement("button");
   reveal.className = "btn-reveal";
@@ -356,7 +360,7 @@ function practiceControls(onReveal: () => void, onRestart: () => void, onExit: (
   restart.textContent = "Restart";
   restart.addEventListener("click", onRestart);
   controls.append(reveal, restart, exitButton(onExit));
-  return controls;
+  return { el: controls, revealBtn: reveal };
 }
 
 function practiceStorageKey(studyId: string): string {
@@ -408,20 +412,24 @@ export function renderPractice(root: HTMLElement, study: Study, deps: PracticeDe
   let drill: Drill | null = null;
   let currentLineId: string | null = null;
   let sessionId = 0; // bumped on every start/restart/exit; guards stale evals
+  let revealBtn: HTMLButtonElement | null = null;
 
   function startDrill(line: LineChoice): void {
     sessionId += 1;
     const mySession = sessionId;
     currentLineId = line.id;
+    board?.destroy(); // Restart reuses startDrill; don't leak the previous board.
+    board = null;
     drill = createDrill(line.path, side);
     root.innerHTML = "";
     const boardEl = document.createElement("div");
     boardEl.className = "board";
     const status = div("practice-status");
     const feedback = div("practice-feedback");
-    const controls = practiceControls(
+    const { el: controls, revealBtn: revealButton } = practiceControls(
       () => {
-        const san = drill!.reveal();
+        if (!drill || drill.state().toMove !== "user") return; // off-turn: no-op
+        const san = drill.reveal();
         feedback.textContent = `Revealed: ${san}.`;
         syncBoard();
         autoPlayOpponent(status);
@@ -429,6 +437,7 @@ export function renderPractice(root: HTMLElement, study: Study, deps: PracticeDe
       () => startDrill(line), // restart
       () => leave(), // exit
     );
+    revealBtn = revealButton;
     const practice = document.createElement("div");
     practice.className = "practice";
     practice.append(boardEl, status, feedback, controls);
@@ -448,6 +457,7 @@ export function renderPractice(root: HTMLElement, study: Study, deps: PracticeDe
     board.setPosition(st.fen, undefined, side);
     if (st.toMove === "user") board.setMovable(legalDests(st.fen), side);
     else board.setMovable(new Map(), side); // freeze while opponent/done
+    if (revealBtn) revealBtn.disabled = st.toMove !== "user";
   }
 
   function autoPlayOpponent(status: HTMLElement): void {
@@ -482,13 +492,15 @@ export function renderPractice(root: HTMLElement, study: Study, deps: PracticeDe
     feedback.textContent = `Not your line — book move is ${grade.expected}.`;
     const fenBefore = drill.state().fen; // decision position (drill did not advance)
     const attempt = drill.state().mistakes;
-    void runAnalysis(mySession, attempt, fenBefore, from, to, grade.expected, feedback);
+    const attemptPly = drill.state().ply; // pins the analysis to this decision point, not just this attempt count
+    void runAnalysis(mySession, attempt, attemptPly, fenBefore, from, to, grade.expected, feedback);
     syncBoard(); // re-arm the board for a retry
   }
 
   async function runAnalysis(
     mySession: number,
     attempt: number,
+    attemptPly: number,
     fenBefore: string,
     from: string,
     to: string,
@@ -501,19 +513,20 @@ export function renderPractice(root: HTMLElement, study: Study, deps: PracticeDe
         deps.evalProvider.evaluate(fenBefore),
         deps.evalProvider.evaluate(fenAfter),
       ]);
-      if (!isCurrent(mySession, attempt)) return; // stale: retried/advanced/exited
+      if (!isCurrent(mySession, attempt, attemptPly)) return; // stale: retried/advanced/exited
       feedback.textContent = verdictText(analyzeMismatch(baseline, played, side), bookSan);
     } catch {
-      if (!isCurrent(mySession, attempt)) return;
+      if (!isCurrent(mySession, attempt, attemptPly)) return;
       feedback.textContent = `Not your line — book move is ${bookSan}. (Couldn't reach the engine for the analysis.)`;
     }
   }
 
-  function isCurrent(mySession: number, attempt: number): boolean {
+  function isCurrent(mySession: number, attempt: number, attemptPly: number): boolean {
     return (
       mySession === sessionId &&
       !!drill &&
       drill.state().mistakes === attempt &&
+      drill.state().ply === attemptPly &&
       drill.state().toMove === "user"
     );
   }
@@ -523,6 +536,7 @@ export function renderPractice(root: HTMLElement, study: Study, deps: PracticeDe
     board?.destroy();
     board = null;
     drill = null;
+    revealBtn = null;
     root.innerHTML = "";
     deps.onExit?.();
   }

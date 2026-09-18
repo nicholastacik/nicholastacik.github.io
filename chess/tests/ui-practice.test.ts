@@ -116,6 +116,52 @@ describe("renderPractice", () => {
     expect(root2.querySelector(".line-choice")!.classList.contains("completed")).toBe(true);
   });
 
+  it("does not let a stale wrong-move analysis overwrite feedback at a new ply after a correct retry", async () => {
+    const dp = deferredProvider();
+    const fb = fakeBoard();
+    const root = mount();
+    const onMove = captureOnMove(fb);
+    renderPractice(root, study, { makeMovableBoard: fb.make, evalProvider: dp.provider });
+    root.querySelector<HTMLElement>(".line-choice")!.click();
+    onMove.current("d2", "d4"); // wrong at ply 0 (book is e4); analysis kicked off in the background
+    onMove.current("e2", "e4"); // retry correctly: ply -> 1, opponent auto-replies e5 -> ply 2
+    const feedback = root.querySelector(".practice-feedback")!;
+    expect(feedback.textContent).toBe(""); // cleared by the correct move; nothing stale shown yet
+    // The abandoned wrong-move analysis (baseline + played) resolves late, after the drill
+    // has moved on to a new decision point. `mistakes` hasn't changed since the wrong move,
+    // so only a ply check (not just session + mistakes) can catch this.
+    dp.resolveNext({ bestMove: "e2e4", cp: 30, mate: null, depth: 12 });
+    dp.resolveNext({ bestMove: "e2e4", cp: -230, mate: null, depth: 12 });
+    await Promise.resolve(); await Promise.resolve();
+    expect(feedback.textContent).toBe("");
+    expect(feedback.textContent).not.toMatch(/loses/i);
+  });
+
+  it("disables Reveal once the drill is done; clicking it then is a no-op", () => {
+    const fb = fakeBoard();
+    const root = mount();
+    const onMove = captureOnMove(fb);
+    renderPractice(root, study, { makeMovableBoard: fb.make, evalProvider: { evaluate: vi.fn() } });
+    root.querySelector<HTMLElement>(".line-choice")!.click();
+    const revealBtn = root.querySelector<HTMLButtonElement>(".btn-reveal")!;
+    expect(revealBtn.disabled).toBe(false); // it's the user's turn at the start
+    onMove.current("e2", "e4"); // correct -> opponent replies e5
+    onMove.current("g1", "f3"); // correct -> opponent replies Nc6 -> line done
+    expect(revealBtn.disabled).toBe(true);
+    expect(() => revealBtn.click()).not.toThrow();
+  });
+
+  it("Restart destroys the previous movable board before creating a new one", () => {
+    const fb = fakeBoard();
+    const root = mount();
+    renderPractice(root, study, { makeMovableBoard: fb.make, evalProvider: { evaluate: vi.fn() } });
+    root.querySelector<HTMLElement>(".line-choice")!.click();
+    const destroysBeforeRestart = fb.calls.filter((c) => c === "destroy").length;
+    root.querySelector<HTMLElement>(".btn-restart")!.click();
+    const destroysAfterRestart = fb.calls.filter((c) => c === "destroy").length;
+    expect(destroysAfterRestart).toBe(destroysBeforeRestart + 1);
+  });
+
   it("tolerates a corrupt storage value without throwing", () => {
     const fb = fakeBoard();
     const root = mount();
