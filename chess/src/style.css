@@ -27,3 +27,15 @@ body { margin: 0; }
 /* Each variation is an indented sub-line branching off its parent move. */
 .variation-tree .variation { display: block; margin: 0.15rem 0 0.15rem 1.25rem; padding-left: 0.5rem; border-left: 2px solid #e0e0e0; color: #777; }
 @media (max-width: 700px) { .study-view { grid-template-columns: 1fr; } }
+
+.line-picker { display: flex; flex-direction: column; gap: 0.4rem; max-width: 420px; margin: 1rem auto; padding: 0 1rem; }
+.line-choice { text-align: left; padding: 0.6rem 0.8rem; border: 1px solid #ddd; border-radius: 6px; background: #fff; cursor: pointer; font: inherit; }
+.line-choice:hover { border-color: #888; }
+.line-choice.completed { border-color: #2e7d32; background: #f1f8f2; }
+.line-choice.completed::after { content: " ✓"; color: #2e7d32; }
+.practice { display: grid; grid-template-columns: minmax(280px, 460px) 1fr; gap: 1rem; max-width: 900px; margin: 0 auto; padding: 1rem; align-items: start; }
+.practice .board { width: 100%; aspect-ratio: 1 / 1; }
+.practice-status { font-weight: 600; }
+.practice-feedback { min-height: 3rem; line-height: 1.5; color: #444; }
+.practice-controls { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+@media (max-width: 700px) { .practice { grid-template-columns: 1fr; } }
