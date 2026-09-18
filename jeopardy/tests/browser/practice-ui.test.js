@@ -59,7 +59,7 @@ test("flow 1: full single-topic session -> summary (dedupe + era filter)", () =>
 });
 
 test("flow 2: a missed card resurfaces once after three intervening cards", () => {
-  const { document, dom } = makeDom(html);
+  const { document, dom, errors } = makeDom(html);
   try {
     clickId(document, "practice-open");
     selectOnlyAlpha(document);
@@ -70,6 +70,7 @@ test("flow 2: a missed card resurfaces once after three intervening cards", () =
     const positions = seen.map((x, i) => (x === firstId ? i : -1)).filter((i) => i >= 0);
     assert.equal(positions.length, 2, "missed card seen exactly twice (one retry)");
     assert.equal(positions[1] - positions[0], 4, "retry is after 3 intervening cards (min(3, remaining))");
+    assert.equal(errors.length, 0, errors.map(String).join(" | "));
   } finally { dom.window.close(); }
 });
 
@@ -78,37 +79,41 @@ test("flow 3: progress persists across a reload (missed cards come back due)", (
   let saved;
   let missedIds;
   {
-    const { document, dom, window } = makeDom(html);
-    const missed = new Set();
-    clickId(document, "practice-open");
-    selectOnlyAlpha(document);
-    clickId(document, "practice-start");
-    // miss the first two distinct cards (and any retry of them), know the rest
-    const firstTwo = [];
-    runToSummary(document, (id) => {
-      if (firstTwo.length < 2 && !firstTwo.includes(id)) firstTwo.push(id);
-      if (firstTwo.includes(id)) { missed.add(id); return "missed"; }
-      return "knew";
-    });
-    saved = window.localStorage.getItem(PKEY);
-    missedIds = [...missed];
-    dom.window.close();
+    const { document, dom, window, errors } = makeDom(html);
+    try {
+      const missed = new Set();
+      clickId(document, "practice-open");
+      selectOnlyAlpha(document);
+      clickId(document, "practice-start");
+      // miss the first two distinct cards (and any retry of them), know the rest
+      const firstTwo = [];
+      runToSummary(document, (id) => {
+        if (firstTwo.length < 2 && !firstTwo.includes(id)) firstTwo.push(id);
+        if (firstTwo.includes(id)) { missed.add(id); return "missed"; }
+        return "knew";
+      });
+      saved = window.localStorage.getItem(PKEY);
+      missedIds = [...missed];
+      assert.equal(errors.length, 0, errors.map(String).join(" | "));
+    } finally { dom.window.close(); }
   }
   // Session 2: fresh DOM seeded with saved progress; only the due (missed) cards appear.
   {
-    const { document, dom } = makeDom(html, { seedStorage: saved });
-    clickId(document, "practice-open");
-    selectOnlyAlpha(document);
-    clickId(document, "practice-start");
-    const seen = runToSummary(document, () => "knew");
-    assert.deepEqual(seen.slice().sort(), missedIds.slice().sort(),
-      "reload surfaces exactly the previously-missed (now-due) cards");
-    dom.window.close();
+    const { document, dom, errors } = makeDom(html, { seedStorage: saved });
+    try {
+      clickId(document, "practice-open");
+      selectOnlyAlpha(document);
+      clickId(document, "practice-start");
+      const seen = runToSummary(document, () => "knew");
+      assert.deepEqual(seen.slice().sort(), missedIds.slice().sort(),
+        "reload surfaces exactly the previously-missed (now-due) cards");
+      assert.equal(errors.length, 0, errors.map(String).join(" | "));
+    } finally { dom.window.close(); }
   }
 });
 
 test("flow 4: Practice again with nothing due returns to setup, settings preserved", () => {
-  const { document, dom } = makeDom(html);
+  const { document, dom, errors } = makeDom(html);
   try {
     clickId(document, "practice-open");
     selectOnlyAlpha(document);
@@ -127,11 +132,12 @@ test("flow 4: Practice again with nothing due returns to setup, settings preserv
       "Nothing due — turn on Extra practice, or widen your era / topics.");
     assert.equal(document.activeElement, document.getElementById("pextra"),
       "focus on Extra-practice checkbox, not lost to BODY");
+    assert.equal(errors.length, 0, errors.map(String).join(" | "));
   } finally { dom.window.close(); }
 });
 
 test("flow 5: keyboard — Space does not hijack a focused button; 1/2/3 grade; click Exit closes", () => {
-  const { document, dom } = makeDom(html);
+  const { document, dom, errors } = makeDom(html);
   try {
     // jsdom's synthetic .click() (unlike a real browser click) doesn't move focus to the
     // target first, so focus explicitly to match the real user interaction that
@@ -156,11 +162,12 @@ test("flow 5: keyboard — Space does not hijack a focused button; 1/2/3 grade; 
     assert.equal(document.getElementById("practice").hidden, true, "overlay closed");
     assert.equal(document.activeElement, document.getElementById("practice-open"),
       "focus restored to Practice button");
+    assert.equal(errors.length, 0, errors.map(String).join(" | "));
   } finally { dom.window.close(); }
 });
 
 test("flow 6: save failure shows the notice and grading still continues", () => {
-  const { document, dom } = makeDom(html, { quota: 0 }); // setItem throws QuotaExceededError
+  const { document, dom, errors } = makeDom(html, { quota: 0 }); // setItem throws QuotaExceededError
   try {
     clickId(document, "practice-open");
     selectOnlyAlpha(document);
@@ -172,5 +179,6 @@ test("flow 6: save failure shows the notice and grading still continues", () => 
     assert.equal(notice.hidden, false, "notice shown");
     assert.match(notice.textContent, /Progress isn't being saved/);
     assert.notEqual(cardId(document), before, "session advanced despite save failure");
+    assert.equal(errors.length, 0, errors.map(String).join(" | "));
   } finally { dom.window.close(); }
 });

@@ -1,4 +1,4 @@
-import { test, before, after } from "node:test";
+import { test, before } from "node:test";
 import assert from "node:assert/strict";
 import { renderFixtureHtml, makeDom } from "./harness.js";
 
