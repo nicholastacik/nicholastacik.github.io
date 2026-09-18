@@ -44,3 +44,7 @@ they're *authored* most comfortably as a mainline with occasional
 "…or you could play this" asides. So a study is written in that readable
 line-plus-alternatives shape, then normalized once into a plain tree the UI can
 walk and click.
+
+## Practice mode
+
+The app now includes a **Practice mode** that lets you drill a line from memory and see how accurately you follow your own repertoire. When you make a move that differs from your studied line, the app grades you strictly—it knows exactly what move you should have played and when you've wandered off the mainline. If you go wrong, a hosted Stockfish instance (via chess-api.com) shows you how much better the right move was, evaluating each variation with the same analysis engine that will power a future trainer for learning from your chess.com blunders.

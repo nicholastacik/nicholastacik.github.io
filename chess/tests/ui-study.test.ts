@@ -22,6 +22,7 @@ function fakeBoardFactory() {
     setPosition(fen, lastMove, o) {
       calls.push({ fen, lastMove, orientation: o });
     },
+    destroy() {},
   });
   return { make, calls };
 }
@@ -64,6 +65,19 @@ describe("renderStudyView", () => {
     const last = fb.calls[fb.calls.length - 1]!;
     expect(last.lastMove).toEqual(["f1", "c4"]);
     expect(bc4.classList.contains("current")).toBe(true);
+  });
+
+  it("nests variation moves inside a .variation container, not the tree root", () => {
+    const root = mount();
+    const fb = fakeBoardFactory();
+    renderStudyView(root, study, { makeBoard: fb.make });
+    const moves = [...root.querySelectorAll<HTMLElement>(".variation-tree .move")];
+    const bc4 = moves.find((m) => m.textContent!.includes("Bc4"))!;
+    const e4 = moves.find((m) => m.textContent!.includes("e4"))!;
+    // A variation move lives inside a .variation block...
+    expect(bc4.closest(".variation")).not.toBeNull();
+    // ...while a mainline move does not.
+    expect(e4.closest(".variation")).toBeNull();
   });
 
   it("defaults orientation to black for a black-side study", () => {
