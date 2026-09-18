@@ -10,7 +10,7 @@ variation tree. Hardening should merge before (or together with) this work.
 
 Let the user drill an opening they've studied *from memory*: pick a line, play
 their own side's moves, and get told immediately when they stray from the book —
-with the engine showing how the wrong move is punished. This is the "keystone"
+with the engine showing its best move and how much a mismatch loses. This is the "keystone"
 interaction: the same "evaluate this position" plumbing powers the parked
 chess.com blunder trainer, which will reuse it with a different position source.
 
@@ -20,8 +20,8 @@ chess.com blunder trainer, which will reuse it with a different position source.
 - A "Practice" mode inside the existing study view.
 - Drill **one line at a time** (a root-to-leaf path through the study tree).
 - **Strict repertoire grading**: only the exact book move passes.
-- On a wrong move, **auto**-show the engine's punishment (refutation + eval
-  swing) plus the correct book move; the user retries or reveals.
+- On a repertoire mismatch, **auto**-show how much the move loses vs the engine's
+  best line, plus the correct book move; the user retries or reveals.
 - The opponent's moves auto-play from the book.
 - A movable board (chessground) with legal-move enforcement + promotion.
 - End-of-line summary (moves, mistakes, retries).
@@ -45,12 +45,13 @@ chess.com blunder trainer, which will reuse it with a different position source.
 - **Grading:** strict — the exact book move is correct; anything else is a
   **repertoire mismatch** (not necessarily a chess mistake). The engine is
   **not** used to grade correctness.
-- **Engine's role:** on a mismatch only, analyze whether the played move is
-  actually worse. The engine's move is described as the **best response**, and an
-  eval-drop / "punishment" is **only asserted when the analysis supports it** —
-  an off-book move, or another of the study's own variations, can be equal or
-  better, in which case the feedback says so honestly. The study's authored
-  `comment` supplies the positive "why" of the book move.
+- **Engine's role:** on a mismatch only, measure how much the played move loses
+  relative to the engine's best line. The engine's move is described as the
+  **best response**, and an eval-drop is **only asserted when the loss supports
+  it** — an off-book move (or another of the study's own variations) can be
+  perfectly playable, in which case the feedback says "playable alternative"
+  rather than claiming a punishment. It never claims the played move beats the
+  book move. The study's authored `comment` supplies the positive "why."
 - **Session shape:** one line at a time; the user selects which line.
 - **Engine provider:** pluggable `EvalProvider` interface; default
   **chess-api.com** (Stockfish 18, browser-oriented), with **stockfish.online**
@@ -81,13 +82,16 @@ chess/tests/
 - `enumerateLines(root: TreeNode): { id: string; label: string; path: Path }[]`
   — every root-to-leaf path. `label` is a human name (e.g. "Mainline",
   "vs Petrov") for **display only**. `id` is a **stable identity** derived from
-  the path's canonical SAN sequence plus the training side; it is what gets
-  persisted for completion, so two paths that share a first-divergence label
-  remain distinct, and completion survives label-wording changes. Editing or
-  extending a line changes its SAN sequence and therefore its `id`: the old
-  completion record simply no longer matches (a changed line is a new line); no
-  migration is attempted in v1. Pure; unit-tested — including two paths that
-  collide on label but not on `id`.
+  the path's canonical SAN sequence; it is what gets persisted for completion, so
+  two paths that share a first-divergence label remain distinct, and completion
+  survives label-wording changes. (The training side is **not** part of the id —
+  `TreeNode` doesn't carry it, completion is already namespaced per study, and a
+  study is drilled from a single side in v1; if per-side drilling of
+  `side: "both"` studies is added later, the side joins the persistence key then
+  and `enumerateLines` takes a side argument.) Editing or extending a line
+  changes its SAN sequence and therefore its `id`: the old completion record
+  simply no longer matches (a changed line is a new line); no migration in v1.
+  Pure; unit-tested — including two paths that collide on label but not on `id`.
 
 ### `practice.ts` — drill state machine (pure)
 The heart. No DOM, no network — takes a chosen line and the study's `side`, and
@@ -134,22 +138,31 @@ drives the drill so the UI is a thin renderer and the logic is fully testable.
   (`{ evaluation, mate, bestmove: "bestmove e2e4 ponder ...", continuation }`).
 - A `localStorage` cache wraps the provider, keyed by `fen`+`depth`.
 
-### Mismatch analysis (how the "swing" is computed)
-On a repertoire mismatch the UI computes a **swing**, not an absolute score, and
-always in the **trainee's** perspective — two evaluations, not one:
+### Mismatch analysis (loss relative to the engine's best line)
+On a repertoire mismatch the UI computes **how much the played move loses
+relative to the engine's best line** — not an absolute score — in the
+**trainee's** perspective, from two evaluations:
 - **Baseline** = evaluate the *decision position* (the FEN **before** the move) —
-  this yields the best move and the score under best play.
+  yields the engine's best move and the score under best play.
 - **Played** = evaluate the FEN **after** the trainee's move.
 - Both `EngineEval`s are White-perspective; convert each to the trainee's
   perspective (negate iff the trainee plays Black), then
-  `swing = trainee(baseline) − trainee(played)`.
-- **Verdict from the swing:** small (≤ ~50cp) → "off-book but fine — a playable
-  alternative" (no punishment claimed); larger → "drops ~N pawns; the best reply
-  is `bestMove`." A move *better* than book (negative swing) is reported honestly
-  as "actually stronger than the book move here."
-- **Mate handling:** if either eval is a mate score, describe it in mate terms
-  ("this gets mated in N" / "the book move forces mate in N") — never subtract a
-  mate from a centipawn score.
+  `loss = trainee(baseline) − trainee(played)` (≥ 0 up to search noise).
+- **What this can and cannot say:** the baseline is *best play from the decision
+  position*, NOT the book move's continuation. So the analysis speaks only to
+  loss vs best play — it **cannot** claim the played move beats the book move,
+  and a baseline mate is best-play's mate, not the book move's. We make no
+  stronger-than-book claim. (A true book-vs-played comparison would need a third
+  eval of the book line — deferred; unneeded for v1.)
+- **Verdict from the loss:** small (≤ ~50cp, including tiny negatives from search
+  noise) → "a playable alternative — loses little vs the best move"; larger →
+  "loses ~N pawns; the engine's best move here is `bestMove`." The study's book
+  move is always shown alongside (from strict grading), without asserting it is
+  the engine's best.
+- **Mate handling (relative to best play):** if the *played* position is mate
+  against the trainee → "this gets mated in N"; if the *baseline* was a mate the
+  played move threw away → "a forced mate was available." Never subtract a mate
+  from a centipawn score, and never attribute the mate to the book move.
 
 ### `board.ts` — movable mode + teardown (changed)
 - Add `createMovableBoard(el, { orientation, onMove })` (or a `movable` option on
@@ -187,16 +200,17 @@ always in the **trainee's** perspective — two evaluations, not one:
 
 1. User picks a study → **Practice** → picks a line.
 2. `createDrill(line, side)`; render the start position on a movable board.
-3. If it's the opponent's move, auto-play `opponentMove()` and advance.
+3. If it's the opponent's move, call `playOpponent()` — it applies the book
+   reply and advances — and animate the returned SAN.
 4. On the user's move, `board.onMove` → SAN (`chess.js`) → `submit(san)`.
    - **correct** → confirm, advance, then `playOpponent()` for the next reply.
    - **mismatch** → hold the position, increment mistakes, and **auto** run the
      mismatch analysis (§Mismatch analysis): evaluate the decision position and
      the after-move position, tag both with the `(sessionId, ply, attempt)`
      token, and — only if the token still matches on resolve — render the verdict
-     ("not your line here; book is `expected`" plus, per the swing, either "your
-     move is fine/stronger" or "drops ~N — best reply is Z"). User retries or
-     `reveal()`s.
+     ("not your line here; book is `expected`" plus, per the loss, either "a
+     playable alternative" or "loses ~N — the engine's best move is Z"). User
+     retries or `reveal()`s.
 5. At the leaf (`toMove === "done"`) → render `summary()`; mark the line
    completed in `localStorage` by its stable `id`.
 
@@ -205,7 +219,7 @@ always in the **trainee's** perspective — two evaluations, not one:
 - **Engine API failure / timeout / rate-limit:** grading is book-based and does
   not depend on the engine, so a failed `evaluate` degrades gracefully — still
   mark the move wrong and show the book move, with a quiet "couldn't reach the
-  engine for the punishment line" note instead of the eval. Timeout ~6s, no
+  engine for the analysis" note instead of the loss figure. Timeout ~6s, no
   hard retry loop (one retry at most). The drill never blocks on the network.
 - **Illegal input:** impossible via the movable board (dests are legal-only), but
   `submit` still guards by replaying with `chess.js`.
@@ -233,9 +247,10 @@ always in the **trainee's** perspective — two evaluations, not one:
 - `evalProvider.test.ts`: the adapter maps a **recorded** chess-api.com response
   into a White-perspective `EngineEval`; both a cp and a mate response covered;
   no live network.
-- Mismatch analysis: baseline−played swing in the trainee's perspective for both
-  a White and a Black trainee; a better-than-book move reads as "stronger"; a
-  mate score is described in mate terms, never subtracted from a cp.
+- Mismatch analysis: `loss` (baseline−played) in the trainee's perspective for
+  both a White and a Black trainee; a near-zero/negative loss reads as "a
+  playable alternative" (never "stronger than book"); a mate score is described
+  in mate terms, never subtracted from a cp, never attributed to the book move.
 - `ui-practice.test.ts`: entering practice removes the viewer `keydown` handler
   and `destroy()`s the view-only board; the line picker renders; a mismatch
   triggers the analysis calls on the fake provider and renders the verdict; a
