@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { ChessApiProvider, CachingEvalProvider, type EvalProvider, type EngineEval } from "../src/evalProvider";
+import { ChessApiProvider, CachingEvalProvider, analyzeMismatch, type EvalProvider, type EngineEval } from "../src/evalProvider";
 
 // Recorded chess-api.com response (POST /v1), Black-to-move position — proves
 // White-perspective: raw stockfish "score cp -32" comes back as eval +0.32.
@@ -68,5 +68,41 @@ describe("CachingEvalProvider", () => {
     const b = await p.evaluate("FEN1");
     expect(a).toEqual(b);
     expect(inner.evaluate).toHaveBeenCalledOnce();
+  });
+});
+
+describe("analyzeMismatch", () => {
+  const ev = (cp: number | null, mate: number | null = null): EngineEval =>
+    ({ bestMove: "e2e4", cp, mate, depth: 12 });
+
+  it("small loss → playable (White trainee)", () => {
+    // baseline +0.30, played +0.10 → loses 20cp
+    expect(analyzeMismatch(ev(30), ev(10), "white")).toEqual({ kind: "playable", bestMoveUci: "e2e4" });
+  });
+
+  it("large loss → loses N, in the trainee's perspective (White)", () => {
+    // baseline +0.30, played -2.30 → loses 260cp
+    expect(analyzeMismatch(ev(30), ev(-230), "white")).toEqual({ kind: "loses", lossCp: 260, bestMoveUci: "e2e4" });
+  });
+
+  it("converts perspective for a Black trainee", () => {
+    // White-persp baseline -0.30 (good for Black = +0.30), played +2.30 (bad for Black = -2.30)
+    // trainee(baseline)=+30, trainee(played)=-230 → loses 260
+    expect(analyzeMismatch(ev(-30), ev(230), "black")).toEqual({ kind: "loses", lossCp: 260, bestMoveUci: "e2e4" });
+  });
+
+  it("a played move at least as good as best play → playable, never 'stronger than book'", () => {
+    // played better than baseline (negative loss) → clamped to playable
+    expect(analyzeMismatch(ev(20), ev(120), "white")).toEqual({ kind: "playable", bestMoveUci: "e2e4" });
+  });
+
+  it("played position is mate against the trainee → mated", () => {
+    // White trainee; played is White-persp mate -2 (White gets mated in 2)
+    expect(analyzeMismatch(ev(30), ev(null, -2), "white")).toEqual({ kind: "mated", mateIn: 2 });
+  });
+
+  it("a forced mate was available but thrown away → missed-mate", () => {
+    // White trainee; baseline White-persp mate +3 (White mates), played only +0.10
+    expect(analyzeMismatch(ev(null, 3), ev(10), "white")).toEqual({ kind: "missed-mate", mateIn: 3, bestMoveUci: "e2e4" });
   });
 });

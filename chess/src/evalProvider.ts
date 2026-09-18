@@ -71,3 +71,45 @@ export class CachingEvalProvider implements EvalProvider {
     return result;
   }
 }
+
+export type MismatchVerdict =
+  | { kind: "playable"; bestMoveUci: string }
+  | { kind: "loses"; lossCp: number; bestMoveUci: string }
+  | { kind: "mated"; mateIn: number }
+  | { kind: "missed-mate"; mateIn: number; bestMoveUci: string };
+
+const PLAYABLE_CP = 50; // within this loss vs best play, treat as a fine alternative
+
+// Convert a White-perspective score to the trainee's perspective.
+function toTrainee<T extends number | null>(v: T, trainee: "white" | "black"): T {
+  return (v === null ? null : trainee === "white" ? v : -v) as T;
+}
+
+export function analyzeMismatch(
+  baseline: EngineEval,
+  played: EngineEval,
+  trainee: "white" | "black",
+): MismatchVerdict {
+  const baseMate = toTrainee(baseline.mate, trainee);
+  const playedMate = toTrainee(played.mate, trainee);
+
+  // Played position is a forced mate against the trainee.
+  if (playedMate !== null && playedMate < 0) {
+    return { kind: "mated", mateIn: Math.abs(playedMate) };
+  }
+  // Best play had a forced mate for the trainee that the played move gave up.
+  // (If the played move itself still mates for the trainee, that's fine → playable.)
+  if (baseMate !== null && baseMate > 0 && !(playedMate !== null && playedMate > 0)) {
+    return { kind: "missed-mate", mateIn: baseMate, bestMoveUci: baseline.bestMove };
+  }
+  // Played move also mates for the trainee, or any non-cp edge → playable.
+  if (playedMate !== null && playedMate > 0) {
+    return { kind: "playable", bestMoveUci: baseline.bestMove };
+  }
+  // cp path: loss vs best play, trainee perspective.
+  const baseCp = toTrainee(baseline.cp, trainee) ?? 0;
+  const playedCp = toTrainee(played.cp, trainee) ?? 0;
+  const lossCp = baseCp - playedCp;
+  if (lossCp <= PLAYABLE_CP) return { kind: "playable", bestMoveUci: baseline.bestMove };
+  return { kind: "loses", lossCp, bestMoveUci: baseline.bestMove };
+}
