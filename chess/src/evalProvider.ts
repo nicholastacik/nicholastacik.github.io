@@ -106,6 +106,11 @@ export function analyzeMismatch(
   if (playedMate !== null && playedMate > 0) {
     return { kind: "playable", bestMoveUci: baseline.bestMove };
   }
+  // Baseline was already a forced mate against the trainee: the position was
+  // lost before this move, so the played move loses nothing relative to it.
+  if (baseMate !== null && baseMate < 0) {
+    return { kind: "playable", bestMoveUci: baseline.bestMove };
+  }
   // cp path: loss vs best play, trainee perspective.
   const baseCp = toTrainee(baseline.cp, trainee) ?? 0;
   const playedCp = toTrainee(played.cp, trainee) ?? 0;
