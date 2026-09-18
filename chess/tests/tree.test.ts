@@ -66,6 +66,11 @@ describe("replay", () => {
   it("throws on a null move token (chess.js otherwise accepts '--')", () => {
     expect(() => replay(["e4", "--", "d4"])).toThrow();
   });
+
+  it("throws on an annotated null move (chess.js strips +/#/?/! before matching)", () => {
+    expect(() => replay(["e4", "--+"])).toThrow();
+    expect(() => replay(["e4", "--!?"])).toThrow();
+  });
 });
 
 describe("navigation", () => {
