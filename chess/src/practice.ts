@@ -66,6 +66,7 @@ export function createDrill(line: Path, userSide: "white" | "black"): Drill {
       return { san };
     },
     submit(san: string): Grade {
+      if (toMove() !== "user") throw new Error("submit() called when it is not the user's turn");
       const expected = expectedSan();
       if (san === expected) {
         if (!dirtyThisPly) cleanFirstTry += 1;
@@ -77,9 +78,9 @@ export function createDrill(line: Path, userSide: "white" | "black"): Drill {
       return { kind: "mismatch", expected, played: san };
     },
     reveal(): string {
+      if (toMove() !== "user") throw new Error("reveal() called when it is not the user's turn");
       const expected = expectedSan();
       revealed += 1;
-      dirtyThisPly = true;
       advance();
       return expected;
     },

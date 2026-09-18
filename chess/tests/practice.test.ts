@@ -68,4 +68,15 @@ describe("createDrill (Black trainee)", () => {
     expect(d.state().toMove).toBe("user");
     expect(d.submit("e5")).toEqual({ kind: "correct", expected: "e5" });
   });
+
+  it("the user's final move completes the drill", () => {
+    const d = createDrill(mainline(), "black");
+    d.playOpponent(); // e4
+    d.submit("e5");
+    d.playOpponent(); // Nf3
+    expect(d.state().toMove).toBe("user");
+    d.submit("Nc6"); // final move by the USER
+    expect(d.state().toMove).toBe("done");
+    expect(d.summary()).toEqual({ plies: 4, cleanFirstTry: 2, mistakes: 0, revealed: 0 });
+  });
 });
