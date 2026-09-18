@@ -551,18 +551,12 @@ _HTML_TEMPLATE = """<!doctype html>
   .practice-exit:hover { color: var(--paper); border-color: var(--gold-dim); }
   .practice-progress { font-family: var(--mono); font-size: 12px; color: var(--ash); }
   .practice-tally { font-family: var(--mono); font-size: 12px; color: var(--gold); margin-left: auto; }
-  .practice-notice {
-    margin-bottom: 14px; padding: 8px 12px; border: 1px solid var(--brick);
-    border-radius: var(--radius); color: var(--brick); font-size: 13px;
-  }
   .practice-title { font-family: var(--display); text-transform: uppercase; letter-spacing: 0.03em; font-size: 26px; margin: 0 0 6px; }
   .practice-sub { color: var(--ash); font-family: var(--mono); font-size: 12px; margin: 0 0 18px; }
   .practice-topics { display: flex; flex-direction: column; gap: 4px; max-height: 40vh; overflow-y: auto; margin-bottom: 18px; }
   .ptopic { font-size: 14px; cursor: pointer; }
   .practice-opts { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; font-size: 14px; }
   .popt-label { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ash); }
-  .pextra { display: block; font-size: 14px; margin-bottom: 18px; cursor: pointer; }
-  .pextra-note { color: var(--ash); font-size: 12px; }
   .practice-actions { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
   .practice-start {
     font-family: var(--mono); font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase;
@@ -590,7 +584,6 @@ _HTML_TEMPLATE = """<!doctype html>
   .pgrade:hover { border-color: var(--gold); }
   .pgrade span { font-family: var(--mono); font-size: 11px; color: var(--ash); margin-left: 6px; }
   .psummary-tally { font-size: 16px; margin: 0 0 8px; }
-  .psummary-sched { color: var(--ash); font-size: 14px; margin: 0 0 18px; }
 </style>
 </head>
 <body>
@@ -625,7 +618,6 @@ _HTML_TEMPLATE = """<!doctype html>
         <span id="practice-progress" class="practice-progress"></span>
         <span id="practice-tally" class="practice-tally"></span>
       </header>
-      <div id="practice-notice" class="practice-notice" hidden></div>
       <div id="practice-body" class="practice-body"></div>
     </div>
   </div>
@@ -958,19 +950,16 @@ _HTML_TEMPLATE = """<!doctype html>
 
       filterInput.addEventListener('input', () => renderSide(filterInput.value));
 
-      // ---- Practice mode ----
-      const PKEY = 'jeopardy-practice-v1';
+      // ---- Practice mode (random flashcard deck) ----
       const practice = {
-        screen: 'start', config: null, store: { v: 1, cards: {} },
-        session: null, current: null, revealed: false,
-        tally: { knew: 0, unsure: 0, missed: 0 }, seen: new Set(),
-        saveFailed: false, returnFocus: null,
+        screen: 'start', config: null, deck: [], i: 0,
+        current: null, revealed: false,
+        tally: { knew: 0, unsure: 0, missed: 0 }, returnFocus: null,
       };
       const overlay = document.getElementById('practice');
       const pBody = document.getElementById('practice-body');
       const pProgress = document.getElementById('practice-progress');
       const pTally = document.getElementById('practice-tally');
-      const pNotice = document.getElementById('practice-notice');
       const bgEls = ['.topbar', '.era-bar', '.layout', '.footer']
         .map(sel => document.querySelector(sel)).filter(Boolean);
       function setBackgroundInert(on) {
@@ -980,17 +969,86 @@ _HTML_TEMPLATE = """<!doctype html>
         }
       }
 
+      function practicePool(clusterIds, era) {
+        const ids = new Set();
+        for (const cid of clusterIds) {
+          const refs = (DATA.quiz && DATA.quiz[String(cid)]) || {};
+          for (const key in refs) for (const id of refs[key]) ids.add(id);
+        }
+        const out = [];
+        for (const id of ids) { const c = clueById(id); if (c && c.year >= era) out.push(id); }
+        return out;
+      }
+
+      function renderStart() {
+        practice.screen = 'start';
+        pProgress.textContent = ''; pTally.textContent = '';
+        const list = DATA.byEra[String(currentEra)] || [];
+        const nameById = {};
+        for (const d of list) nameById[d.cluster_id] = d.name;
+        const clusters = Object.keys(DATA.quiz || {}).map(Number)
+          .filter(cid => nameById[cid] !== undefined)
+          .sort((a, b) => (nameById[a] || '').localeCompare(nameById[b] || ''));
+        let html = '<h2 class="practice-title">Practice</h2>' +
+          '<p class="practice-sub">Study window: ' +
+          (currentEra === DATA.eras[0] ? 'All-time' : 'Since ' + currentEra) + '</p>' +
+          '<div class="practice-topics" role="group" aria-label="Topics">' +
+          '<label class="ptopic"><input type="checkbox" id="ptopic-all" checked> <b>Select all / none</b></label>';
+        for (const cid of clusters) {
+          html += '<label class="ptopic"><input type="checkbox" class="ptopic-cb" value="' + cid + '" checked> ' +
+            escapeHtml(nameById[cid]) + '</label>';
+        }
+        html += '</div>' +
+          '<div class="practice-opts"><span class="popt-label">Cards</span>' +
+          [10, 20, 30].map(n => '<label><input type="radio" name="psize" value="' + n + '"' +
+            (n === 20 ? ' checked' : '') + '> ' + n + '</label>').join('') + '</div>' +
+          '<div class="practice-actions">' +
+          '<button type="button" id="practice-start" class="practice-start">Start session</button>' +
+          '<span id="practice-startnote" class="practice-startnote"></span></div>';
+        pBody.innerHTML = html;
+        const all = document.getElementById('ptopic-all');
+        const cbs = () => Array.from(pBody.querySelectorAll('.ptopic-cb'));
+        all.addEventListener('change', () => { cbs().forEach(cb => { cb.checked = all.checked; }); updateStartAvailability(); });
+        cbs().forEach(cb => cb.addEventListener('change', () => {
+          all.checked = cbs().every(c => c.checked); updateStartAvailability();
+        }));
+        document.getElementById('practice-start').addEventListener('click', startSession);
+        updateStartAvailability();
+      }
+
+      function currentSelection() {
+        const cids = Array.from(pBody.querySelectorAll('.ptopic-cb')).filter(cb => cb.checked).map(cb => Number(cb.value));
+        const sizeEl = pBody.querySelector('input[name=psize]:checked');
+        return { cids, size: Number(sizeEl ? sizeEl.value : 20) };
+      }
+      function updateStartAvailability() {
+        const sel = currentSelection();
+        const avail = practicePool(sel.cids, currentEra).length;
+        document.getElementById('practice-start').disabled = avail === 0;
+        document.getElementById('practice-startnote').textContent =
+          avail === 0 ? 'No clues match — widen your era or topics.' : '';
+      }
+
+      function startSession() {
+        const sel = currentSelection();
+        const deck = pickSession(practicePool(sel.cids, currentEra), sel.size, Math.random);
+        if (!deck.length) { updateStartAvailability(); return; }
+        practice.config = { clusterIds: sel.cids, size: sel.size, era: currentEra };
+        practice.deck = deck;
+        practice.i = 0;
+        practice.tally = { knew: 0, unsure: 0, missed: 0 };
+        nextCard();
+      }
+
       function nextCard() {
-        if (!practice.session.queue.length) { renderSummary(); return; }
-        practice.current = practice.session.queue[0].id;
+        if (practice.i >= practice.deck.length) { renderSummary(); return; }
+        practice.current = practice.deck[practice.i];
         practice.revealed = false;
         practice.screen = 'card';
         renderCard();
       }
       function updateProgressHeader() {
-        const p = sessionProgress(practice.session);
-        pProgress.textContent = p.done + ' / ' + p.size + ' cards' +
-          (p.retriesPending ? ' · ' + p.retriesPending + ' retr' + (p.retriesPending === 1 ? 'y' : 'ies') + ' remaining' : '');
+        pProgress.textContent = (practice.i + 1) + ' / ' + practice.deck.length;
         pTally.textContent = '✓' + practice.tally.knew + ' · ?' + practice.tally.unsure + ' · ✗' + practice.tally.missed;
       }
       function renderCard() {
@@ -1024,155 +1082,30 @@ _HTML_TEMPLATE = """<!doctype html>
       function reveal() { practice.revealed = true; renderCard(); }
       function grade(g) {
         practice.tally[g] = (practice.tally[g] || 0) + 1;
-        practice.seen.add(practice.current);
-        const rec = applyGrade(practice.store.cards[practice.current] || null, g, Date.now(), !practice.config.extra);
-        saveCard(practice.current, rec);
-        practice.session = gradeCurrent(practice.session, g);
+        practice.i += 1;
         nextCard();
       }
       function renderSummary() {
         practice.screen = 'summary';
-        updateProgressHeader();
-        const now = Date.now();
-        let scheduled = 0;
-        for (const id of practice.seen) {
-          const r = practice.store.cards[id];
-          if (r && r.due > now) scheduled++;
-        }
+        pProgress.textContent = practice.deck.length + ' / ' + practice.deck.length;
+        pTally.textContent = '✓' + practice.tally.knew + ' · ?' + practice.tally.unsure + ' · ✗' + practice.tally.missed;
         const t = practice.tally;
         pBody.innerHTML = '<h2 class="practice-title">Session complete</h2>' +
           '<p class="psummary-tally">' + t.knew + ' knew · ' + t.unsure + ' unsure · ' + t.missed + ' missed</p>' +
-          '<p class="psummary-sched">' + scheduled + ' card' + (scheduled === 1 ? '' : 's') + ' scheduled to come back later.</p>' +
           '<div class="practice-actions">' +
           '<button type="button" id="practice-again" class="practice-start">Practice again</button>' +
           '<button type="button" id="practice-done" class="practice-reset">Done</button></div>';
         document.getElementById('practice-again').addEventListener('click', () => {
-          const ids = assembleSession(practicePool(practice.config.clusterIds, practice.config.era),
-            practice.store.cards, Date.now(), practice.config.size, practice.config.extra, Math.random);
-          if (!ids.length) {
-            // Nothing left due — return to setup but keep this session's topics/size/extra.
-            renderStart({ clusterIds: practice.config.clusterIds, size: practice.config.size,
-              extra: practice.config.extra, note: 'Nothing left due — adjust topics/era or turn on Extra practice.' });
-            // Start is disabled here (nothing due), so focus the always-enabled Extra practice
-            // checkbox — the control that recovers a deck — keeping focus inside the dialog.
-            const extraCb = document.getElementById('pextra');
-            if (extraCb) extraCb.focus();
-            return;
-          }
-          practice.session = initSession(ids);
+          const deck = pickSession(practicePool(practice.config.clusterIds, practice.config.era),
+            practice.config.size, Math.random);
+          if (!deck.length) { renderStart(); return; }
+          practice.deck = deck;
+          practice.i = 0;
           practice.tally = { knew: 0, unsure: 0, missed: 0 };
-          practice.seen = new Set();
           nextCard();
         });
         document.getElementById('practice-done').addEventListener('click', closePractice);
         document.getElementById('practice-again').focus();
-      }
-
-      function loadStore() {
-        try { return sanitizeStore(JSON.parse(localStorage.getItem(PKEY))); }
-        catch (e) { return { v: 1, cards: {} }; }
-      }
-      function saveCard(id, rec) {
-        practice.store.cards[id] = rec;
-        try { localStorage.setItem(PKEY, JSON.stringify(practice.store)); }
-        catch (e) {
-          practice.saveFailed = true;
-          pNotice.textContent = "Progress isn't being saved (storage unavailable).";
-          pNotice.hidden = false;
-        }
-      }
-      function resetProgress() {
-        try { localStorage.removeItem(PKEY); } catch (e) { /* ignore */ }
-        practice.store = { v: 1, cards: {} };
-      }
-      function practicePool(clusterIds, era) {
-        const ids = new Set();
-        for (const cid of clusterIds) {
-          const refs = (DATA.quiz && DATA.quiz[String(cid)]) || {};
-          for (const key in refs) for (const id of refs[key]) ids.add(id);
-        }
-        const out = [];
-        for (const id of ids) { const c = clueById(id); if (c && c.year >= era) out.push(id); }
-        return out;
-      }
-
-      function renderStart(prefill) {
-        practice.screen = 'start';
-        pProgress.textContent = ''; pTally.textContent = '';
-        const list = DATA.byEra[String(currentEra)] || [];
-        const nameById = {};
-        for (const d of list) nameById[d.cluster_id] = d.name;
-        const clusters = Object.keys(DATA.quiz || {}).map(Number)
-          .filter(cid => nameById[cid] !== undefined)
-          .sort((a, b) => (nameById[a] || '').localeCompare(nameById[b] || ''));
-        const isOn = cid => !prefill || prefill.clusterIds.indexOf(cid) !== -1;
-        const size = prefill ? prefill.size : 20;
-        const extra = prefill ? prefill.extra : false;
-        let html = '<h2 class="practice-title">Practice</h2>' +
-          '<p class="practice-sub">Study window: ' +
-          (currentEra === DATA.eras[0] ? 'All-time' : 'Since ' + currentEra) + '</p>' +
-          '<div class="practice-topics" role="group" aria-label="Topics">' +
-          '<label class="ptopic"><input type="checkbox" id="ptopic-all"' +
-          (clusters.every(isOn) ? ' checked' : '') + '> <b>Select all / none</b></label>';
-        for (const cid of clusters) {
-          html += '<label class="ptopic"><input type="checkbox" class="ptopic-cb" value="' + cid + '"' +
-            (isOn(cid) ? ' checked' : '') + '> ' + escapeHtml(nameById[cid]) + '</label>';
-        }
-        html += '</div>' +
-          '<div class="practice-opts"><span class="popt-label">Cards</span>' +
-          [10, 20, 30].map(n => '<label><input type="radio" name="psize" value="' + n + '"' +
-            (n === size ? ' checked' : '') + '> ' + n + '</label>').join('') + '</div>' +
-          '<label class="pextra"><input type="checkbox" id="pextra"' + (extra ? ' checked' : '') + '> Extra practice ' +
-          '<span class="pextra-note">(drill everything; correct answers don\\'t change your schedule)</span></label>' +
-          '<div class="practice-actions">' +
-          '<button type="button" id="practice-start" class="practice-start">Start session</button>' +
-          '<span id="practice-startnote" class="practice-startnote">' +
-          (prefill && prefill.note ? escapeHtml(prefill.note) : '') + '</span></div>' +
-          '<button type="button" id="practice-reset" class="practice-reset">Reset progress</button>';
-        pBody.innerHTML = html;
-        const all = document.getElementById('ptopic-all');
-        const cbs = () => Array.from(pBody.querySelectorAll('.ptopic-cb'));
-        all.addEventListener('change', () => { cbs().forEach(cb => { cb.checked = all.checked; }); updateStartAvailability(); });
-        cbs().forEach(cb => cb.addEventListener('change', () => {
-          all.checked = cbs().every(c => c.checked); updateStartAvailability();
-        }));
-        document.getElementById('pextra').addEventListener('change', updateStartAvailability);
-        pBody.querySelectorAll('input[name=psize]').forEach(r => r.addEventListener('change', updateStartAvailability));
-        document.getElementById('practice-start').addEventListener('click', startSession);
-        document.getElementById('practice-reset').addEventListener('click', () => {
-          if (window.confirm('Erase all saved practice progress?')) { resetProgress(); updateStartAvailability(); }
-        });
-        updateStartAvailability();
-      }
-
-      function currentSelection() {
-        const cids = Array.from(pBody.querySelectorAll('.ptopic-cb')).filter(cb => cb.checked).map(cb => Number(cb.value));
-        const extra = document.getElementById('pextra').checked;
-        const sizeEl = pBody.querySelector('input[name=psize]:checked');
-        return { cids, extra, size: Number(sizeEl ? sizeEl.value : 20) };
-      }
-      function updateStartAvailability() {
-        const sel = currentSelection();
-        const avail = assembleSession(practicePool(sel.cids, currentEra), practice.store.cards,
-          Date.now(), 1, sel.extra, Math.random).length;
-        const btn = document.getElementById('practice-start');
-        const note = document.getElementById('practice-startnote');
-        btn.disabled = avail === 0;
-        note.textContent = avail !== 0 ? '' : (sel.extra
-          ? 'No clues match — widen your era or topics.'
-          : 'Nothing due — turn on Extra practice, or widen your era / topics.');
-      }
-
-      function startSession() {
-        const sel = currentSelection();
-        const ids = assembleSession(practicePool(sel.cids, currentEra), practice.store.cards,
-          Date.now(), sel.size, sel.extra, Math.random);
-        if (!ids.length) { updateStartAvailability(); return; }
-        practice.config = { clusterIds: sel.cids, size: sel.size, extra: sel.extra, era: currentEra };
-        practice.session = initSession(ids);
-        practice.tally = { knew: 0, unsure: 0, missed: 0 };
-        practice.seen = new Set();
-        nextCard();
       }
 
       function trapTab(e) {
@@ -1191,18 +1124,13 @@ _HTML_TEMPLATE = """<!doctype html>
         const tag = (e.target.tagName || '').toLowerCase();
         const interactive = tag === 'button' || tag === 'a' || tag === 'input' || tag === 'textarea';
         if (!practice.revealed) {
-          // Space reveals — but never override native activation of a focused button/link
-          // (Exit, Reveal, etc. must keep their default Space/Enter behavior).
           if (e.key === ' ' && !interactive) { e.preventDefault(); reveal(); }
         } else if (e.key === '1' || e.key === '2' || e.key === '3') {
-          // Digit keys aren't native button activators, so grading by number is safe regardless of focus.
           grade({ '1': 'knew', '2': 'unsure', '3': 'missed' }[e.key]);
         }
       }
       function openPractice() {
         practice.returnFocus = document.activeElement;
-        practice.store = loadStore();
-        practice.saveFailed = false; pNotice.hidden = true;
         overlay.hidden = false;
         document.body.style.overflow = 'hidden';
         setBackgroundInert(true);

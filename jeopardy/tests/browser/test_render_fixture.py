@@ -19,5 +19,5 @@ def test_fixture_data_has_two_topics_and_expected_clues():
 def test_fixture_html_is_self_contained_with_practice():
     html = build_fixture_html()
     for marker in ['id="practice-open"', 'id="practice"', "Topic Alpha", "Topic Beta",
-                   "function assembleSession", "jeopardy-practice-v1"]:
+                   "function pickSession"]:
         assert marker in html, marker

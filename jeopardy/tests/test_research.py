@@ -179,8 +179,7 @@ def test_render_html_injects_practice_module():
     data = build_research_data(_tokens_df(), _eras_df(), _labels())
     html = render_html(data)
     assert "__PRACTICE_JS__" not in html          # placeholder replaced
-    assert "function assembleSession" in html      # module inlined
-    assert "function sanitizeStore" in html
+    assert "function pickSession" in html          # module inlined
     assert "\nexport {" not in html                # ES-module export line stripped
 
 
@@ -190,7 +189,7 @@ def test_render_html_has_practice_entry_and_start_screen():
     for marker in [
         'id="practice-open"', 'id="practice"', 'aria-modal="true"',
         'openPractice', 'closePractice', 'renderStart', 'startSession',
-        'practicePool', 'id="pextra"', 'name="psize"', 'practice-reset',
+        'practicePool', 'id="ptopic-all"', 'name="psize"',
     ]:
         assert marker in html, marker
 
@@ -201,7 +200,6 @@ def test_render_html_has_card_loop_and_summary():
     for marker in [
         'renderCard', 'renderSummary', 'updateProgressHeader',
         'pcard-reveal', 'class="pgrade"', 'data-g="missed"',
-        'practice-again', 'scheduled to come back later',
-        "applyGrade(", "gradeCurrent(", "sessionProgress(",
+        'practice-again', 'pickSession(',
     ]:
         assert marker in html, marker
