@@ -1,6 +1,6 @@
 import { test, before } from "node:test";
 import assert from "node:assert/strict";
-import { renderFixtureHtml, makeDom, clickId, setChecked, PKEY } from "./harness.js";
+import { renderFixtureHtml, makeDom, clickId, setChecked, dispatchKey, PKEY } from "./harness.js";
 
 let html;
 before(() => { html = renderFixtureHtml(); });
@@ -105,4 +105,72 @@ test("flow 3: progress persists across a reload (missed cards come back due)", (
       "reload surfaces exactly the previously-missed (now-due) cards");
     dom.window.close();
   }
+});
+
+test("flow 4: Practice again with nothing due returns to setup, settings preserved", () => {
+  const { document, dom } = makeDom(html);
+  try {
+    clickId(document, "practice-open");
+    selectOnlyAlpha(document);
+    setSize(document, 10);
+    clickId(document, "practice-start");
+    runToSummary(document, () => "knew"); // all knew -> all future-due
+    clickId(document, "practice-again");  // nothing due -> back to setup
+    // settings preserved
+    assert.equal(document.querySelector('.ptopic-cb[value="1"]').checked, true, "Alpha still checked");
+    assert.equal(document.querySelector('.ptopic-cb[value="2"]').checked, false, "Beta still unchecked");
+    assert.equal(document.querySelector("input[name=psize]:checked").value, "10", "size 10 preserved");
+    const start = document.getElementById("practice-start");
+    assert.equal(start.disabled, true, "Start disabled (nothing due)");
+    // the ACTUAL disabled-state note (updateStartAvailability overwrites the prefill note)
+    assert.equal(document.getElementById("practice-startnote").textContent,
+      "Nothing due — turn on Extra practice, or widen your era / topics.");
+    assert.equal(document.activeElement, document.getElementById("pextra"),
+      "focus on Extra-practice checkbox, not lost to BODY");
+  } finally { dom.window.close(); }
+});
+
+test("flow 5: keyboard — Space does not hijack a focused button; 1/2/3 grade; click Exit closes", () => {
+  const { document, dom } = makeDom(html);
+  try {
+    // jsdom's synthetic .click() (unlike a real browser click) doesn't move focus to the
+    // target first, so focus explicitly to match the real user interaction that
+    // openPractice()'s document.activeElement capture (returnFocus) depends on.
+    document.getElementById("practice-open").focus();
+    clickId(document, "practice-open");
+    selectOnlyAlpha(document);
+    clickId(document, "practice-start");
+    // Space on the focused Exit button must NOT be intercepted (no reveal, not prevented)
+    const exit = document.getElementById("practice-exit");
+    exit.focus();
+    const ev = dispatchKey(exit, " ");
+    assert.equal(ev.defaultPrevented, false, "Space not preventDefaulted on Exit");
+    assert.equal(document.querySelector(".pcard-answer"), null, "answer still hidden");
+    // After reveal, digit keys grade and advance
+    const before = cardId(document);
+    clickId(document, "pcard-reveal");
+    dispatchKey(document.body, "1"); // '1' = knew
+    assert.notEqual(cardId(document), before, "grading via '1' advanced the card");
+    // Clicking Exit closes the overlay and restores focus to the opener
+    clickId(document, "practice-exit");
+    assert.equal(document.getElementById("practice").hidden, true, "overlay closed");
+    assert.equal(document.activeElement, document.getElementById("practice-open"),
+      "focus restored to Practice button");
+  } finally { dom.window.close(); }
+});
+
+test("flow 6: save failure shows the notice and grading still continues", () => {
+  const { document, dom } = makeDom(html, { quota: 0 }); // setItem throws QuotaExceededError
+  try {
+    clickId(document, "practice-open");
+    selectOnlyAlpha(document);
+    clickId(document, "practice-start");
+    const before = cardId(document);
+    clickId(document, "pcard-reveal");
+    grade(document, "knew"); // triggers saveCard -> setItem throws -> notice
+    const notice = document.getElementById("practice-notice");
+    assert.equal(notice.hidden, false, "notice shown");
+    assert.match(notice.textContent, /Progress isn't being saved/);
+    assert.notEqual(cardId(document), before, "session advanced despite save failure");
+  } finally { dom.window.close(); }
 });
