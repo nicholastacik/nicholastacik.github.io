@@ -38,9 +38,12 @@ export class ChessApiProvider implements EvalProvider {
     if (typeof move !== "string") throw new Error("chess-api: missing move");
     const mateRaw = data["mate"];
     const mate = typeof mateRaw === "number" ? mateRaw : null;
-    // eval (pawns) is always numeric and White-perspective; centipawns may be a
-    // string, so derive cp from eval when not mate.
-    const cp = mate === null ? Math.round(Number(data["eval"]) * 100) : null;
+    let cp: number | null = null;
+    if (mate === null) {
+      const evalNum = Number(data["eval"]);
+      if (!Number.isFinite(evalNum)) throw new Error("chess-api: non-numeric eval");
+      cp = Math.round(evalNum * 100);
+    }
     const depth = typeof data["depth"] === "number" ? (data["depth"] as number) : this.depth;
     return { bestMove: move, cp, mate, depth };
   }

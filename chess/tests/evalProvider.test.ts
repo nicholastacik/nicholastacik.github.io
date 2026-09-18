@@ -53,6 +53,13 @@ describe("ChessApiProvider", () => {
     await expect(new ChessApiProvider({ fetchFn: fakeFetch({}, false) }).evaluate("F")).rejects.toThrow();
     await expect(new ChessApiProvider({ fetchFn: fakeFetch({ nope: 1 }) }).evaluate("F")).rejects.toThrow();
   });
+
+  it("throws when eval is missing or non-numeric with mate: null", async () => {
+    const p = new ChessApiProvider({ fetchFn: fakeFetch({ type: "bestmove", move: "e2e4", eval: "abc", mate: null, depth: 12 }) });
+    await expect(p.evaluate("F")).rejects.toThrow("non-numeric eval");
+    const p2 = new ChessApiProvider({ fetchFn: fakeFetch({ type: "bestmove", move: "e2e4", mate: null, depth: 12 }) });
+    await expect(p2.evaluate("F")).rejects.toThrow("non-numeric eval");
+  });
 });
 
 describe("CachingEvalProvider", () => {
