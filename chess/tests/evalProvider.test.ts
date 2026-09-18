@@ -14,7 +14,7 @@ const MATE_RESPONSE = {
 };
 
 function fakeFetch(json: unknown, ok = true) {
-  return vi.fn(async () => ({ ok, json: async () => json }) as Response);
+  return vi.fn(async (_url: string | URL | Request, _init?: RequestInit) => ({ ok, json: async () => json }) as Response);
 }
 
 describe("ChessApiProvider", () => {
