@@ -1,0 +1,36 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Sync dependencies
+        run: uv sync --frozen
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Python tests
+        run: uv run --frozen --group scraper --group analysis python -m pytest jeopardy/tests -q
+
+      - name: JS unit tests (pure scheduler)
+        run: node --test jeopardy/analysis/practice.test.js
+
+      - name: Install harness dependencies
+        run: npm ci --prefix jeopardy/tests/browser
+
+      - name: Browser regression (jsdom)
+        run: node --test jeopardy/tests/browser/*.test.js
