@@ -1,0 +1,9 @@
+{
+  "name": "jeopardy-practice-harness",
+  "private": true,
+  "type": "module",
+  "description": "jsdom regression harness for the research page's Practice mode",
+  "devDependencies": {
+    "jsdom": "^29.1.1"
+  }
+}
