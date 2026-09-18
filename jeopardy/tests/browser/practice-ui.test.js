@@ -47,10 +47,11 @@ test("flow 1: full single-topic session -> summary (dedupe + era filter)", () =>
     assert.ok(!seen.includes("old"), "pre-2010 clue excluded");
     assert.equal(seen.filter((x) => x === "dup").length, 1, "duplicate ref deduped");
     assert.ok(!seen.some((x) => ["b1", "b2"].includes(x)), "Topic Beta excluded");
+    assert.deepEqual(seen.slice().sort(), ["a1", "a2", "dup", "g1", "g2"], "exact deck identity");
     // summary
     const again = document.getElementById("practice-again");
     assert.ok(again, "summary shown");
-    assert.match(document.getElementById("practice-tally").textContent, /5/);
+    assert.match(document.getElementById("practice-tally").textContent, /✓5/);
     assert.match(document.getElementById("practice-body").textContent, /5 cards scheduled to come back later/);
     assert.equal(document.activeElement, again, "focus on Practice again");
     assert.equal(errors.length, 0, errors.map(String).join(" | "));
@@ -75,6 +76,7 @@ test("flow 2: a missed card resurfaces once after three intervening cards", () =
 test("flow 3: progress persists across a reload (missed cards come back due)", () => {
   // Session 1: miss two cards (and their retries), know the rest; capture storage.
   let saved;
+  let missedIds;
   {
     const { document, dom, window } = makeDom(html);
     const missed = new Set();
@@ -89,7 +91,7 @@ test("flow 3: progress persists across a reload (missed cards come back due)", (
       return "knew";
     });
     saved = window.localStorage.getItem(PKEY);
-    globalThis.__missed = [...missed];
+    missedIds = [...missed];
     dom.window.close();
   }
   // Session 2: fresh DOM seeded with saved progress; only the due (missed) cards appear.
@@ -99,7 +101,7 @@ test("flow 3: progress persists across a reload (missed cards come back due)", (
     selectOnlyAlpha(document);
     clickId(document, "practice-start");
     const seen = runToSummary(document, () => "knew");
-    assert.deepEqual(seen.slice().sort(), globalThis.__missed.slice().sort(),
+    assert.deepEqual(seen.slice().sort(), missedIds.slice().sort(),
       "reload surfaces exactly the previously-missed (now-due) cards");
     dom.window.close();
   }
