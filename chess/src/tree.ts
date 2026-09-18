@@ -96,3 +96,41 @@ export function siblings(path: Path): TreeNode[] {
 export function switchSibling(path: Path, node: TreeNode): Path {
   return [...path.slice(0, -1), node];
 }
+
+export interface LineChoice {
+  id: string;
+  label: string;
+  path: Path;
+}
+
+// One entry per root-to-leaf path. children[0] is the mainline continuation, so
+// the all-first-child path is the mainline; every other leaf is a variation
+// labelled by the first ply at which it left the mainline.
+export function enumerateLines(root: TreeNode): LineChoice[] {
+  const out: LineChoice[] = [];
+
+  function walk(node: TreeNode, path: Path, leftMainlineAt: number | null): void {
+    if (node.children.length === 0) {
+      const sans = pathSans(path);
+      const id = sans.join(" ");
+      let label = "Mainline";
+      if (leftMainlineAt !== null) {
+        const idx = leftMainlineAt; // path index of the diverging move
+        const ply = idx; // path[0] is root; path[1] is ply 1
+        const san = path[idx]!.san as string;
+        const moveNo = Math.ceil(ply / 2);
+        label = ply % 2 === 1 ? `${moveNo}. ${san}` : `${moveNo}… ${san}`;
+      }
+      out.push({ id, label, path });
+      return;
+    }
+    node.children.forEach((child, i) => {
+      // A non-first child is a divergence from the mainline at this ply.
+      const diverged = leftMainlineAt === null && i > 0 ? path.length : leftMainlineAt;
+      walk(child, [...path, child], diverged);
+    });
+  }
+
+  walk(root, [root], null);
+  return out;
+}

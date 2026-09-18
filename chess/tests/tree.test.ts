@@ -10,6 +10,7 @@ import {
   stepBack,
   siblings,
   switchSibling,
+  enumerateLines,
   type Path,
 } from "../src/tree";
 
@@ -122,5 +123,51 @@ describe("validateLegality", () => {
     const errs = validateLegality(normalize(bad));
     expect(errs.length).toBeGreaterThan(0);
     expect(errs.some((e) => e.includes("--"))).toBe(true);
+  });
+});
+
+describe("enumerateLines", () => {
+  // study: e4 e5 { Nf3, alt Bc4 } Nc6 ; i.e. after 1.e4 e5, White plays Nf3
+  // (mainline) or Bc4 (alt). Two root-to-leaf paths.
+  const s: Study = {
+    id: "t", name: "T", side: "white", intro: "i",
+    line: [
+      { san: "e4" },
+      { san: "e5" },
+      { san: "Nf3", alts: [[{ san: "Bc4" }, { san: "Bc5" }]] },
+      { san: "Nc6" },
+    ],
+  };
+
+  it("yields one entry per root-to-leaf path, mainline first", () => {
+    const lines = enumerateLines(normalize(s));
+    expect(lines.length).toBe(2);
+    expect(lines[0]!.label).toBe("Mainline");
+    expect(pathSans(lines[0]!.path)).toEqual(["e4", "e5", "Nf3", "Nc6"]);
+    expect(pathSans(lines[1]!.path)).toEqual(["e4", "e5", "Bc4", "Bc5"]);
+  });
+
+  it("gives each path a stable id from its canonical SAN", () => {
+    const lines = enumerateLines(normalize(s));
+    expect(lines[0]!.id).toBe("e4 e5 Nf3 Nc6");
+    expect(lines[1]!.id).toBe("e4 e5 Bc4 Bc5");
+    expect(lines[0]!.id).not.toBe(lines[1]!.id);
+  });
+
+  it("distinguishes two paths that would collide on a first-divergence label", () => {
+    // Two alts that both start with the same move Bc4 but then diverge, so a
+    // 'first divergence' label alone would collide; ids must differ.
+    const s2: Study = {
+      id: "t2", name: "T2", side: "white", intro: "i",
+      line: [
+        { san: "e4" },
+        { san: "e5", alts: [
+          [{ san: "d5" }, { san: "exd5" }, { san: "Qxd5" }],
+          [{ san: "d5" }, { san: "Nc3" }, { san: "dxe4" }],
+        ] },
+      ],
+    };
+    const ids = enumerateLines(normalize(s2)).map((l) => l.id);
+    expect(new Set(ids).size).toBe(ids.length); // all unique
   });
 });
