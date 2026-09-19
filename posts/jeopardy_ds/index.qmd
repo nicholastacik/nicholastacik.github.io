@@ -218,6 +218,17 @@ A second cleaning pass asked a sharper question — not just "is this a real ent
 lists: "New York City" is a fine answer, but it's Geography, not **Books & Authors**, so it
 no longer clutters the authors list.
 
+A few problems only surfaced on a closer read. A whole rash of bare surnames and first names
+turned out to be a *parsing* bug, not messy data: J-Archive writes some answers with an
+optional first name in parentheses — `(Henry) Fielding` — and my extractor had been splitting
+those into a stray "Henry" and a stray "Fielding." Fixing the extractor at the source
+recovered the actual people. The LLM also occasionally over-merged in the other direction:
+"Marshall" swept George C. Marshall and Thurgood Marshall into one entry. So a final audit
+renamed each over-merged cluster to its dominant person and dropped the remnants too rare to
+make a list — while a dedup pass fixed the opposite mistake, fusing one person who'd been
+split in two ("Harriet Beecher" and "Beecher Stowe" becoming a single *Harriet Beecher
+Stowe*).
+
 ## A study tool
 
 The payoff is a lookup tool: pick a category type, see its most common (cleaned) entities,
@@ -231,9 +242,23 @@ real clue from that category — highlight an answer first to be quizzed on that
 entity, or leave it un-highlighted for anything on the board — with the answer hidden until
 you ask for it.
 
-Each answer now also carries a **clue fingerprint** — the handful of terms Jeopardy keeps using to
-ask about it (with how often), and real example clues linked back to J-Archive — so you can study
-the *angle*, not just the name.
+Each answer now also carries a **clue fingerprint** — the handful of terms Jeopardy keeps
+reusing to ask about it, each with an *N-of-M* count of how many of that answer's clues the
+term shows up in, plus real example clues linked back to J-Archive. Tap a cue and, where I
+could precompute one, a one-sentence note explains *why* that word points at the answer — why
+"Hannibal" belongs to Mark Twain, or "Genoese" to Christopher Columbus. The display even
+prefers cues it can explain over generic ones like "author" or "novel," so the fingerprint
+teaches the *angle*, not just the name.
+
+For actual drilling there's a **Practice** mode: pick your topics and it deals you a run of
+real clues one at a time, answer hidden, with *Knew it / Unsure / Missed* buttons and a score
+at the end. This is the one place I built something clever and then tore it out. The first
+version was full spaced repetition — Leitner boxes, missed cards resurfacing later in the
+session and leading the next one, progress saved in your browser. Using it, that was just
+annoying: I wanted fresh clues, not the ones I'd already fumbled. So I scrapped the machinery
+for a plainer deck — *N* distinct random clues from the topics you picked, nothing repeating,
+nothing remembered between sessions. Because the cards are text-only, it also skips clues that
+lean on an image or audio you can't see ("the people seen here…").
 
 And a 51st list, **Misc: Hard to Classify**, gathers the categories the
 clustering was *least* sure about — the ones that sat farthest from any clean type — so the
