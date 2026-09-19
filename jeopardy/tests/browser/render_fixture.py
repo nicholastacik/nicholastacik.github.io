@@ -30,8 +30,9 @@ def _eras_df():
 def _quiz_refs_df():
     # 'dup' is referenced in both the general pool and an entity -> must dedupe to one card.
     # 'old' is pre-2010 -> excluded by the era filter at runtime (era 2010).
+    # 'med' is a media-dependent clue -> excluded from the text-only deck at runtime.
     return pd.DataFrame([
-        {"cluster_id": 1, "phrase": None, "clue_ids": ["g1", "g2", "dup"]},
+        {"cluster_id": 1, "phrase": None, "clue_ids": ["g1", "g2", "dup", "med"]},
         {"cluster_id": 1, "phrase": "Alpha One", "clue_ids": ["a1", "dup"]},
         {"cluster_id": 1, "phrase": "Alpha Two", "clue_ids": ["a2", "old"]},
         {"cluster_id": 2, "phrase": None, "clue_ids": ["b1", "b2"]},
@@ -40,12 +41,15 @@ def _quiz_refs_df():
 
 def _clues_df():
     rows = [("g1", 2011), ("g2", 2012), ("dup", 2013), ("a1", 2014),
-            ("a2", 2015), ("old", 2005), ("b1", 2016), ("b2", 2017)]
-    return pd.DataFrame([
+            ("a2", 2015), ("old", 2005), ("b1", 2016), ("b2", 2017), ("med", 2016)]
+    df = pd.DataFrame([
         {"clue_id": cid, "clue": f"Clue text for {cid}", "answer": f"Answer {cid}",
          "year": yr, "category": "FIXTURE CATEGORY", "game_id": 1000 + i}
         for i, (cid, yr) in enumerate(rows)
     ])
+    # 'med' is a media-dependent clue (text references an unshown image).
+    df.loc[df["clue_id"] == "med", "clue"] = "The people seen here are observing this holiday"
+    return df
 
 
 def build_fixture_data():

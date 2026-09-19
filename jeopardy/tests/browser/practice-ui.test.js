@@ -32,23 +32,34 @@ function runToSummary(document, gradeFor) {
   return seen;
 }
 
-test("flow 1: full single-topic session -> summary (dedupe + era filter, stateless)", () => {
+test("flow 1: full single-topic session (dedupe, era + media filter, answer shown, stateless)", () => {
   const { document, dom, window, errors } = makeDom(html);
   try {
     clickId(document, "practice-open");
     selectOnlyAlpha(document);
     setSize(document, 10);
     clickId(document, "practice-start");
-    const seen = runToSummary(document, () => "knew");
-    // Alpha refs = {g1,g2,dup,a1,a2,old}; 'old' era-excluded, 'dup' deduped -> 5 distinct
+    // First card: the revealed answer must actually be shown (not blank).
+    const first = cardId(document);
+    clickId(document, "pcard-reveal");
+    assert.match(document.querySelector(".pcard-answer").textContent, new RegExp("Answer " + first),
+      "revealed answer text is shown");
+    grade(document, "knew");
+    const seen = [first, ...runToSummary(document, () => "knew")];
+    // Alpha refs = {g1,g2,dup,a1,a2,old,med}; 'old' era-excluded, 'med' media-excluded,
+    // 'dup' deduped -> 5 distinct text-only cards.
     assert.deepEqual(seen.slice().sort(), ["a1", "a2", "dup", "g1", "g2"], "exact deck");
     assert.ok(!seen.includes("old"), "pre-2010 clue excluded");
+    assert.ok(!seen.includes("med"), "media-dependent clue excluded");
     assert.ok(!seen.some((x) => ["b1", "b2"].includes(x)), "Topic Beta excluded");
     const again = document.getElementById("practice-again");
     assert.ok(again, "summary shown");
     assert.match(document.getElementById("practice-tally").textContent, /✓5/);
     assert.match(document.getElementById("practice-body").textContent, /5 knew · 0 unsure · 0 missed/);
     assert.equal(document.activeElement, again, "focus on Practice again");
+    // Practice again actually starts a fresh session.
+    clickId(document, "practice-again");
+    assert.ok(document.getElementById("pcard-reveal"), "Practice again starts a new session");
     assert.equal(window.localStorage.length, 0, "stateless: nothing persisted");
     assert.equal(errors.length, 0, errors.map(String).join(" | "));
   } finally { dom.window.close(); }
@@ -69,30 +80,35 @@ test("flow 2: missed cards do NOT resurface — every card appears exactly once"
   } finally { dom.window.close(); }
 });
 
-test("flow 3: keyboard — Space doesn't hijack a focused button; 1/2/3 grade; click Exit closes", () => {
+test("flow 3: keyboard — Space guard, 1/2/3 map correctly, focus restored on close", () => {
   const { document, dom, errors } = makeDom(html);
   try {
+    // Focus the opener BEFORE opening so openPractice captures it as returnFocus (a real
+    // browser click focuses the button; jsdom's synthetic click does not). We then never
+    // re-focus it, so the close-restores-focus assertion actually tests production restore.
+    const opener = document.getElementById("practice-open");
+    opener.focus();
     clickId(document, "practice-open");
     selectOnlyAlpha(document);
     clickId(document, "practice-start");
-    // Space on the focused Exit button must NOT be intercepted (no reveal, not prevented)
+    // Space on the focused Exit button must NOT be intercepted (no reveal, not prevented).
     const exit = document.getElementById("practice-exit");
     exit.focus();
     const ev = dispatchKey(exit, " ");
     assert.equal(ev.defaultPrevented, false, "Space not preventDefaulted on Exit");
     assert.equal(document.querySelector(".pcard-answer"), null, "answer still hidden");
-    // After reveal, digit keys grade and advance
-    const before = cardId(document);
-    clickId(document, "pcard-reveal");
-    dispatchKey(document.body, "1"); // '1' = knew
-    assert.notEqual(cardId(document), before, "grading via '1' advanced the card");
-    // A real browser click focuses the clicked opener; jsdom's synthetic click doesn't,
-    // so prime focus to model reality before exercising focus-restore-on-close.
-    document.getElementById("practice-open").focus();
+    // 1/2/3 map to knew/unsure/missed respectively.
+    clickId(document, "pcard-reveal"); dispatchKey(document.body, "1");
+    clickId(document, "pcard-reveal"); dispatchKey(document.body, "2");
+    clickId(document, "pcard-reveal"); dispatchKey(document.body, "3");
+    const tally = document.getElementById("practice-tally").textContent;
+    assert.match(tally, /✓1/, "'1' -> knew");
+    assert.match(tally, /\?1/, "'2' -> unsure");
+    assert.match(tally, /✗1/, "'3' -> missed");
+    // Closing restores focus to the opener — no manual re-focus here (that's the point).
     clickId(document, "practice-exit");
     assert.equal(document.getElementById("practice").hidden, true, "overlay closed");
-    assert.equal(document.activeElement, document.getElementById("practice-open"),
-      "focus restored to Practice button");
+    assert.equal(document.activeElement, opener, "focus restored to Practice button");
     assert.equal(errors.length, 0, errors.map(String).join(" | "));
   } finally { dom.window.close(); }
 });
