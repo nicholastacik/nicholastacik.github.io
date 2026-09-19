@@ -976,7 +976,7 @@ _HTML_TEMPLATE = """<!doctype html>
           for (const key in refs) for (const id of refs[key]) ids.add(id);
         }
         const out = [];
-        for (const id of ids) { const c = clueById(id); if (c && c.year >= era) out.push(id); }
+        for (const id of ids) { const c = clueById(id); if (c && c.year >= era && !isMediaClue(c.clue)) out.push(id); }
         return out;
       }
 

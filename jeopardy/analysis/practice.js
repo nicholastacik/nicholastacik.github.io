@@ -17,4 +17,13 @@ function pickSession(pool, size, rng) {
   return _shuffle(pool.slice(), rng).slice(0, size);
 }
 
-export { pickSession };
+// Cards are text-only, so a clue that points at an image/audio/video the reader can't
+// see is unanswerable. Exclude the high-confidence J-Archive media tells: a "seen/shown/
+// pictured/heard/depicted here|above|below" reference, or a bare "(pictured)".
+function isMediaClue(text) {
+  const t = text || "";
+  return /\b(seen|shown|pictured|heard|depicted) (here|above|below)\b/i.test(t)
+    || /\bpictured\b/i.test(t);
+}
+
+export { pickSession, isMediaClue };
