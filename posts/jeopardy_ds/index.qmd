@@ -12,6 +12,14 @@ show could ask me, *what is actually worth studying?* This post walks through ho
 40 years of the show, turned every category into something a computer can compare, grouped
 the categories into "types," named them, and used the result to find where studying pays off.
 
+Here's the kind of thing it turns up. In **Books & Authors**, the word *Hannibal* appears in
+10 of the 60 archived clues whose answer is Mark Twain — because Hannibal, Missouri was his
+boyhood home. That's a concrete, learnable association, and the [study tool](research/) this
+post ends with is full of them: for any answer that recurs, the specific words the show keeps
+attaching to it. Getting there was mostly a data-cleaning slog, and the honest finding is that
+the archive is better at showing you *where* the study material is than at ranking topics by
+payoff. The rest of this post is how I got there.
+
 Every figure below is generated from a committed dataset — no live scraping — so the whole
 post re-renders from scratch.
 
@@ -130,9 +138,10 @@ plt.show()
 
 ## Naming the 50 types
 
-Each cluster is labelled automatically with a three-part "fingerprint": its most frequent
-real category names, the instances closest to its centre, and its most distinctive words
-(via class-based TF-IDF). Reading those fingerprints, the 50 types name themselves:
+Each cluster gets an automatic three-part "fingerprint": its most frequent real category
+names, the instances closest to its centre, and its most distinctive words (via class-based
+TF-IDF). The *fingerprints* are generated; the *names* are the one genuinely interpretive step
+— I read each fingerprint and named the type by hand. They came easily enough:
 
 ```{python}
 #| label: tbl-types
@@ -147,23 +156,28 @@ t.columns = ["Type", "Categories", "Example entities"]
 t.reset_index(drop=True)
 ```
 
-## What the data says to study
+## Where the study material is
 
-Two findings stand out. First, **wordplay is the single biggest meta-domain** — homophones,
-anagrams, rhymes, hidden words, "___-letter words." Grouped together, roughly one category
-in ten rewards a *skill* you drill rather than facts you memorize. Push the clustering finer
-and wordplay even splits into two prep tracks: pure letter/anagram games (drill) versus
-etymology and idioms (genuinely studyable).
+Two things stand out. First, **wordplay is a big, unusual slice**. The two pure
+letter/anagram types — Wordplay & Vocabulary and Rhymes, Anagrams & Common Bonds — are 7.4% of
+all categories between them, and folding in Word Origins & Foreign Words brings the
+wordplay-and-language family to 10.4%: about one category in ten. It's unusual because it
+rewards a *skill* you drill (homophones, anagrams, hidden words) more than facts you memorize,
+and it splits into two prep tracks — pure letter games versus the genuinely studyable
+etymology and idioms.
 
-Second, the types differ enormously in whether "study the common answers" even *works*. As a
-rough, exploratory heuristic we can count how many distinct entities recur ≥5 times in a type —
-a tally taken from raw phrases (before dedup and LLM cleaning) and sensitive to how big a type
-is, so read it as a directional signal, not a precise payoff score. Entity-dense types
-(authors, geography, presidents) score high; wordplay and grab-bag types don't:
+Second, the types differ enormously in how much *recurring material* they even offer. As a
+rough gauge I count how many distinct phrases recur ≥5 times in a type — drawn from both clues
+and answers, taken from raw text before dedup and LLM cleaning, and sensitive to how big the
+type is. Crucially, this measures the *breadth* of repeated material, not the payoff of
+studying it: a type with thousands of recurring names might take more effort than a small,
+predictable one. Read it as "where is there stuff to learn," not "what's the best use of your
+time." Entity-dense types (authors, geography, presidents) score high; wordplay and grab-bag
+types don't:
 
 ```{python}
 #| label: fig-applicability
-#| fig-cap: "How studyable each type is: distinct entities recurring 5+ times."
+#| fig-cap: "Breadth of recurring material: distinct phrases (from clues and answers) recurring 5+ times, per type."
 eras = pd.read_parquet("category_eras.parquet")
 eras = eras[eras["era"] == 1980]
 ap = eras[["cluster_id", "n_qualifying_phrases"]].copy()
@@ -179,8 +193,8 @@ plt.tight_layout()
 plt.show()
 ```
 
-And for the studyable types, here are the entities that actually recur — the stuff worth
-knowing:
+And for the material-rich types, here are the phrases that recur most — counted across clues
+and answers, the stuff worth knowing:
 
 ```{python}
 #| label: tbl-entities
@@ -233,8 +247,8 @@ Stowe*).
 
 The payoff is a lookup tool: pick a category type, see its most common (cleaned) entities,
 and jump straight to Wikipedia for each. It's live at [`research/`](research/), and it's
-filterable by a cumulative *study window* — all-time, or restricted to answers since 1990,
-2000, 2010, or 2020 — so you can watch a type's common entities shift as you narrow to more
+filterable by a cumulative *study window* — all-time, or restricted to clues aired since 1990,
+2000, 2010, or 2020 — so you can watch a type's recurring entities shift as you narrow to more
 recent years.
 
 Two more touches make it a study aid rather than a lookup: press **Sample clue** to draw a
@@ -254,15 +268,27 @@ For actual drilling there's a **Practice** mode: pick your topics and it deals y
 real clues one at a time, answer hidden, with *Knew it / Unsure / Missed* buttons and a score
 at the end. This is the one place I built something clever and then tore it out. The first
 version was full spaced repetition — Leitner boxes, missed cards resurfacing later in the
-session and leading the next one, progress saved in your browser. Using it, that was just
-annoying: I wanted fresh clues, not the ones I'd already fumbled. So I scrapped the machinery
-for a plainer deck — *N* distinct random clues from the topics you picked, nothing repeating,
-nothing remembered between sessions. Because the cards are text-only, it also skips clues that
-lean on an image or audio you can't see ("the people seen here…").
+session and leading the next one, progress saved in your browser. In use, the resurfacing was
+more distracting than helpful: I wanted fresh clues each session, not the ones I'd just
+fumbled. So I scrapped the machinery for a plainer deck — *N* distinct random clues from the
+topics you picked, no card twice within a session, and nothing remembered between sessions (so
+a later session can deal the same clue again). Because the cards are text-only, it also skips
+clues that lean on an image or audio you can't see ("the people seen here…").
 
 And a 51st list, **Misc: Hard to Classify**, gathers the categories the
 clustering was *least* sure about — the ones that sat farthest from any clean type — so the
 oddballs the other 50 lists smoothed over get a place to show themselves.
+
+## So what should I study?
+
+Back to the question I opened with. The honest answer is that the data reframes it more than it
+settles it: it can't tell you which topic gives the best *return* on study time — breadth of
+recurring material isn't the same as payoff — but it's very good at showing you where the
+learnable material lives and handing you the exact angles to learn. If I were actually
+cramming, I'd pick one dense, entity-rich type — Books & Authors, say, or U.S. Presidents —
+read its clue fingerprints to learn not just the names but the words the show keeps attaching
+to them, and drill them in Practice until they stick. And I'd keep the *Misc* pile open as a
+humility check: a standing reminder of how much of the board still refuses to be tidy.
 
 ```{python}
 #| label: thumbnail
