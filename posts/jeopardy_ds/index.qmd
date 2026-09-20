@@ -143,6 +143,26 @@ names, the instances closest to its centre, and its most distinctive words (via 
 TF-IDF). The *fingerprints* are generated; the *names* are the one genuinely interpretive step
 — I read each fingerprint and named the type by hand. They came easily enough:
 
+::: {.callout-note collapse="true"}
+## How class-based TF-IDF works
+
+Ordinary TF-IDF scores a word high in a *document* when it shows up often there but rarely
+across the whole collection. Class-based TF-IDF (c-TF-IDF, the trick [BERTopic]
+(https://maartengr.github.io/BERTopic/) popularized) just changes the unit: instead of one
+score per document, you pool every item in a *class* into a single big document and score
+words per class. Here that means gluing all of a type's categories into one text — 50
+documents, one per type — and asking, for each word, "how often does this type use it,
+weighted down by how many of the 50 types use it at all?"
+
+Concretely, a term's weight in a type rises with its frequency inside that type (the TF part)
+and falls the more types contain it (the IDF part, `log(50 / types-containing-the-word)`).
+Boilerplate that's everywhere — *this*, *called*, *known* — cancels out; a word like
+*inaugural* that lives almost entirely in one type shoots to the top. What's left is each
+type's signature vocabulary, distinctive enough to read off and name. The same idea, pointed
+at a single answer instead of a whole type, is exactly how the clue fingerprints below are
+built.
+:::
+
 ```{python}
 #| label: tbl-types
 #| echo: false
@@ -168,12 +188,14 @@ etymology and idioms.
 
 Second, the types differ enormously in how much *recurring material* they even offer. As a
 rough gauge I count how many distinct phrases recur ≥5 times in a type — drawn from both clues
-and answers, taken from raw text before dedup and LLM cleaning, and sensitive to how big the
-type is. Crucially, this measures the *breadth* of repeated material, not the payoff of
-studying it: a type with thousands of recurring names might take more effort than a small,
-predictable one. Read it as "where is there stuff to learn," not "what's the best use of your
-time." Entity-dense types (authors, geography, presidents) score high; wordplay and grab-bag
-types don't:
+and answers. Two caveats matter. It's counted from the **raw** phrases, *before* the dedup and
+LLM cleaning I describe below, so it still carries the noise: stray first names, Clue Crew
+presenters, off-topic answers, and near-duplicates counted twice (*van Gogh* and *Vincent van
+Gogh* as two). And it measures the *breadth* of repeated material, not the payoff of studying
+it — a type with thousands of recurring names might take more effort than a small, predictable
+one. So read it as "where is there stuff to learn," not "what's the best use of your time."
+Entity-dense types (authors, geography, presidents) score high; wordplay and grab-bag types
+don't:
 
 ```{python}
 #| label: fig-applicability
@@ -263,6 +285,19 @@ could precompute one, a one-sentence note explains *why* that word points at the
 "Hannibal" belongs to Mark Twain, or "Genoese" to Christopher Columbus. The display even
 prefers cues it can explain over generic ones like "author" or "novel," so the fingerprint
 teaches the *angle*, not just the name.
+
+Finding those cues is the class-based TF-IDF trick from naming, pointed at a single answer
+instead of a whole type. For each recurring answer I pool all of its clues into one document,
+then score every word and two-word phrase by how distinctive it is to *that* answer against
+every other answer in the type, and keep the top handful. Filters do the rest of the work:
+drop the answer's own name (a "Mark Twain" cue on Mark Twain teaches nothing), throw out the
+type-generic terms that show up across most of a type's answers (the "author"/"novel"
+problem), and require a cue to appear in at least **two** of the answer's clues — that's the
+*N-of-M* support count — so a one-off phrasing never gets promoted to a fingerprint.
+Overlapping fragments get stitched back together ("harriet beecher" + "beecher stowe" → the
+whole name), and the one-sentence explanations are precomputed by an LLM into a committed file
+the render only reads — so the fingerprints appear instantly, with no live model calls when you
+use the tool.
 
 For actual drilling there's a **Practice** mode: pick your topics and it deals you a run of
 real clues one at a time, answer hidden, with *Knew it / Unsure / Missed* buttons and a score
