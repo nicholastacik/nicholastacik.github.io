@@ -2,7 +2,7 @@
 title: "Doing Data Science on Jeopardy Data"
 description: "Scraping, Clustering, Cleaning and Building a Practice Mode"
 date: "2026-09-24"
-categories: [data-science, nlp, ai, projects]
+categories: [data-science, NLP, AI, projects]
 image: thumbnail.png
 draft: false
 ---
