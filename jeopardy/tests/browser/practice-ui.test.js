@@ -114,7 +114,7 @@ test("flow 3: keyboard — Space guard, 1/2/3 map correctly, focus restored on c
   } finally { dom.window.close(); }
 });
 
-test("sample clue: 'Another' always shows a different clue (broadens a thin entity)", async () => {
+test("sample clue: excludes media clues and 'Another' broadens a thin entity", async () => {
   const { document, dom, errors } = makeDom(html);
   try {
     // Open Topic Alpha in the main view, then select the thin "Alpha Two" entity
@@ -124,10 +124,16 @@ test("sample clue: 'Another' always shows a different clue (broadens a thin enti
     Array.from(document.querySelectorAll(".entity-row"))
       .find((r) => /Alpha Two/.test(r.textContent)).click();
     document.getElementById("sample-clue-btn").click();
-    const first = document.querySelector("#sample-card .clue-text").textContent;
-    document.getElementById("another-clue-btn").click();
-    const second = document.querySelector("#sample-card .clue-text").textContent;
-    assert.notEqual(second, first, "'Another' shows a different clue, not the same one");
+    const seen = [];
+    for (let i = 0; i < 12; i++) {
+      seen.push(document.querySelector("#sample-card .clue-text").textContent);
+      const another = document.getElementById("another-clue-btn");
+      if (!another) break;
+      another.click();
+    }
+    // Never surfaces a media clue: 'med' (a "seen here" text tell) or the flag-media 'pic'.
+    assert.ok(!seen.some((t) => /seen here|perennial favourite/i.test(t)), "no media clue shown");
+    assert.ok(new Set(seen).size > 1, "'Another' shows more than one distinct clue");
     // Selecting an entity kicks off an async (stubbed) Wikipedia fetch; let it settle
     // before tearing down the window so it doesn't error against a closed DOM.
     await new Promise((r) => dom.window.setTimeout(r, 0));
