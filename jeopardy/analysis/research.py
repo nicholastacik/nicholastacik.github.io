@@ -809,6 +809,9 @@ _HTML_TEMPLATE = """<!doctype html>
       function eligibleClues(clusterId) {
         const refs = (DATA.quiz && DATA.quiz[String(clusterId)]) || {};
         const toClues = ids => (ids || []).map(clueById).filter(Boolean);
+        // A clue is playable as a text-only sample if it's in the current era and isn't
+        // media-dependent (same exclusion Practice uses).
+        const playable = c => c.year >= currentEra && !c.media && !isMediaClue(c.clue);
         // The "any answer" pool is the deduped union of this cluster's general + every per-entity
         // ref, so un-highlighted / fallback sampling has real variety (not just the ~12 general).
         const anyClues = () => {
@@ -819,11 +822,11 @@ _HTML_TEMPLATE = """<!doctype html>
             const c = clueById(id);
             if (c) out.push(c);
           }
-          return out.filter(c => c.year >= currentEra);
+          return out.filter(playable);
         };
         const broad = anyClues();
         if (selectedEntity) {
-          const scoped = toClues(refs[selectedEntity.phrase]).filter(c => c.year >= currentEra);
+          const scoped = toClues(refs[selectedEntity.phrase]).filter(playable);
           if (scoped.length) return { clues: scoped, scoped: true, fellBack: false, broad };
           return { clues: broad, scoped: false, fellBack: true, broad };
         }
