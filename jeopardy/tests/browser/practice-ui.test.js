@@ -113,3 +113,24 @@ test("flow 3: keyboard — Space guard, 1/2/3 map correctly, focus restored on c
     assert.equal(errors.length, 0, errors.map(String).join(" | "));
   } finally { dom.window.close(); }
 });
+
+test("sample clue: 'Another' always shows a different clue (broadens a thin entity)", async () => {
+  const { document, dom, errors } = makeDom(html);
+  try {
+    // Open Topic Alpha in the main view, then select the thin "Alpha Two" entity
+    // (one in-era clue), which forces "Another" to broaden to the category.
+    Array.from(document.querySelectorAll(".side-item"))
+      .find((b) => /Topic Alpha/.test(b.textContent)).click();
+    Array.from(document.querySelectorAll(".entity-row"))
+      .find((r) => /Alpha Two/.test(r.textContent)).click();
+    document.getElementById("sample-clue-btn").click();
+    const first = document.querySelector("#sample-card .clue-text").textContent;
+    document.getElementById("another-clue-btn").click();
+    const second = document.querySelector("#sample-card .clue-text").textContent;
+    assert.notEqual(second, first, "'Another' shows a different clue, not the same one");
+    // Selecting an entity kicks off an async (stubbed) Wikipedia fetch; let it settle
+    // before tearing down the window so it doesn't error against a closed DOM.
+    await new Promise((r) => dom.window.setTimeout(r, 0));
+    assert.equal(errors.length, 0, errors.map(String).join(" | "));
+  } finally { dom.window.close(); }
+});

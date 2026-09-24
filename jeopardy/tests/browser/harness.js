@@ -32,6 +32,11 @@ export function makeDom(html) {
     virtualConsole,
     beforeParse(window) {
       window.Math.random = () => 0; // deterministic pickSession shuffle
+      // jsdom lacks these; the real research page uses them when an entity is selected
+      // (responsive scroll + live Wikipedia fetch). Stub them so driving the main view
+      // doesn't throw. fetch returns a non-ok response, so the page falls back cleanly.
+      window.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
+      window.fetch = () => Promise.resolve({ ok: false, json: () => Promise.resolve({}) });
       window.addEventListener("error", (e) => errors.push(e.error || new Error(e.message)));
       window.addEventListener("unhandledrejection", (e) => errors.push(e.reason));
     },

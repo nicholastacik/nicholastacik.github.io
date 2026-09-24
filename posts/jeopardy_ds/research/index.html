@@ -766,18 +766,19 @@ function isMediaClue(text) {
           }
           return out.filter(c => c.year >= currentEra);
         };
+        const broad = anyClues();
         if (selectedEntity) {
           const scoped = toClues(refs[selectedEntity.phrase]).filter(c => c.year >= currentEra);
-          if (scoped.length) return { clues: scoped, scoped: true, fellBack: false };
-          return { clues: anyClues(), scoped: false, fellBack: true };
+          if (scoped.length) return { clues: scoped, scoped: true, fellBack: false, broad };
+          return { clues: broad, scoped: false, fellBack: true, broad };
         }
-        return { clues: anyClues(), scoped: false, fellBack: false };
+        return { clues: broad, scoped: false, fellBack: false, broad };
       }
 
       function rollSampleClue(clusterId) {
         const card = document.getElementById('sample-card');
         if (!card) return;
-        const { clues, scoped, fellBack } = eligibleClues(clusterId);
+        const { clues, scoped, fellBack, broad } = eligibleClues(clusterId);
         if (!clues.length) {
           const msg = fellBack
             ? 'No clue on this board has &ldquo;' + escapeHtml(selectedEntity.phrase) + '&rdquo; as its answer.'
@@ -785,18 +786,25 @@ function isMediaClue(text) {
           card.innerHTML = '<div class="sample-card"><p class="scope">' + msg + '</p></div>';
           return;
         }
-        let choices = clues;
-        if (clues.length > 1 && lastSampleClue) {
-          const filtered = clues.filter(c => c.clue !== lastSampleClue);
-          if (filtered.length) choices = filtered;
+        // "Another" should always show a *different* clue. If the current (possibly
+        // entity-scoped) pool has nothing other than the last clue shown, broaden to the
+        // whole category so the button always does something.
+        let choices = clues.filter(c => c.clue !== lastSampleClue);
+        let broadened = false;
+        if (!choices.length) {
+          const more = broad.filter(c => c.clue !== lastSampleClue);
+          if (more.length) { choices = more; broadened = true; }
+          else { choices = clues; }
         }
         const pick = choices[Math.floor(Math.random() * choices.length)];
         lastSampleClue = pick.clue;
-        const scopeLabel = scoped
-          ? 'Answer is related to &ldquo;' + escapeHtml(selectedEntity.phrase) + '&rdquo; &middot; tap the answer again to broaden'
-          : (fellBack
-              ? 'No clue for &ldquo;' + escapeHtml(selectedEntity.phrase) + '&rdquo; this era &mdash; showing another from this category (tap the answer again to broaden)'
-              : 'Any answer in this category');
+        const scopeLabel = (broadened && selectedEntity)
+          ? 'Only one clue for &ldquo;' + escapeHtml(selectedEntity.phrase) + '&rdquo; in this window &mdash; showing another from this category'
+          : (scoped
+              ? 'Answer is related to &ldquo;' + escapeHtml(selectedEntity.phrase) + '&rdquo; &middot; tap the answer again to broaden'
+              : (fellBack
+                  ? 'No clue for &ldquo;' + escapeHtml(selectedEntity.phrase) + '&rdquo; this era &mdash; showing another from this category (tap the answer again to broaden)'
+                  : 'Any answer in this category'));
         card.innerHTML = '<div class="sample-card">' +
           '<p class="scope">' + escapeHtml(pick.category) + ' &middot; ' + pick.year + '</p>' +
           '<p class="scope">' + scopeLabel + '</p>' +
