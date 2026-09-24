@@ -1,27 +1,33 @@
 ---
-title: "What should I study to get better at Jeopardy?"
-description: "Scraping 40 years of J-Archive, then clustering 123k categories to find what to learn."
-date: "2026-07-06"
-categories: [data science, nlp, jeopardy]
+title: "Doing Data Science on Jeopardy Data"
+description: "Scraping, Clustering, Cleaning and Building a Practice Mode"
+date: "2026-09-24"
+categories: [data-science, nlp, ai, projects]
 image: thumbnail.png
-draft: true
+draft: false
 ---
 
-I like Jeopardy, and I wanted a data-driven answer to a simple question: of everything the
-show could ask me, *what is actually worth studying?* This post walks through how I scraped
-40 years of the show, turned every category into something a computer can compare, grouped
-the categories into "types," named them, and used the result to find where studying pays off.
+## Introduction
 
-Here's the kind of thing it turns up. In **Books & Authors**, the word *Hannibal* appears in
-10 of the 60 archived clues whose answer is Mark Twain — because Hannibal, Missouri was his
-boyhood home. That's a concrete, learnable association, and the [study tool](research/) this
-post ends with is full of them: for any answer that recurs, the specific words the show keeps
-attaching to it. Getting there was mostly a data-cleaning slog, and the honest finding is that
-the archive is better at showing you *where* the study material is than at ranking topics by
-payoff. The rest of this post is how I got there.
+I like to think of myself as a bit of a Jeopardy aficionado. It's a ritual for my wife and me to watch
+an episode as we sit down for lunch or dinner. However, there are definitely some categories that I'm a bit hopeless at —
+Opera, musicals, Civil War history, biblical names, architecture, and so on. I'd like to get better at these categories, but I'm not even sure
+where to start.
 
-Every figure below is generated from a committed dataset — no live scraping — so the whole
-post re-renders from scratch.
+A hypothesis starts to form as you watch more and more Jeopardy. 
+
+- There are not really that many total types of categories. The different category types get repeated frequently from game to game.
+- Within each category there
+are certain entities that get asked about far more frequently than others.
+- Those entities often have certain "fingerprints" - specific words 
+used in the clue that signify what the answer is going to be. If I hear "Toreador" in an opera category, I'm betting the answer is "Carmen",
+even knowing nothing more about operas.
+- If I can determine those categories, entities and fingerprints, I'll have a good basis to study and hopefully get good enough to get on the show
+one day myself.
+
+In this post, I'll document my process for building a Jeopardy study tool: scraping the data from J-Archive, clustering the data
+into types of categories, reconstructing the most common entities in those categories (and the cleaning that goes into it),
+finding the clue fingerprints for those entities, and finally building the study tool itself.
 
 ```{python}
 #| label: setup
@@ -40,20 +46,18 @@ tokens = tokens[tokens["era"] == 1980]
 plt.rcParams["figure.dpi"] = 110
 ```
 
-## Scraping J-Archive
+## Scraping the Data
 
-There's no API, so the data comes from a polite, cached crawl of
-[J-Archive](https://j-archive.com): a `fetch` stage (one request/second, every page cached
-to disk), a `parse` stage that reads each game's board out of the HTML, and a resumable
-`crawl` that walks every season and game. The raw crawl stays on my machine; what ships is
-a single compact `clues.parquet` — one row per clue — so anyone (including the CI that
-builds this site) starts from identical data without re-scraping.
-
-The result is **563,266 clues** across **9,485 games**, spanning 1984 to 2026.
+- [J-Archive](https://j-archive.com) does not have an API, so the data comes from a polite, cached crawl. 
+- A fetch stage that does one request per second with every page cached to disk.
+- A parse stage that reads each game's board out of the HTML.
+- A resumable crawl that walks through every season and game.
+- This is assembled into a single `clues.parquet` file with one row per clue.
+- Ultimately, we find 563,266 clues across 9,485 games spanning from 1984 to 2026.
 
 ```{python}
 #| label: fig-overview
-#| fig-cap: "The corpus: clues per year, game types, and rounds."
+#| fig-cap: "The dataset: clues per year, game types, and rounds."
 fig, axes = plt.subplots(1, 3, figsize=(13, 4))
 
 per_year = clues["air_date"].dt.year.value_counts().sort_index()
@@ -73,28 +77,44 @@ plt.tight_layout()
 plt.show()
 ```
 
-## From categories to documents
+## Clustering in "Types of Categories"
 
-To compare categories, each one becomes a short text "document": its title followed by its
-clue → answer pairs (in a shuffled order, so no clue position carries special weight). For
-example, one category instance reads:
+- To start clustering, we need to convert each category into a short "document". The choice here is to take the category title, followed
+by its clue → answer pairs in a shuffled order (so no clue's position carries special weight).
 
-```{python}
-#| label: sample-doc
-#| echo: false
-row = clues[clues["category"] == "FISH, BIRD OR MAMMAL"].head(4)
-print("FISH, BIRD OR MAMMAL. " + "; ".join(f"{c} -> {a}" for c, a in zip(row["clue"], row["answer"])))
+- Each document is embedded into a 384-dimensional vector with a local sentence-transformer (`bge-small-en-v1.5`). This step is run offline
+and commits its output once.
+
+::: {.callout-note collapse="true"}
+## Running a sentence-transformer locally
+
+A sentence-transformer turns a chunk of text into a fixed-length vector where semantically similar texts land near each other.
+`bge-small-en-v1.5` is a small, fast one (384 dimensions) that runs comfortably on a CPU. With the
+[`sentence-transformers`](https://www.sbert.net/) library it's essentially two lines:
+
+```python
+from sentence_transformers import SentenceTransformer
+
+model = SentenceTransformer("BAAI/bge-small-en-v1.5")
+vectors = model.encode(documents, batch_size=64, show_progress_bar=True)
 ```
 
-Each document is embedded into a 384-dimensional vector with a local sentence-transformer
-(`bge-small-en-v1.5`) — a step heavy enough (a GPU-less few minutes over 123k documents)
-that it runs offline and commits its *output*, never re-running when the post builds.
+The model downloads once (~130 MB) and then embeds entirely offline — no API, no per-call cost. Encoding the ~123k category documents
+takes a few CPU-only minutes, which is exactly why it runs once and commits its output rather than re-running on every build.
+:::
 
-## Clustering into "types"
+- Running K-means (k = 50) over those vectors groups the ~123k category instances into recognizable types. Projected to 2D with UMAP, the map
+looks like @fig-clusters. Hover any point to see its type, an example category, and that type's most common entity. I chose the hyperparameter k=50,
+with a bit of experimentation. When k was too low, US presidents got merged together with Geography, but when it was too high, it was a bit
+too hard to interpret the meaningful differences between the categories. 
 
-Running K-means (k = 50) over those vectors groups the ~123k category instances into
-recognizable *types*. Projected to 2D with UMAP, the map looks like this — hover any point
-to see its type, an example category, and that type's most common entity:
+::: {.callout-note collapse="true"}
+## UMAP
+
+- UMAP (Uniform Manifold Approximation and Projection) is a nonlinear dimensionality-reduction technique — it squashes the
+384-dimensional embeddings down to 2D while trying to keep nearby points nearby, purely so we can *see* the structure. The clustering itself
+(K-means) runs on the full 384-dimensional vectors; UMAP is only for drawing this picture.
+:::
 
 ```{python}
 #| label: fig-clusters
@@ -121,51 +141,38 @@ fig.update_layout(showlegend=False, height=620,
 fig.show()
 ```
 
-The 50 types are far from equal in size:
+- This methodology assumes a category *can* be neatly clustered, which isn't always true. Picture a category whose only through-line is
+that every answer's last name is "Johnson" — those Johnsons might come from politics, sports, and the arts all at once. Because the unit of
+clustering is the whole *category* (not the individual clue), such a category isn't torn apart; it's embedded as one document and assigned
+wherever its overall text points. And categories that don't sit near *any* clean type aren't dropped — the worst ~5% by distance to their
+cluster's centre are swept into a synthetic 51st type, **Misc: Hard to Classify**.
 
-```{python}
-#| label: fig-sizes
-#| fig-cap: "How common each category type is."
-sz = summary.copy()
-sz["type"] = sz["cluster_id"].map(labels)
-sz = sz.sort_values("size").tail(25)
-plt.figure(figsize=(8, 9))
-plt.barh(sz["type"], sz["size"], color="#4C72B0")
-plt.xlabel("category instances")
-plt.tight_layout()
-plt.show()
-```
+- The 50 types are also far from equal in size — @tbl-types lists all of them, sorted by how many category instances each contains. The
+largest few (two flavours of wordplay, plus music, books, and movies) are also the broadest and most conceptually loose.
 
-## Naming the 50 types
-
-Each cluster gets an automatic three-part "fingerprint": its most frequent real category
-names, the instances closest to its centre, and its most distinctive words (via class-based
-TF-IDF). The *fingerprints* are generated; the *names* are the one genuinely interpretive step
-— I read each fingerprint and named the type by hand. They came easily enough:
+- To name each of the 50 types, each cluster gets an automatic three-part summary — its most frequent real category names, the instances
+closest to its centre, and its most distinctive words (via TF-IDF over the pooled category text — see below). That summary is handed to an LLM (`gpt-4o-mini`), which returns
+a short 2–4 word name for each; the names are committed to a CSV the pipeline only reads, so nothing calls the model at build time.
 
 ::: {.callout-note collapse="true"}
-## How class-based TF-IDF works
+## How the "distinctive words" are scored
 
-Ordinary TF-IDF scores a word high in a *document* when it shows up often there but rarely
-across the whole collection. Class-based TF-IDF (c-TF-IDF, the trick [BERTopic]
-(https://maartengr.github.io/BERTopic/) popularized) just changes the unit: instead of one
-score per document, you pool every item in a *class* into a single big document and score
-words per class. Here that means gluing all of a type's categories into one text — 50
-documents, one per type — and asking, for each word, "how often does this type use it,
-weighted down by how many of the 50 types use it at all?"
+To find each type's signature vocabulary, I pool all of a type's categories into one big document — 50 documents, one per type — and run
+an ordinary [TF-IDF](https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.TfidfVectorizer.html)
+(Term-Frequency–Inverse-Document-Frequency) over them. A word scores high for a type when it's frequent *inside* that type (the TF part) but
+appears in few of the 50 pooled documents (the IDF part). So *inaugural*, which lives almost entirely in one type, floats to the top, while a
+word spread across many types gets **downweighted** — with scikit-learn's smoothed IDF, `log((1 + n) / (1 + df)) + 1`, ubiquitous words are
+pushed down but never fully cancelled to zero.
 
-Concretely, a term's weight in a type rises with its frequency inside that type (the TF part)
-and falls the more types contain it (the IDF part, `log(50 / types-containing-the-word)`).
-Boilerplate that's everywhere — *this*, *called*, *known* — cancels out; a word like
-*inaugural* that lives almost entirely in one type shoots to the top. What's left is each
-type's signature vocabulary, distinctive enough to read off and name. The same idea, pointed
-at a single answer instead of a whole type, is exactly how the clue fingerprints below are
-built.
+(This is the plain-vanilla version. [BERTopic](https://maartengr.github.io/BERTopic/) popularized a "class-based" c-TF-IDF with a different
+reweighting designed exactly for this pool-per-class setup; I stuck with stock scikit-learn TF-IDF, which is simpler and good enough to read a
+name off of.) The same idea, pointed at a single answer instead of a whole type, is how the clue fingerprints below are built.
 :::
 
 ```{python}
 #| label: tbl-types
 #| echo: false
+#| tbl-cap: "The 50 category types, ranked by number of category instances, with example entities."
 t = summary.copy()
 t["Type"] = t["cluster_id"].map(labels)
 top2 = (tokens[tokens["rank"].between(1, 2)]
@@ -176,26 +183,16 @@ t.columns = ["Type", "Categories", "Example entities"]
 t.reset_index(drop=True)
 ```
 
-## Where the study material is
+## Where is the Study Material?
 
-Two things stand out. First, **wordplay is a big, unusual slice**. The two pure
-letter/anagram types — Wordplay & Vocabulary and Rhymes, Anagrams & Common Bonds — are 7.4% of
-all categories between them, and folding in Word Origins & Foreign Words brings the
-wordplay-and-language family to 10.4%: about one category in ten. It's unusual because it
-rewards a *skill* you drill (homophones, anagrams, hidden words) more than facts you memorize,
-and it splits into two prep tracks — pure letter games versus the genuinely studyable
-etymology and idioms.
-
-Second, the types differ enormously in how much *recurring material* they even offer. As a
-rough gauge I count how many distinct phrases recur ≥5 times in a type — drawn from both clues
-and answers. Two caveats matter. It's counted from the **raw** phrases, *before* the dedup and
-LLM cleaning I describe below, so it still carries the noise: stray first names, Clue Crew
-presenters, off-topic answers, and near-duplicates counted twice (*van Gogh* and *Vincent van
-Gogh* as two). And it measures the *breadth* of repeated material, not the payoff of studying
-it — a type with thousands of recurring names might take more effort than a small, predictable
-one. So read it as "where is there stuff to learn," not "what's the best use of your time."
-Entity-dense types (authors, geography, presidents) score high; wordplay and grab-bag types
-don't:
+- **Wordplay** seems to be a big, unusual slice. The two pure letter/anagram types - Wordplay & Vocabulary and Rhymes, Anagrams
+& Common Bonds - are 7.4% of all categories between them, and folding in Word Origins & Foreign Words brings the wordplay-and-language 
+family to 10.4%, about one category in ten. It's unusual because it rewards a skill you can drill through repetition more than the
+facts you memorize. It also splits into two tracks — pure letter games versus the genuinely studyable etymology and idioms.
+- Types differ quite a bit in how much *recurring material* they even offer — and if a type has little of it, my whole hypothesis about
+studyability falls apart. As a rough gauge, I count how many distinct phrases recur 5 or more times in a type, drawn from both clues and answers.
+It really is rough: the phrases aren't cleaned yet (so stray first names, presenters, and near-duplicates are all still counted), and breadth
+isn't payoff — a phrase repeating a lot doesn't prove that studying it is worth your time.
 
 ```{python}
 #| label: fig-applicability
@@ -210,13 +207,13 @@ show = pd.concat([bottom, top])
 plt.figure(figsize=(8, 9))
 colors = ["#C44E52"] * len(bottom) + ["#55A868"] * len(top)
 plt.barh(show["type"], show["n_qualifying_phrases"], color=colors)
-plt.xlabel("distinct recurring entities (count >= 5)")
+plt.xlabel("distinct recurring phrases (count >= 5)")
 plt.tight_layout()
 plt.show()
 ```
-
-And for the material-rich types, here are the phrases that recur most — counted across clues
-and answers, the stuff worth knowing:
+- And for the material-rich types, here are the phrases that recur most, counted across clues and answers. These recurring names give me a
+concrete starting list to study — a ranked "if this type comes up, know these." (They're truncated mention counts, not a coverage
+calculation, so I won't claim what *fraction* of a type's clues they account for — just that they come up a lot.)
 
 ```{python}
 #| label: tbl-entities
@@ -233,110 +230,35 @@ for name in ["U.S. Presidents", "World Geography & Waters", "Books & Authors"]:
     display(top_entities(name))
 ```
 
-## Cleaning up the entities
+## Cleaning the Data
 
-Hand-written rules got the entity lists most of the way, but they kept tripping on judgment
-calls a regex can't make. Is "John" a studyable entity or a stray first name? ("John Adams"
-is; "John" alone isn't.) Is "May" the month or Theresa May? Rules also couldn't tell that
-"Sarah of the Clue Crew" is a clue *presenter* rather than an answer, or that a category
-about *Grey's Anatomy* had been split into a useless "Grey" and "Anatomy."
+- To actually make sense of the data, we need to clean it up. Hand-written regex rules get a lot of the way
+there, but there are a lot more judgment calls to make that require interpreting the context. Is "John"
+a studyable entity or a stray first name? John Adams is studyable, John isn't. Is "May" the month or "Theresa May"?
+"Sarah of the Clue Crew" comes up a lot, but that's just a clue presenter, not a studyable entity.
 
-So I handed the lists to an LLM for a second look. For each type, it judged every candidate
-entity — **keep**, **drop**, or **merge into a canonical form** — with the type's context in
-view. It dropped the noise (bare first names, nationalities like "British," months, Clue Crew
-presenters) and stitched the fragments back together: "Grey" + "Anatomy" → *Grey's Anatomy*,
-"Canadian" → *Canada*, "van Gogh" → *Vincent van Gogh*. Its verdicts live in a committed CSV
-the pipeline only *reads*, so the render stays deterministic and I can hand-correct any call
-it gets wrong without re-running anything expensive.
+- With this in mind, the lists were handed off to an LLM for a second look. For each type, it judged every candidate
+entity - **keep**, **drop**, or **merge into a canonical form** - with the type's context in view. It dropped the noise
+(bare first names, nationalities like "British", months, Clue Crew presenters, etc.) and stitched fragments back together - 
+"Grey" + "Anatomy" -> "Grey's Anatomy". These verdicts live in a committed CSV that the pipeline only reads, so the render
+stays deterministic.
 
-A second cleaning pass asked a sharper question — not just "is this a real entity?" but
-"does it belong to *this* topic?" That pulled valid-but-off-topic answers out of the wrong
-lists: "New York City" is a fine answer, but it's Geography, not **Books & Authors**, so it
-no longer clutters the authors list.
+- A second cleaning pass asks a sharper question - not just "is this a real entity" but "does it belong to this topic?". This
+was able to pull valid but off-topic answers out of the wrong lists. For example, "New York City" is a fine entity, but it belongs 
+in, say, Geography not in **Books & Authors**, so it no longer clutters the authors list. 
 
-A few problems only surfaced on a closer read. A whole rash of bare surnames and first names
-turned out to be a *parsing* bug, not messy data: J-Archive writes some answers with an
-optional first name in parentheses — `(Henry) Fielding` — and my extractor had been splitting
-those into a stray "Henry" and a stray "Fielding." Fixing the extractor at the source
-recovered the actual people. The LLM also occasionally over-merged in the other direction:
-"Marshall" swept George C. Marshall and Thurgood Marshall into one entry. So a final audit
-renamed each over-merged cluster to its dominant person and dropped the remnants too rare to
-make a list — while a dedup pass fixed the opposite mistake, fusing one person who'd been
-split in two ("Harriet Beecher" and "Beecher Stowe" becoming a single *Harriet Beecher
-Stowe*).
+## The Study Tool
 
-## A study tool
-
-The payoff is a lookup tool: pick a category type, see its most common (cleaned) entities,
-and jump straight to Wikipedia for each. It's live at [`research/`](research/), and it's
-filterable by a cumulative *study window* — all-time, or restricted to clues aired since 1990,
-2000, 2010, or 2020 — so you can watch a type's recurring entities shift as you narrow to more
-recent years.
-
-Two more touches make it a study aid rather than a lookup: press **Sample clue** to draw a
-real clue from that category — highlight an answer first to be quizzed on that specific
-entity, or leave it un-highlighted for anything on the board — with the answer hidden until
-you ask for it.
-
-Each answer now also carries a **clue fingerprint** — the handful of terms Jeopardy keeps
-reusing to ask about it, each with an *N-of-M* count of how many of that answer's clues the
-term shows up in, plus real example clues linked back to J-Archive. Tap a cue and, where I
-could precompute one, a one-sentence note explains *why* that word points at the answer — why
-"Hannibal" belongs to Mark Twain, or "Genoese" to Christopher Columbus. The display even
-prefers cues it can explain over generic ones like "author" or "novel," so the fingerprint
-teaches the *angle*, not just the name.
-
-Finding those cues is the class-based TF-IDF trick from naming, pointed at a single answer
-instead of a whole type. For each recurring answer I pool all of its clues into one document,
-then score every word and two-word phrase by how distinctive it is to *that* answer against
-every other answer in the type, and keep the top handful. Filters do the rest of the work:
-drop the answer's own name (a "Mark Twain" cue on Mark Twain teaches nothing), throw out the
-type-generic terms that show up across most of a type's answers (the "author"/"novel"
-problem), and require a cue to appear in at least **two** of the answer's clues — that's the
-*N-of-M* support count — so a one-off phrasing never gets promoted to a fingerprint.
-Overlapping fragments get stitched back together ("harriet beecher" + "beecher stowe" → the
-whole name), and the one-sentence explanations are precomputed by an LLM into a committed file
-the render only reads — so the fingerprints appear instantly, with no live model calls when you
-use the tool.
-
-For actual drilling there's a **Practice** mode: pick your topics and it deals you a run of
-real clues one at a time, answer hidden, with *Knew it / Unsure / Missed* buttons and a score
-at the end. This is the one place I built something clever and then tore it out. The first
-version was full spaced repetition — Leitner boxes, missed cards resurfacing later in the
-session and leading the next one, progress saved in your browser. In use, the resurfacing was
-more distracting than helpful: I wanted fresh clues each session, not the ones I'd just
-fumbled. So I scrapped the machinery for a plainer deck — *N* distinct random clues from the
-topics you picked, no card twice within a session, and nothing remembered between sessions (so
-a later session can deal the same clue again). Because the cards are text-only, it also skips
-clues that lean on an image or audio you can't see ("the people seen here…").
-
-And a 51st list, **Misc: Hard to Classify**, gathers the categories the
-clustering was *least* sure about — the ones that sat farthest from any clean type — so the
-oddballs the other 50 lists smoothed over get a place to show themselves.
-
-## So what should I study?
-
-Back to the question I opened with. The honest answer is that the data reframes it more than it
-settles it: it can't tell you which topic gives the best *return* on study time — breadth of
-recurring material isn't the same as payoff — but it's very good at showing you where the
-learnable material lives and handing you the exact angles to learn. If I were actually
-cramming, I'd pick one dense, entity-rich type — Books & Authors, say, or U.S. Presidents —
-read its clue fingerprints to learn not just the names but the words the show keeps attaching
-to them, and drill them in Practice until they stick. And I'd keep the *Misc* pile open as a
-humility check: a standing reminder of how much of the board still refuses to be tidy.
-
-```{python}
-#| label: thumbnail
-#| include: false
-# Static PNG of the cluster map for the listing thumbnail.
-frac = min(1.0, 12000 / len(clusters))
-s = clusters.groupby("cluster_id", group_keys=False)[clusters.columns.tolist()].apply(
-    lambda g: g.sample(frac=frac, random_state=42)
-)
-plt.figure(figsize=(6, 6))
-plt.scatter(s["umap_x"], s["umap_y"], c=s["cluster_id"], cmap="tab20", s=3, alpha=0.5)
-plt.axis("off")
-plt.tight_layout()
-plt.savefig("thumbnail.png", dpi=120, bbox_inches="tight")
-plt.close()
-```
+- The study tool is live at [`research/`](research/). Pick a category type, see its most common (cleaned) entities, and jump
+straight to Wikipedia for each. 
+- It's filterable by a cumulative window - all-time or restricted to clues aired since 1990, 2000, 2010, 2020. This lets you see how
+a type's recurring entities shift as you narrow to more recent years.
+- The **Sample Clue** button draws a real clue from that category. Optionally, if an entity is highlighted, it will draw a clue
+related to that entity.
+- **Clue Fingerprints**: For each entity, we look for the handful of terms that Jeopardy keeps reusing to ask about that entity, showing an
+*N-of-M* count of how many of that answer's clues the term shows up in, plus real example clues. Tap a cue, and, where it could be pre-computed,
+a one-sentence note explains *why* that word points at the answer. The cues were found using the same TF-IDF trick from naming, but pointed
+at a single answer instead of a whole type. Filters do the rest of the work - drop the answer's own name, throw out type-generic terms that show
+up across most of the type's answers, and require a cue to appear in at least **two** of the answer's clues.
+- For actual drilling, there's a **Practice** mode: pick your topics and it deals you a run of distinct real clues, one at a time with the
+answer hidden, then a quick tally at the end. (Text-only, so it skips clues that lean on an image or audio you can't see.)
