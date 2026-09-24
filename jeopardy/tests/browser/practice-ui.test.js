@@ -50,7 +50,8 @@ test("flow 1: full single-topic session (dedupe, era + media filter, answer show
     // 'dup' deduped -> 5 distinct text-only cards.
     assert.deepEqual(seen.slice().sort(), ["a1", "a2", "dup", "g1", "g2"], "exact deck");
     assert.ok(!seen.includes("old"), "pre-2010 clue excluded");
-    assert.ok(!seen.includes("med"), "media-dependent clue excluded");
+    assert.ok(!seen.includes("med"), "media clue excluded by the text heuristic");
+    assert.ok(!seen.includes("pic"), "media clue excluded by the source-derived media flag");
     assert.ok(!seen.some((x) => ["b1", "b2"].includes(x)), "Topic Beta excluded");
     const again = document.getElementById("practice-again");
     assert.ok(again, "summary shown");

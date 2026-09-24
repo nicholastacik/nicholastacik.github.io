@@ -38,7 +38,7 @@ def test_store_has_intrinsic_fields_only_and_deduped():
     clues = pd.concat([clues, dup], ignore_index=True)
     store, entity_clues, quiz_refs = build_clue_index(_clusters(), clues, decisions={}, min_freq=5)
     assert list(store.columns) == ["clue_id", "clue", "answer", "year", "category",
-                                   "game_id", "round", "row", "column"]
+                                   "game_id", "round", "row", "column", "media"]
     assert "cluster_id" not in store.columns and "phrase" not in store.columns
     assert store["clue_id"].is_unique                      # the injected duplicate collapsed
     assert (store["clue_id"] == "0:Jeopardy:1:1").sum() == 1
