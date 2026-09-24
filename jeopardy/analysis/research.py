@@ -73,7 +73,8 @@ def build_research_data(tokens_df, eras_df, labels, fingerprints_df=None, quiz_r
     if clues_df is not None:
         for _, r in clues_df[clues_df["clue_id"].isin(referenced)].iterrows():
             clues[r["clue_id"]] = {"clue": r["clue"], "answer": r["answer"], "year": int(r["year"]),
-                                   "category": r["category"], "game_id": int(r["game_id"])}
+                                   "category": r["category"], "game_id": int(r["game_id"]),
+                                   "media": bool(r.get("media", False))}
     return {"eras": [int(e) for e in eras], "byEra": by_era,
             "fingerprints": fingerprints, "quiz": quiz, "clues": clues,
             "jarchive": config.JARCHIVE_GAME_URL}
@@ -976,7 +977,7 @@ _HTML_TEMPLATE = """<!doctype html>
           for (const key in refs) for (const id of refs[key]) ids.add(id);
         }
         const out = [];
-        for (const id of ids) { const c = clueById(id); if (c && c.year >= era && !isMediaClue(c.clue)) out.push(id); }
+        for (const id of ids) { const c = clueById(id); if (c && c.year >= era && !c.media && !isMediaClue(c.clue)) out.push(id); }
         return out;
       }
 

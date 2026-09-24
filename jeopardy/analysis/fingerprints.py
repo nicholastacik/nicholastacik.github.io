@@ -14,7 +14,7 @@ from jeopardy.analysis.tokens import (
     _cluster_phrase_counts,
 )
 
-_STORE_COLS = ["clue_id", "clue", "answer", "year", "category", "game_id", "round", "row", "column"]
+_STORE_COLS = ["clue_id", "clue", "answer", "year", "category", "game_id", "round", "row", "column", "media"]
 
 
 def clue_ids(clues_df):
@@ -26,6 +26,8 @@ def clue_ids(clues_df):
 
 def build_clue_index(clusters_df, clues_df, decisions, quiz_k=2, quiz_general_n=12, min_freq=5):
     clues_df = clues_df.copy()
+    if "media" not in clues_df.columns:
+        clues_df["media"] = False
     clues_df["year"] = pd.to_datetime(clues_df["air_date"]).dt.year
     clues_df = clues_df[clues_df["year"].notna()]
     clues_df["year"] = clues_df["year"].astype(int)

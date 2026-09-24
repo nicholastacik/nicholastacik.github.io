@@ -56,8 +56,9 @@ def test_game_rows_shape_and_derivation():
     assert r1["clue_value"] == 400 and r1["dd_wager"] == 1600
     assert set(r0.keys()) == {
         "game_id", "air_date", "season", "game_type", "round", "category",
-        "clue_value", "row", "column", "is_daily_double", "dd_wager", "clue", "answer",
+        "clue_value", "row", "column", "is_daily_double", "dd_wager", "clue", "answer", "media",
     }
+    assert r0["media"] is False  # defaults False when the source clue has no media link
 
 
 def test_tournament_fixture_daily_double_gets_doubled_era_value():

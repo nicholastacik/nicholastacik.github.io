@@ -12,6 +12,15 @@ _SHOW_NUMBER_RE = re.compile(r"Show #(\d+)")
 _CID_RE = re.compile(r"clue_(J|DJ)_(\d+)_(\d+)$")
 _ROUND_DIVS = [("J", "jeopardy_round"), ("DJ", "double_jeopardy_round")]
 
+# A clue that leans on an image/audio link (e.g. "this" -> a photo) is unanswerable as a
+# text-only card; flag it from the source HTML so downstream steps can exclude it. J-Archive
+# serves these from /media/ (or a media file extension).
+_MEDIA_HREF_RE = re.compile(r"/media/|\.(?:jpe?g|png|gif|mp3|wav|mov|mp4|m4a|ogg)(?:\?|$)", re.I)
+
+
+def _has_media(td):
+    return any(_MEDIA_HREF_RE.search(a.get("href", "")) for a in td.find_all("a", href=True))
+
 
 def parse_game(page_html):
     """Parse a game page. Returns None if the page has no game (unaired/missing)."""
@@ -81,6 +90,7 @@ def _parse_board_clues(soup):
                 "round": round_, "row": row, "col": col, "category": category,
                 "value": value, "is_daily_double": is_dd, "dd_wager": dd_wager,
                 "clue": clue_text, "answer": answer, "order_number": order_number,
+                "media": _has_media(ctd),
             })
     return clues
 
@@ -129,4 +139,5 @@ def _parse_final_clue(soup):
         "round": "Final", "row": None, "col": None, "category": category,
         "value": None, "is_daily_double": False, "dd_wager": None,
         "clue": clue_text, "answer": answer, "order_number": None,
+        "media": _has_media(clue_td),
     }]

@@ -72,6 +72,7 @@ def game_rows(record):
             "dd_wager": c["dd_wager"],
             "clue": c["clue"],
             "answer": c["answer"],
+            "media": c.get("media", False),
         })
     return rows
 
