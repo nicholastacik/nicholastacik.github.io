@@ -24,7 +24,9 @@ def _year(result: dict) -> int | None:
 
 
 def _names(result: dict) -> set[str]:
-    return {(result.get(key) or "").casefold().strip() for key in ("name", "original_name")}
+    return {
+        (result.get(key) or "").casefold().strip() for key in ("name", "original_name")
+    }
 
 
 def pick_match(results: list[dict], title: str, year: int) -> dict | None:
@@ -32,7 +34,11 @@ def pick_match(results: list[dict], title: str, year: int) -> dict | None:
     near = None
     for result in results:
         result_year = _year(result)
-        if wanted not in _names(result) or result_year is None or abs(result_year - year) > 1:
+        if (
+            wanted not in _names(result)
+            or result_year is None
+            or abs(result_year - year) > 1
+        ):
             continue
         if result_year == year:
             return result
@@ -40,7 +46,9 @@ def pick_match(results: list[dict], title: str, year: int) -> dict | None:
     return near
 
 
-def resolve_suggestions(raw: list[dict], search, known_ids: set[int]) -> tuple[list[Suggestion], list[str]]:
+def resolve_suggestions(
+    raw: list[dict], search, known_ids: set[int]
+) -> tuple[list[Suggestion], list[str]]:
     kept, dropped, seen = [], [], set(known_ids)
     for item in raw:
         label = f"{item['title']} ({item['year']})"
@@ -68,8 +76,14 @@ def resolve_suggestions(raw: list[dict], search, known_ids: set[int]) -> tuple[l
 USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
 
 DATE_PATTERNS = [
-    re.compile(r"<meta[^>]+property=[\"']article:published_time[\"'][^>]+content=[\"']([^\"']+)", re.IGNORECASE),
-    re.compile(r"<meta[^>]+content=[\"']([^\"']+)[\"'][^>]+property=[\"']article:published_time", re.IGNORECASE),
+    re.compile(
+        r"<meta[^>]+property=[\"']article:published_time[\"'][^>]+content=[\"']([^\"']+)",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"<meta[^>]+content=[\"']([^\"']+)[\"'][^>]+property=[\"']article:published_time",
+        re.IGNORECASE,
+    ),
     re.compile(r"\"datePublished\"\s*:\s*\"([^\"]+)\""),
     re.compile(r"<time[^>]+datetime=[\"']([^\"']+)", re.IGNORECASE),
 ]
@@ -123,7 +137,12 @@ def fetch_page(url: str, client: httpx.Client | None = None) -> str | None:
 
 
 def validate_news(
-    raw: list[dict], sources: set[str], tracked_ids: set[int], fetch, today: date, window_days: int
+    raw: list[dict],
+    sources: set[str],
+    tracked_ids: set[int],
+    fetch,
+    today: date,
+    window_days: int,
 ) -> tuple[list[NewsItem], list[str]]:
     allowed = {normalize_url(url) for url in sources}
     cutoff = today - timedelta(days=window_days)
@@ -142,11 +161,17 @@ def validate_news(
             dropped.append(f"{headline}: duplicate URL")
         elif (html := fetch(url)) is None:
             dropped.append(f"{headline}: page unreachable")
-        elif (published := published_date(html) or _parse_date(item["published_date"])) is None:
+        elif (
+            published := published_date(html) or _parse_date(item["published_date"])
+        ) is None:
             dropped.append(f"{headline}: no usable publish date")
         elif not cutoff <= published <= today:
-            dropped.append(f"{headline}: published {published.isoformat()}, outside window")
+            dropped.append(
+                f"{headline}: published {published.isoformat()}, outside window"
+            )
         else:
             seen.add((item["tmdb_id"], key))
-            kept.append(NewsItem(item["tmdb_id"], headline, item["summary"], url, published))
+            kept.append(
+                NewsItem(item["tmdb_id"], headline, item["summary"], url, published)
+            )
     return kept, dropped

@@ -1,7 +1,6 @@
 from datetime import date
 
 import httpx
-
 from job.validate import fetch_page, normalize_url, published_date, validate_news
 
 TODAY = date(2026, 9, 27)
@@ -28,14 +27,21 @@ def run(raw, sources=(URL,), pages=None, tracked=(95396,)):
 
 
 def test_normalize_url_ignores_scheme_www_slash_fragment_and_tracking():
-    assert normalize_url("https://www.Deadline.com/a/b/?utm_source=chatgpt.com#x") == "deadline.com/a/b"
+    assert (
+        normalize_url("https://www.Deadline.com/a/b/?utm_source=chatgpt.com#x")
+        == "deadline.com/a/b"
+    )
     assert normalize_url("http://deadline.com/a/b") == "deadline.com/a/b"
     assert normalize_url("https://x.com/a?id=1&utm_medium=y&fbclid=z") == "x.com/a?id=1"
 
 
 def test_normalize_url_keeps_meaningful_query():
-    assert normalize_url("https://x.com/article?id=1") != normalize_url("https://x.com/article?id=2")
-    assert normalize_url("https://x.com/a?b=2&a=1") == normalize_url("https://x.com/a?a=1&b=2")
+    assert normalize_url("https://x.com/article?id=1") != normalize_url(
+        "https://x.com/article?id=2"
+    )
+    assert normalize_url("https://x.com/a?b=2&a=1") == normalize_url(
+        "https://x.com/a?a=1&b=2"
+    )
 
 
 def test_different_query_is_not_a_source_match():
@@ -86,12 +92,18 @@ def test_drops_unreachable_page():
 
 
 def test_page_date_overrides_model_date():
-    stale = page('<meta property="article:published_time" content="2026-08-01T10:00:00Z">')
+    stale = page(
+        '<meta property="article:published_time" content="2026-08-01T10:00:00Z">'
+    )
     kept, dropped = run([item()], pages={URL: stale})
     assert kept == []
-    assert dropped == ["Severance season 3 gets a date: published 2026-08-01, outside window"]
+    assert dropped == [
+        "Severance season 3 gets a date: published 2026-08-01, outside window"
+    ]
 
-    fresh = page('<meta property="article:published_time" content="2026-09-26T10:00:00Z">')
+    fresh = page(
+        '<meta property="article:published_time" content="2026-09-26T10:00:00Z">'
+    )
     kept, _ = run([item(published_date="2020-01-01")], pages={URL: fresh})
     assert kept[0].published == date(2026, 9, 26)
 
@@ -105,11 +117,17 @@ def test_falls_back_to_model_date_and_drops_unusable_one():
 
 def test_future_dates_rejected_from_page_or_model():
     _, dropped = run([item(published_date="2099-01-01")])
-    assert dropped == ["Severance season 3 gets a date: published 2099-01-01, outside window"]
-    future_page = page('<meta property="article:published_time" content="2026-09-28T09:00:00Z">')
+    assert dropped == [
+        "Severance season 3 gets a date: published 2099-01-01, outside window"
+    ]
+    future_page = page(
+        '<meta property="article:published_time" content="2026-09-28T09:00:00Z">'
+    )
     kept, _ = run([item()], pages={URL: future_page})
     assert kept == []
-    today_page = page('<meta property="article:published_time" content="2026-09-27T09:00:00Z">')
+    today_page = page(
+        '<meta property="article:published_time" content="2026-09-27T09:00:00Z">'
+    )
     kept, _ = run([item()], pages={URL: today_page})
     assert len(kept) == 1
 
@@ -128,11 +146,22 @@ def test_same_url_for_two_shows_keeps_both():
 
 
 def test_published_date_formats():
-    assert published_date('<meta property="article:published_time" content="2026-09-25T14:00:00-04:00">') == date(2026, 9, 25)
-    assert published_date('<meta content="2026-09-24" property="article:published_time">') == date(2026, 9, 24)
-    assert published_date('<script type="application/ld+json">{"datePublished": "2026-09-23T08:00:00Z"}</script>') == date(2026, 9, 23)
-    assert published_date('<time class="x" datetime="2026-09-22">Sept 22</time>') == date(2026, 9, 22)
-    assert published_date('<meta property="article:published_time" content="soon">') is None
+    assert published_date(
+        '<meta property="article:published_time" content="2026-09-25T14:00:00-04:00">'
+    ) == date(2026, 9, 25)
+    assert published_date(
+        '<meta content="2026-09-24" property="article:published_time">'
+    ) == date(2026, 9, 24)
+    assert published_date(
+        '<script type="application/ld+json">{"datePublished": "2026-09-23T08:00:00Z"}</script>'
+    ) == date(2026, 9, 23)
+    assert published_date(
+        '<time class="x" datetime="2026-09-22">Sept 22</time>'
+    ) == date(2026, 9, 22)
+    assert (
+        published_date('<meta property="article:published_time" content="soon">')
+        is None
+    )
     assert published_date("<p>no date</p>") is None
 
 
@@ -153,4 +182,9 @@ def test_fetch_page_returns_text_on_success_and_none_otherwise():
     def boom(request):
         raise httpx.ConnectError("down")
 
-    assert fetch_page("https://x.test/ok", httpx.Client(transport=httpx.MockTransport(boom))) is None
+    assert (
+        fetch_page(
+            "https://x.test/ok", httpx.Client(transport=httpx.MockTransport(boom))
+        )
+        is None
+    )

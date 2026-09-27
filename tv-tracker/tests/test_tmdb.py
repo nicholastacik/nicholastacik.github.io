@@ -1,5 +1,4 @@
 import httpx
-
 from job.tmdb import Tmdb, image_url
 
 
@@ -31,7 +30,9 @@ def test_show_without_seasons_only_appends_external_ids():
 
 def test_search_returns_results_list():
     transport, seen = recording({"results": [{"id": 7, "name": "Shōgun"}]})
-    assert Tmdb("tok", transport=transport).search("Shōgun") == [{"id": 7, "name": "Shōgun"}]
+    assert Tmdb("tok", transport=transport).search("Shōgun") == [
+        {"id": 7, "name": "Shōgun"}
+    ]
     assert seen[0].url.path == "/3/search/tv"
     assert seen[0].url.params["query"] == "Shōgun"
 

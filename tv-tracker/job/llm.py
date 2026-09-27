@@ -30,7 +30,11 @@ def _array_schema(key: str, properties: dict) -> dict:
 
 SUGGESTIONS_SCHEMA = _array_schema(
     "suggestions",
-    {"title": {"type": "string"}, "year": {"type": "integer"}, "reason": {"type": "string"}},
+    {
+        "title": {"type": "string"},
+        "year": {"type": "integer"},
+        "reason": {"type": "string"},
+    },
 )
 NEWS_SCHEMA = _array_schema(
     "news",
@@ -65,7 +69,9 @@ def _template(name: str) -> Template:
     return Template((PROMPTS / f"{name}.md").read_text())
 
 
-def suggestions_prompt(tracked: list[dict], ignored: list[dict], pending: list[dict], k: int) -> str:
+def suggestions_prompt(
+    tracked: list[dict], ignored: list[dict], pending: list[dict], k: int
+) -> str:
     return _template("suggestions").substitute(
         tracked=_bullets(map(_label, tracked)),
         ignored=_bullets(map(_label, ignored)),
@@ -74,7 +80,9 @@ def suggestions_prompt(tracked: list[dict], ignored: list[dict], pending: list[d
     )
 
 
-def news_prompt(tracked: list[dict], recent: list[dict], today: date, window_days: int) -> str:
+def news_prompt(
+    tracked: list[dict], recent: list[dict], today: date, window_days: int
+) -> str:
     return _template("news").substitute(
         today=today.isoformat(),
         window=window_days,
@@ -90,7 +98,9 @@ def extract_sources(response) -> tuple[set[str], int]:
             action = getattr(item, "action", None)
             if getattr(action, "type", None) == "search":
                 searches += 1
-                urls.update(source.url for source in getattr(action, "sources", None) or [])
+                urls.update(
+                    source.url for source in getattr(action, "sources", None) or []
+                )
         elif item.type == "message":
             for part in item.content:
                 for annotation in getattr(part, "annotations", None) or []:
@@ -113,7 +123,14 @@ def run(
         tools=[{"type": "web_search"}],
         include=["web_search_call.action.sources"],
         input=prompt,
-        text={"format": {"type": "json_schema", "name": name, "strict": True, "schema": schema}},
+        text={
+            "format": {
+                "type": "json_schema",
+                "name": name,
+                "strict": True,
+                "schema": schema,
+            }
+        },
     )
     sources, searches = extract_sources(response)
     return LlmResult(

@@ -1,6 +1,5 @@
 import httpx
 import pytest
-
 from job.http import get_json
 
 
@@ -14,12 +13,16 @@ def client_for(responses):
             raise response
         return response
 
-    client = httpx.Client(base_url="https://x.test", transport=httpx.MockTransport(handler))
+    client = httpx.Client(
+        base_url="https://x.test", transport=httpx.MockTransport(handler)
+    )
     return client, calls
 
 
 def test_retries_server_error_then_succeeds():
-    client, calls = client_for([httpx.Response(503), httpx.Response(200, json={"ok": 1})])
+    client, calls = client_for(
+        [httpx.Response(503), httpx.Response(200, json={"ok": 1})]
+    )
     sleeps = []
     assert get_json(client, "/a", sleep=sleeps.append) == {"ok": 1}
     assert len(calls) == 2
@@ -41,7 +44,9 @@ def test_gives_up_after_three_tries():
 
 
 def test_retries_transport_error():
-    client, calls = client_for([httpx.ConnectError("down"), httpx.Response(200, json=[])])
+    client, calls = client_for(
+        [httpx.ConnectError("down"), httpx.Response(200, json=[])]
+    )
     assert get_json(client, "/a", sleep=lambda s: None) == []
     assert len(calls) == 2
 

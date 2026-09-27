@@ -23,7 +23,9 @@ class Tmdb:
 
     def show(self, tmdb_id: int, seasons: Iterable[int] = ()) -> dict:
         parts = ["external_ids", *(f"season/{n}" for n in seasons)]
-        return get_json(self.client, f"/tv/{tmdb_id}", {"append_to_response": ",".join(parts)})
+        return get_json(
+            self.client, f"/tv/{tmdb_id}", {"append_to_response": ",".join(parts)}
+        )
 
     def search(self, title: str) -> list[dict]:
         return get_json(self.client, "/search/tv", {"query": title})["results"]

@@ -9,7 +9,9 @@ BASE = "https://api.tvmaze.com"
 
 class Tvmaze:
     def __init__(self, transport: httpx.BaseTransport | None = None):
-        self.client = httpx.Client(base_url=BASE, timeout=10, follow_redirects=True, transport=transport)
+        self.client = httpx.Client(
+            base_url=BASE, timeout=10, follow_redirects=True, transport=transport
+        )
 
     def lookup_imdb(self, imdb_id: str) -> int | None:
         try:
