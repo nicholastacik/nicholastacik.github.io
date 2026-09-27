@@ -19,7 +19,10 @@
 - HTTP clients retry transient errors (3 tries, backoff) before failing.
 - LLM output schemas have an object root: `{"suggestions": [...]}` and `{"news": [...]}`. Request sources with `include: ["web_search_call.action.sources"]`.
 - The LLM never supplies an ID, URL or image for a suggestion; TMDB does.
-- News `source_url` must match (after normalizing scheme, `www.`, trailing slash, query string) a URL returned by the search call or its `url_citation` annotations.
+- News `source_url` must match (after normalizing scheme, `www.`, trailing slash, fragment and tracking parameters such as `utm_*`; meaningful query parameters are kept) a URL returned by the search call or its `url_citation` annotations. News identity is `(tmdb_id, normalized URL)`; one article can yield items for two shows.
+- News dates must satisfy `today − NEWS_WINDOW_DAYS ≤ published ≤ today`.
+- Suggestions: never more than `MAX_PENDING_SUGGESTIONS − pending` kept per run, enforced in code, not just the prompt. No LLM call when nothing is tracked.
+- Nick's real shows are private (spec: the Sheet is the only store). `tv-tracker/shows.json` is gitignored; only the synthetic `shows.example.json` is committed, and committed notes name no real preferences.
 - News page fetch: 5 s timeout, one try; non-2xx or failure → drop. The page's own date (`article:published_time`, JSON-LD `datePublished`, `<time datetime>`) replaces the model's.
 - `OPENAI_MODEL` is config (default `gpt-5.6`, from current OpenAI docs); reasoning effort default `low`.
 - Match repo style: ruff formatting, no docstrings or comments beyond what's needed, `uv` for deps.
@@ -40,7 +43,8 @@
 ```
 tv-tracker/
   .env                      # gitignored: TMDB_TOKEN, OPENAI_API_KEY
-  shows.example.json        # hand-written input for the dry run
+  shows.example.json        # synthetic input for the dry run (committed)
+  shows.json                # Nick's real shows (gitignored)
   job/
     __init__.py             # empty
     __main__.py             # CLI: --dry-run; run_suggestions / run_news
@@ -86,7 +90,7 @@ The spec lists validation inside `llm.py`. It's split into `validate.py` here so
 ```bash
 cd /Users/nick/Work/nicholastacik.github.io-tv-tracker
 uv add --group tv-tracker httpx openai pytest
-printf '\n# TV tracker secrets (TMDB_TOKEN, OPENAI_API_KEY)\ntv-tracker/.env\n' >> .gitignore
+printf '\n# TV tracker secrets and private viewing preferences\ntv-tracker/.env\ntv-tracker/shows.json\n' >> .gitignore
 mkdir -p tv-tracker/job/prompts tv-tracker/tests
 touch tv-tracker/job/__init__.py
 ```
@@ -979,9 +983,26 @@ def run(raw, sources=(URL,), pages=None, tracked=(95396,)):
     return validate_news(raw, set(sources), set(tracked), pages.get, TODAY, 7)
 
 
-def test_normalize_url_ignores_scheme_www_slash_and_query():
+def test_normalize_url_ignores_scheme_www_slash_fragment_and_tracking():
     assert normalize_url("https://www.Deadline.com/a/b/?utm_source=chatgpt.com#x") == "deadline.com/a/b"
     assert normalize_url("http://deadline.com/a/b") == "deadline.com/a/b"
+    assert normalize_url("https://x.com/a?id=1&utm_medium=y&fbclid=z") == "x.com/a?id=1"
+
+
+def test_normalize_url_keeps_meaningful_query():
+    assert normalize_url("https://x.com/article?id=1") != normalize_url("https://x.com/article?id=2")
+    assert normalize_url("https://x.com/a?b=2&a=1") == normalize_url("https://x.com/a?a=1&b=2")
+
+
+def test_different_query_is_not_a_source_match():
+    source = "https://x.com/article?id=1"
+    kept, dropped = run(
+        [item(source_url="https://x.com/article?id=2")],
+        sources=(source,),
+        pages={"https://x.com/article?id=2": page()},
+    )
+    assert kept == []
+    assert dropped == ["Severance season 3 gets a date: URL not among search sources"]
 
 
 def test_keeps_item_whose_url_is_a_search_source():
@@ -994,7 +1015,8 @@ def test_keeps_item_whose_url_is_a_search_source():
 def test_tracking_params_on_either_side_still_match():
     kept, _ = run([item()], sources=(URL + "?utm_source=chatgpt.com",))
     assert len(kept) == 1
-    kept, _ = run([item(source_url=URL + "?utm_source=chatgpt.com")])
+    tagged = URL + "?utm_source=chatgpt.com"
+    kept, _ = run([item(source_url=tagged)], pages={tagged: page()})
     assert len(kept) == 1
 
 
@@ -1037,10 +1059,28 @@ def test_falls_back_to_model_date_and_drops_unusable_one():
     assert dropped == ["Severance season 3 gets a date: no usable publish date"]
 
 
-def test_duplicate_url_kept_once():
+def test_future_dates_rejected_from_page_or_model():
+    _, dropped = run([item(published_date="2099-01-01")])
+    assert dropped == ["Severance season 3 gets a date: published 2099-01-01, outside window"]
+    future_page = page('<meta property="article:published_time" content="2026-09-28T09:00:00Z">')
+    kept, _ = run([item()], pages={URL: future_page})
+    assert kept == []
+    today_page = page('<meta property="article:published_time" content="2026-09-27T09:00:00Z">')
+    kept, _ = run([item()], pages={URL: today_page})
+    assert len(kept) == 1
+
+
+def test_duplicate_url_for_same_show_kept_once():
     kept, dropped = run([item(), item(headline="Same story")])
     assert len(kept) == 1
     assert dropped == ["Same story: duplicate URL"]
+
+
+def test_same_url_for_two_shows_keeps_both():
+    raw = [item(), item(tmdb_id=136315, headline="The Bear renewed too")]
+    kept, dropped = run(raw, tracked=(95396, 136315))
+    assert [n.tmdb_id for n in kept] == [95396, 136315]
+    assert dropped == []
 
 
 def test_published_date_formats():
@@ -1083,7 +1123,7 @@ Add to the imports at the top of `tv-tracker/job/validate.py`:
 ```python
 import re
 from datetime import date, timedelta
-from urllib.parse import urlsplit
+from urllib.parse import parse_qsl, urlencode, urlsplit
 
 import httpx
 ```
@@ -1093,10 +1133,10 @@ Append:
 USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
 
 DATE_PATTERNS = [
-    re.compile(r"<meta[^>]+property=[\"']article:published_time[\"'][^>]+content=[\"']([^\"']+)", re.I),
-    re.compile(r"<meta[^>]+content=[\"']([^\"']+)[\"'][^>]+property=[\"']article:published_time", re.I),
+    re.compile(r"<meta[^>]+property=[\"']article:published_time[\"'][^>]+content=[\"']([^\"']+)", re.IGNORECASE),
+    re.compile(r"<meta[^>]+content=[\"']([^\"']+)[\"'][^>]+property=[\"']article:published_time", re.IGNORECASE),
     re.compile(r"\"datePublished\"\s*:\s*\"([^\"]+)\""),
-    re.compile(r"<time[^>]+datetime=[\"']([^\"']+)", re.I),
+    re.compile(r"<time[^>]+datetime=[\"']([^\"']+)", re.IGNORECASE),
 ]
 
 
@@ -1109,9 +1149,18 @@ class NewsItem:
     published: date
 
 
+TRACKING_PARAMS = {"fbclid", "gclid", "mc_cid", "mc_eid", "ref", "cmpid"}
+
+
 def normalize_url(url: str) -> str:
     parts = urlsplit(url.strip())
-    return parts.netloc.lower().removeprefix("www.") + parts.path.rstrip("/")
+    params = sorted(
+        (key, value)
+        for key, value in parse_qsl(parts.query, keep_blank_values=True)
+        if not key.startswith("utm_") and key not in TRACKING_PARAMS
+    )
+    query = f"?{urlencode(params)}" if params else ""
+    return parts.netloc.lower().removeprefix("www.") + parts.path.rstrip("/") + query
 
 
 def _parse_date(value: str) -> date | None:
@@ -1154,16 +1203,16 @@ def validate_news(
             dropped.append(f"{headline}: not an http(s) URL")
         elif key not in allowed:
             dropped.append(f"{headline}: URL not among search sources")
-        elif key in seen:
+        elif (item["tmdb_id"], key) in seen:
             dropped.append(f"{headline}: duplicate URL")
         elif (html := fetch(url)) is None:
             dropped.append(f"{headline}: page unreachable")
         elif (published := published_date(html) or _parse_date(item["published_date"])) is None:
             dropped.append(f"{headline}: no usable publish date")
-        elif published < cutoff:
+        elif not cutoff <= published <= today:
             dropped.append(f"{headline}: published {published.isoformat()}, outside window")
         else:
-            seen.add(key)
+            seen.add((item["tmdb_id"], key))
             kept.append(NewsItem(item["tmdb_id"], headline, item["summary"], url, published))
     return kept, dropped
 ```
@@ -1171,7 +1220,7 @@ def validate_news(
 - [ ] **Step 4: Run to verify pass**
 
 Run: `uv run --group tv-tracker python -m pytest tv-tracker/tests -q`
-Expected: all pass (10 new in `test_validate_news.py`)
+Expected: all pass (14 new in `test_validate_news.py`)
 
 - [ ] **Step 5: Commit**
 
@@ -1248,6 +1297,21 @@ def test_suggestions_skipped_when_queue_full():
     assert run_suggestions(shows, client=None, search=None) is None
 
 
+def test_suggestions_skipped_when_nothing_tracked():
+    assert run_suggestions({"tracked": []}, client=None, search=None) is None
+
+
+def test_suggestions_capped_to_remaining_slots_after_validation():
+    calls = []
+    shows = {"tracked": [SEVERANCE], "pending": [{"tmdb_id": 8, "name": "Y", "first_air_year": 2021}] * 2}
+    titles = ["A", "B", "C"]
+    payload = {"suggestions": [{"title": t, "year": 2025, "reason": "r"} for t in titles]}
+    results = {t: [{"id": i, "name": t, "first_air_date": "2025-01-01"}] for i, t in enumerate(titles, 100)}
+    _, kept, dropped = run_suggestions(shows, client_returning(payload, calls), results.__getitem__)
+    assert [s.name for s in kept] == ["A"]
+    assert dropped == ["B (2025): over queue capacity", "C (2025): over queue capacity"]
+
+
 def test_suggestions_ask_for_remaining_slots_and_treat_all_lists_as_known():
     calls = []
     shows = {
@@ -1257,7 +1321,7 @@ def test_suggestions_ask_for_remaining_slots_and_treat_all_lists_as_known():
     }
     payload = {"suggestions": [{"title": "X", "year": 2020, "reason": "r"}]}
     x_result = [{"id": 7, "name": "X", "first_air_date": "2020-01-01"}]
-    result, kept, dropped = run_suggestions(shows, client_returning(payload, calls), lambda title: x_result)
+    _, kept, dropped = run_suggestions(shows, client_returning(payload, calls), lambda title: x_result)
     assert "Suggest 2 show(s)" in calls[0]["input"]
     assert kept == []
     assert dropped == ["X (2020): already tracked, ignored or suggested"]
@@ -1266,7 +1330,7 @@ def test_suggestions_ask_for_remaining_slots_and_treat_all_lists_as_known():
 def test_news_validates_against_tracked_ids():
     calls = []
     payload = {"news": [{"tmdb_id": 1, "headline": "h", "summary": "s", "source_url": "https://a.com/x", "published_date": "2026-09-26"}]}
-    result, kept, dropped = run_news({"tracked": [SEVERANCE]}, client_returning(payload, calls), lambda url: "", date(2026, 9, 27))
+    _, kept, dropped = run_news({"tracked": [SEVERANCE]}, client_returning(payload, calls), lambda url: "", date(2026, 9, 27))
     assert kept == []
     assert dropped == ["h: not a tracked show"]
 ```
@@ -1293,13 +1357,14 @@ from job.tvmaze import Tvmaze, next_airing
 def run_suggestions(shows: dict, client, search):
     pending = shows.get("pending", [])
     k = config.MAX_PENDING_SUGGESTIONS - len(pending)
-    if k <= 0:
+    if k <= 0 or not shows["tracked"]:
         return None
     prompt = llm.suggestions_prompt(shows["tracked"], shows.get("ignored", []), pending, k)
     result = llm.run(client, prompt, "suggestions", llm.SUGGESTIONS_SCHEMA)
     known = {s["tmdb_id"] for key in ("tracked", "ignored", "pending") for s in shows.get(key, [])}
     kept, dropped = validate.resolve_suggestions(result.data["suggestions"], search, known)
-    return result, kept, dropped
+    dropped += [f"{s.name} ({s.year}): over queue capacity" for s in kept[k:]]
+    return result, kept[:k], dropped
 
 
 def run_news(shows: dict, client, fetch, today: date):
@@ -1328,7 +1393,7 @@ def print_facts(tracked: list[dict], tmdb: Tmdb, tvmaze: Tvmaze, now: datetime) 
             print(f"    seasons: {data.get('number_of_seasons')}, status: {data.get('status')}")
             print(f"    TMDB next: {next_tmdb.get('air_date')} {next_tmdb.get('name') or ''}")
             print(f"    TVmaze next: {upcoming['airstamp'] if upcoming else None}")
-        except Exception as error:
+        except Exception as error:  # noqa: BLE001 — spec: log and skip the show
             print(f"- {show['name']}: FAILED ({error!r})")
 
 
@@ -1365,7 +1430,7 @@ def main(argv: list[str] | None = None) -> None:
         print("\n== Suggestions ==")
         outcome = run_suggestions(shows, client, tmdb.search)
         if outcome is None:
-            print("  skipped: pending queue full")
+            print("  skipped: nothing tracked or pending queue full")
         else:
             result, kept, dropped = outcome
             for s in kept:
@@ -1416,8 +1481,8 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ### Task 8: Live dry run and prompt iteration (needs Nick)
 
 **Files:**
-- Create: `tv-tracker/shows.json` (Nick's real shows, committed; not secret)
-- Create: `posts/tv_tracker/notes/BUILD_NOTES.md`
+- Create: `tv-tracker/shows.json` (Nick's real shows; gitignored in Task 1, never committed)
+- Create: `posts/tv_tracker/notes/BUILD_NOTES.md` (committed, so aggregate findings only: counts, drop reasons, costs, prompt changes; no real show names)
 - Modify: `tv-tracker/job/prompts/*.md` (only if the runs show problems)
 
 **Interfaces:**
@@ -1439,7 +1504,7 @@ OPENAI_API_KEY=...
 Run (from `tv-tracker/`): `uv run --group tv-tracker --env-file .env python -m job --dry-run`
 Expected: a Facts section with the right show names and a TVmaze id for each; suggestions that resolve; news items or an honest empty list; token/search counts. If a Facts name is wrong, fix the ID in `shows.example.json`.
 
-- [ ] **Step 3: Nick writes `tv-tracker/shows.json`** with the shows you actually track (IDs via themoviedb.org URLs), and some `ignored` shows you'd never watch to test that exclusion.
+- [ ] **Step 3: Nick writes `tv-tracker/shows.json`** with the shows you actually track (IDs via themoviedb.org URLs), and some `ignored` shows you'd never watch to test that exclusion. Confirm it's ignored: `git check-ignore tv-tracker/shows.json` prints the path.
 
 - [ ] **Step 4: Run on 3 separate days** with `--shows shows.json`. After each run, copy that day's kept news headlines into `recent_news` so the next run tests dedupe. Record in `posts/tv_tracker/notes/BUILD_NOTES.md`:
   - Suggestions: how many resolved, how many dropped and why, would you actually watch them?
@@ -1451,7 +1516,7 @@ Expected: a Facts section with the right show names and a TVmaze id for each; su
 - [ ] **Step 6: Commit**
 
 ```bash
-git add tv-tracker/shows.json tv-tracker/job/prompts posts/tv_tracker/notes/BUILD_NOTES.md
+git add tv-tracker/job/prompts posts/tv_tracker/notes/BUILD_NOTES.md
 git commit -m "docs(tv-tracker): record dry-run findings and prompt tuning
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"

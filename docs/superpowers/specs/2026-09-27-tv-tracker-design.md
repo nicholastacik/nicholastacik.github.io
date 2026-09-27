@@ -242,8 +242,9 @@ poster, link and year.
 **News (cited, not confirmed):**
 1. `tmdb_id` must be an active tracked show.
 2. `source_url` must match (after normalizing scheme, `www.`, trailing slash,
-   query string) a URL in the web search call's returned sources or the
-   response's `url_citation` annotations. Otherwise drop.
+   fragment and tracking parameters like `utm_*`; meaningful query
+   parameters are kept) a URL in the web search call's returned sources or
+   the response's `url_citation` annotations. Otherwise drop.
 3. Fetch the page (5 s timeout, one try). If it fails or returns non-2xx,
    drop. If it exposes a publish date (`article:published_time`, JSON-LD
    `datePublished`, `<time datetime>`), that date replaces the model's; drop
