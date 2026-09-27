@@ -1,7 +1,7 @@
 # TV Tracker — Design
 
 **Date:** 2026-09-27
-**Status:** Approved (rev 2, after spec review)
+**Status:** Approved (rev 3, after second spec review)
 
 ## Overview
 
@@ -103,8 +103,8 @@ stale read and re-read (see Writes).
 - `body`: blank for episode/season; the LLM's reason for suggestions; the
   news summary for news.
 - `status`: `new` → `noted` (episode/season/news) or `tracked` / `ignored`
-  (suggestion), set by the app. The job may set exactly one transition:
-  `new` → `superseded` (see Season cards).
+  (suggestion), set by the app. The job may only move season cards between
+  `new` and `superseded`, in either direction (see Season cards).
 - `card_id` (dedupe key):
   - `ep:{tmdb}:S{ss}E{ee}`
   - `season:{tmdb}:{n}:{air_date}`
@@ -113,7 +113,7 @@ stale read and re-read (see Writes).
 - **Column ownership:** the job may update content columns (`show_name`,
   `headline`, `date`, `link`, `image_url`) on existing episode rows when TMDB
   data changes (e.g. "Episode 5" → real title), and never touches `status`
-  except `new` → `superseded`. The app only writes `status` + `updated_at`.
+  except season `new` ↔ `superseded`. The app only writes `status` + `updated_at`.
   Because they write disjoint cells, neither can clobber the other.
 - **Visibility:** the feed shows `status = new` cards, except episode, season
   and news cards whose show is not active (Untrack hides them immediately,
@@ -143,6 +143,10 @@ stale read and re-read (see Writes).
 ## Daily job
 
 GitHub Actions cron `0 10 * * *` (6 am Eastern) plus `workflow_dispatch`.
+All runs share one fixed concurrency group (`concurrency: {group:
+tv-tracker-sheet, cancel-in-progress: false}`), so a manual run started
+during the cron run waits instead of overlapping (overlapping runs would read
+the same existing ids and append duplicate cards).
 Secrets: `TMDB_TOKEN`, `OPENAI_API_KEY`, `GOOGLE_SERVICE_ACCOUNT_JSON`,
 `SHEET_ID`. Config: `OPENAI_MODEL` (chosen at implementation time),
 `TZ=America/Toronto`, `NEWS_WINDOW_DAYS=7`, `NEWS_MEMORY_DAYS=30`,
@@ -170,11 +174,20 @@ Steps, in order. Only active tracked shows are processed.
      and queue an update if different.
    - Link = episode IMDb page (episode `external_ids`), fallback show IMDb
      page. Image = episode still, fallback poster.
-4. **Season cards**: seasons with `season_number > 0` and known
-   `air_date ≥ today`. Append `season:{tmdb}:{n}:{date}` if new; any other
-   card for the same show + season with `status = new` becomes `superseded`.
-   (If the old card was already `noted`, leave it; the new-date card appears
-   as fresh news.)
+4. **Season cards**: for each season with `season_number > 0` that hasn't
+   premiered yet (air date unknown or `≥ today`, including a season TMDB no
+   longer lists), make the season's cards match the **current announced
+   date**:
+   - Date known: the current card is `season:{tmdb}:{n}:{date}`. Append it if
+     missing; if it exists as `superseded`, set it back to `new` (a date that
+     changed A → B → A reappears). Every *other* card for that season with
+     `status = new` becomes `superseded`.
+   - Date unknown or season removed: every card for that season with
+     `status = new` becomes `superseded` (a withdrawn date stops showing).
+   - `noted` cards are never changed. If you noted date A and it moves to B,
+     you get a B card; if it moves back to A, nothing reappears because you
+     already noted A.
+   Seasons that have premiered are left alone.
 5. **Schedule**: TVmaze `/shows/{id}/episodes`, keep this Mon–Sun by
    `airstamp` in Eastern. For a show whose fetch fails, carry forward its
    existing `Schedule` rows (they keep their old `refreshed_at`). If the
@@ -244,14 +257,14 @@ Static page at `posts/tv_tracker/app/`, mobile-first, bottom tab bar.
 - On load and whenever there's no valid token, the app shows a **"Connect
   Google"** button; requesting a token happens only from that click (Google
   requires a user gesture for the popup).
-- If a Sheets call returns 401/403 or the token has expired, the pending
-  action is kept in memory and the button reappears as **"Reconnect Google"**.
+- If a Sheets call returns 401 or the token has expired, the pending action
+  is kept in memory and the button reappears as **"Reconnect Google"**.
   After reconnecting, the pending action retries automatically.
+- If the first Sheet read after sign-in returns 403 (account not shared on
+  the Sheet), the app shows "This app is private" and nothing else. No email
+  scope is requested; Google's own permission check does the job.
 - Accepted: a quick reconnect tap roughly once per session after an hour
   idle. No 7-day re-consent because the OAuth app is in Production.
-- After sign-in the app reads the account email (from the token's userinfo)
-  and shows "This app is private" to anyone not on a two-address allowlist in
-  `config.js`. This is courtesy, not security.
 
 ### Security requirements
 
@@ -272,10 +285,15 @@ is protected by these, all required:
   buttons `Noted`, or `Track` / `Ignore` for suggestions. News cards show the
   source domain and link.
 - **This Week**: `Schedule` grouped by day, time + network, today
-  highlighted. A header line shows freshness from `Meta`: "Updated 6:02 am".
-  If `last_run_ok` is false or `last_run_at` is older than 36 h, a warning:
-  "Couldn't refresh: Severance, The Bear — showing last known times". An
-  empty week with a healthy `Meta` says "Nothing airing this week".
+  highlighted. The app computes the current Toronto week (Monday date) and
+  **only displays rows whose `airstamp` falls in it**. Header states, checked
+  in order:
+  1. `Meta.schedule_week` ≠ current week → "This week hasn't refreshed yet"
+     (e.g. Monday before 6 am; last week's rows are filtered out).
+  2. `last_run_ok` false or `last_run_at` older than 36 h → "Couldn't
+     refresh: Severance, The Bear — showing last known times".
+  3. Otherwise → "Updated 6:02 am"; an empty week here says "Nothing airing
+     this week".
 - **Shows**: TMDB search (tap → Track) above the active tracked list
   (Untrack).
 
@@ -295,7 +313,10 @@ is protected by these, all required:
   Two people tapping Track at once can each append a row; readers collapse
   duplicates by `tmdb_id`, so the result is still correct. Retrying a Track
   is harmless for the same reason.
-- **Untrack**: set `active = FALSE` on every row with that `tmdb_id`.
+- **Untrack**: fresh-read column A of `Tracked` and set `active = FALSE` on
+  every row with that `tmdb_id` **in the fresh read** (so duplicate rows
+  another device appended after page load are included). Track builds its
+  target rows from the fresh read the same way.
 - The UI removes the card optimistically; if the write fails for a
   non-auth reason, the card is restored with a "couldn't save" toast.
 
@@ -312,6 +333,9 @@ in-memory fake sheet):
   untouched.
 - Season date change → new card; old `new` card `superseded`; old `noted`
   card untouched.
+- Season date A → B → A → the A card returns to `new`, B `superseded`.
+- Season date withdrawn (unknown or season removed) → `new` cards
+  `superseded`.
 - Partial schedule failure → failed show's rows carried forward with old
   `refreshed_at`; `Meta.failed_shows` set; exit code non-zero.
 - Total outage → schedule unchanged (all carried), `last_run_ok = FALSE`.
@@ -327,7 +351,11 @@ App (`node --test` on `state.js` with a fake Sheets client):
 - Two simultaneous Tracks from stale reads → two `Tracked` rows, collapsed
   to one active show; suggestion card `tracked`.
 - Track of an inactive show → reactivated, `added_at` reset, no append.
-- Untrack with duplicate rows → all rows inactive; show's cards hidden.
+- Untrack with duplicate rows, including one appended after page load → all
+  rows inactive; show's cards hidden.
+- First Sheet read returns 403 → "This app is private".
+- This Week on a new Monday before the job runs → last week's rows hidden,
+  "hasn't refreshed yet" shown.
 - Expired auth during a write → pending action kept, "Reconnect" shown,
   retried after reconnect.
 - Cached row key mismatch → write aborted, reload triggered.
