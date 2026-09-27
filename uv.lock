@@ -1660,6 +1660,11 @@ scraper = [
     { name = "lxml" },
     { name = "pytest" },
 ]
+tv-tracker = [
+    { name = "httpx" },
+    { name = "openai" },
+    { name = "pytest" },
+]
 
 [package.metadata]
 requires-dist = [
@@ -1687,6 +1692,11 @@ scraper = [
     { name = "click", specifier = ">=8.4.2" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "lxml", specifier = ">=6.1.1" },
+    { name = "pytest", specifier = ">=9.1.1" },
+]
+tv-tracker = [
+    { name = "httpx", specifier = ">=0.28.1" },
+    { name = "openai", specifier = ">=2.44.0" },
     { name = "pytest", specifier = ">=9.1.1" },
 ]
 

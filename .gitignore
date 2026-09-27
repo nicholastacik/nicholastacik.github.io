@@ -20,3 +20,7 @@ ptcg/engine/
 
 codenames/node_modules
 jeopardy/tests/browser/node_modules/
+
+# TV tracker secrets and private viewing preferences
+tv-tracker/.env
+tv-tracker/shows.json
