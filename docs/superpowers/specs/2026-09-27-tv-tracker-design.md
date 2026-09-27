@@ -1,7 +1,7 @@
 # TV Tracker — Design
 
 **Date:** 2026-09-27
-**Status:** Approved (rev 3, after second spec review)
+**Status:** Approved (rev 4, after third spec review)
 
 ## Overview
 
@@ -95,29 +95,33 @@ stale read and re-read (see Writes).
 
 ### `Cards` — job owns content columns; app owns `status`
 
-| card_id | type | tmdb_id | show_name | headline | body | date | link | image_url | source_url | created_at | status | updated_at |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| card_id | type | tmdb_id | show_name | headline | body | date | link | image_url | source_url | created_at | current | status | updated_at |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 
 - `type`: `episode` · `season` · `suggestion` · `news`
 - `headline`: episode title / "Season N premieres" / show name / news headline.
 - `body`: blank for episode/season; the LLM's reason for suggestions; the
   news summary for news.
 - `status`: `new` → `noted` (episode/season/news) or `tracked` / `ignored`
-  (suggestion), set by the app. The job may only move season cards between
-  `new` and `superseded`, in either direction (see Season cards).
+  (suggestion). **Written only by the app.** The job writes `new` when it
+  appends a row and never touches `status` again.
+- `current`: `TRUE`/`FALSE`, **written only by the job**. Always `TRUE`
+  except season cards whose announcement is obsolete (see Season cards).
 - `card_id` (dedupe key):
   - `ep:{tmdb}:S{ss}E{ee}`
   - `season:{tmdb}:{n}:{air_date}`
   - `sugg:{tmdb}` — once ignored, never suggested again
   - `news:{tmdb}:{sha1(normalized source_url)[:8]}`
-- **Column ownership:** the job may update content columns (`show_name`,
-  `headline`, `date`, `link`, `image_url`) on existing episode rows when TMDB
-  data changes (e.g. "Episode 5" → real title), and never touches `status`
-  except season `new` ↔ `superseded`. The app only writes `status` + `updated_at`.
-  Because they write disjoint cells, neither can clobber the other.
-- **Visibility:** the feed shows `status = new` cards, except episode, season
-  and news cards whose show is not active (Untrack hides them immediately,
-  client-side; they reappear if re-tracked). Suggestion cards are unaffected.
+- **Column ownership:** after appending a row, the job may update only
+  content columns (`show_name`, `headline`, `date`, `link`, `image_url`) on
+  episode rows when TMDB data changes (e.g. "Episode 5" → real title), and
+  `current` on season rows. The app only writes `status` + `updated_at`.
+  The two writers never touch the same cell, so a Noted click landing between
+  the job's read and write can't be overwritten.
+- **Visibility:** the feed shows cards with `status = new` **and**
+  `current = TRUE`, except episode, season and news cards whose show is not
+  active (Untrack hides them immediately, client-side; they reappear if
+  re-tracked). Suggestion cards are unaffected.
 
 ### `Schedule` — derived, per-show
 
@@ -174,20 +178,23 @@ Steps, in order. Only active tracked shows are processed.
      and queue an update if different.
    - Link = episode IMDb page (episode `external_ids`), fallback show IMDb
      page. Image = episode still, fallback poster.
-4. **Season cards**: for each season with `season_number > 0` that hasn't
-   premiered yet (air date unknown or `≥ today`, including a season TMDB no
-   longer lists), make the season's cards match the **current announced
-   date**:
-   - Date known: the current card is `season:{tmdb}:{n}:{date}`. Append it if
-     missing; if it exists as `superseded`, set it back to `new` (a date that
-     changed A → B → A reappears). Every *other* card for that season with
-     `status = new` becomes `superseded`.
-   - Date unknown or season removed: every card for that season with
-     `status = new` becomes `superseded` (a withdrawn date stops showing).
-   - `noted` cards are never changed. If you noted date A and it moves to B,
-     you get a B card; if it moves back to A, nothing reappears because you
-     already noted A.
-   Seasons that have premiered are left alone.
+4. **Season cards**: reconcile every season (`season_number > 0`) that
+   either hasn't premiered in TMDB (air date unknown or `≥ today`) **or
+   already has season cards**, whatever its date, and including a season
+   TMDB no longer lists:
+   - **Target id** = `season:{tmdb}:{n}:{air_date}` if TMDB has a date (past
+     or future), else none.
+   - **Append** the target only if it's missing **and** its date is
+     `≥ today`. No new announcements for dates already past.
+   - **Set `current`** on every card of that season: `TRUE` for the target
+     id, `FALSE` for all others.
+   - Examples: A → B hides A, shows B. B → A shows A again (unless you
+     already noted it, since `status` is untouched). A date withdrawn or a
+     season removed hides every card for it. A Sept 30 card corrected to
+     Sept 26 during the Sept 27 run: the Sept 26 id isn't appended (past),
+     and the Sept 30 card goes `current = FALSE`. A season that premiered on
+     its announced date keeps its card current; episode cards take over from
+     there.
 5. **Schedule**: TVmaze `/shows/{id}/episodes`, keep this Mon–Sun by
    `airstamp` in Eastern. For a show whose fetch fails, carry forward its
    existing `Schedule` rows (they keep their old `refreshed_at`). If the
@@ -197,7 +204,7 @@ Steps, in order. Only active tracked shows are processed.
    `< MAX_PENDING_SUGGESTIONS`; request `k = cap − pending`.
 7. **News (LLM)**: one call across all active tracked shows.
 8. **Write**: one Sheets `batchUpdate` for card appends + content updates +
-   supersessions; then `Schedule`; then `Meta`.
+   `current` flags; then `Schedule`; then `Meta`.
 9. **Exit** non-zero if anything failed (any show, any step), *after*
    writing everything that succeeded. GitHub emails on failure; `Meta` tells
    the app.
@@ -331,11 +338,15 @@ in-memory fake sheet):
 - `added_at` equal to an air date → that episode is included.
 - Episode metadata correction → content columns updated, `status`
   untouched.
-- Season date change → new card; old `new` card `superseded`; old `noted`
-  card untouched.
-- Season date A → B → A → the A card returns to `new`, B `superseded`.
-- Season date withdrawn (unknown or season removed) → `new` cards
-  `superseded`.
+- Season date change → new card; old card `current = FALSE`; no card's
+  `status` changes.
+- Season date A → B → A → A `current = TRUE`, B `current = FALSE`.
+- Season date withdrawn (unknown or season removed) → all its cards
+  `current = FALSE`.
+- Season date corrected into the past → no new card; old card
+  `current = FALSE`.
+- Noted click between the job's read and write → `status = noted` survives
+  the job's write (job's batch contains no `status` cells).
 - Partial schedule failure → failed show's rows carried forward with old
   `refreshed_at`; `Meta.failed_shows` set; exit code non-zero.
 - Total outage → schedule unchanged (all carried), `last_run_ok = FALSE`.
