@@ -1464,7 +1464,7 @@ Expected: all pass
 
 - [ ] **Step 6: Lint**
 
-Run: `uvx ruff format tv-tracker && uvx ruff check tv-tracker`
+Run: `uvx ruff check --fix tv-tracker && uvx ruff format tv-tracker`
 Expected: no errors (fix any that appear, re-run tests)
 
 - [ ] **Step 7: Commit**
