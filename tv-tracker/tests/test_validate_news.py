@@ -188,3 +188,15 @@ def test_fetch_page_returns_text_on_success_and_none_otherwise():
         )
         is None
     )
+
+
+def test_strips_inline_citations_from_headline_and_summary():
+    cited = item(
+        headline="Severance renewed [deadline.com](https://deadline.com/x)",
+        summary="Apple renewed it. ([deadline.com](https://deadline.com/x?utm_source=openai))",
+    )
+    kept, _ = run([cited])
+    assert (kept[0].headline, kept[0].summary) == (
+        "Severance renewed deadline.com",
+        "Apple renewed it.",
+    )

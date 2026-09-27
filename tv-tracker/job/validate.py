@@ -33,6 +33,14 @@ def _norm(title: str) -> str:
     return " ".join(text.casefold().split())
 
 
+CITATION = re.compile(r"\s*\(\[[^\]]*\]\([^)]*\)\)")
+MARKDOWN_LINK = re.compile(r"\[([^\]]*)\]\([^)]*\)")
+
+
+def strip_citations(text: str) -> str:
+    return MARKDOWN_LINK.sub(r"\1", CITATION.sub("", text)).strip()
+
+
 def _names(result: dict) -> set[str]:
     return {_norm(result.get(key) or "") for key in ("name", "original_name")}
 
@@ -73,7 +81,7 @@ def resolve_suggestions(
                 tmdb_id=match["id"],
                 name=match["name"],
                 year=_year(match),
-                reason=item["reason"],
+                reason=strip_citations(item["reason"]),
                 poster_url=image_url(match.get("poster_path")),
                 link=f"https://www.themoviedb.org/tv/{match['id']}",
             )
@@ -157,7 +165,7 @@ def validate_news(
     kept, dropped, seen = [], [], set()
 
     for item in raw:
-        headline, url = item["headline"], item["source_url"]
+        headline, url = strip_citations(item["headline"]), item["source_url"]
         key = normalize_url(url)
         if item["tmdb_id"] not in tracked_ids:
             dropped.append(f"{headline}: not a tracked show")
@@ -180,6 +188,12 @@ def validate_news(
         else:
             seen.add((item["tmdb_id"], key))
             kept.append(
-                NewsItem(item["tmdb_id"], headline, item["summary"], url, published)
+                NewsItem(
+                    item["tmdb_id"],
+                    headline,
+                    strip_citations(item["summary"]),
+                    url,
+                    published,
+                )
             )
     return kept, dropped

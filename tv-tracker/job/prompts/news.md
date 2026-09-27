@@ -15,3 +15,5 @@ good answer. For each item give the show's tmdb_id from the list above, a
 short factual headline, a one-sentence summary, the URL of the article you
 found it in (the original report where possible), and the article's
 publication date as YYYY-MM-DD.
+
+Write every field as plain text: no links, citations or markdown.

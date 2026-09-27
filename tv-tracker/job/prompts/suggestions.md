@@ -16,3 +16,5 @@ search to confirm each show exists and to check recent reception.
 For each show give its exact title as listed on TMDB or IMDb, the year it
 first aired, and one sentence on why this couple in particular would like it,
 naming a specific show they track.
+
+Write every field as plain text: no links, citations or markdown.
