@@ -131,6 +131,7 @@ def main(argv: list[str] | None = None) -> None:
         else:
             result, kept, dropped = outcome
             names = {s["tmdb_id"]: s["name"] for s in shows["tracked"]}
+            print(f"  model proposed {len(result.data['news'])} item(s)")
             for n in kept:
                 print(
                     f"- [{names[n.tmdb_id]}] {n.headline} ({n.published})\n    {n.summary}\n    {n.source_url}"
