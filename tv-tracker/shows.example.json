@@ -1,0 +1,10 @@
+{
+  "tracked": [
+    {"tmdb_id": 95396, "name": "Severance", "first_air_year": 2022},
+    {"tmdb_id": 136315, "name": "The Bear", "first_air_year": 2022},
+    {"tmdb_id": 107113, "name": "Only Murders in the Building", "first_air_year": 2021}
+  ],
+  "ignored": [],
+  "pending": [],
+  "recent_news": []
+}
