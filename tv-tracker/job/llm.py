@@ -101,6 +101,10 @@ def extract_sources(response) -> tuple[set[str], int]:
                 urls.update(
                     source.url for source in getattr(action, "sources", None) or []
                 )
+            elif getattr(action, "type", None) == "open_page" and getattr(
+                action, "url", None
+            ):
+                urls.add(action.url)
         elif item.type == "message":
             for part in item.content:
                 for annotation in getattr(part, "annotations", None) or []:

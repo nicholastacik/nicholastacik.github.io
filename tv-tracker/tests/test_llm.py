@@ -126,3 +126,15 @@ def test_run_sends_web_search_and_strict_schema():
         1,
     )
     assert "https://variety.com/b" in result.sources
+
+
+def test_extract_sources_includes_opened_pages():
+    response = NS(
+        output=[
+            NS(
+                type="web_search_call",
+                action=NS(type="open_page", url="https://thr.com/x"),
+            )
+        ]
+    )
+    assert llm.extract_sources(response) == ({"https://thr.com/x"}, 0)

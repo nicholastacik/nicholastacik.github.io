@@ -1,4 +1,5 @@
 import re
+import unicodedata
 from dataclasses import dataclass
 from datetime import date, timedelta
 from urllib.parse import parse_qsl, urlencode, urlsplit
@@ -23,14 +24,21 @@ def _year(result: dict) -> int | None:
     return int(prefix) if prefix.isdigit() else None
 
 
+QUOTES = str.maketrans({"’": "'", "‘": "'", "“": '"', "”": '"'})
+
+
+def _norm(title: str) -> str:
+    text = unicodedata.normalize("NFKD", title).translate(QUOTES)
+    text = "".join(c for c in text if not unicodedata.combining(c))
+    return " ".join(text.casefold().split())
+
+
 def _names(result: dict) -> set[str]:
-    return {
-        (result.get(key) or "").casefold().strip() for key in ("name", "original_name")
-    }
+    return {_norm(result.get(key) or "") for key in ("name", "original_name")}
 
 
 def pick_match(results: list[dict], title: str, year: int) -> dict | None:
-    wanted = title.casefold().strip()
+    wanted = _norm(title)
     near = None
     for result in results:
         result_year = _year(result)

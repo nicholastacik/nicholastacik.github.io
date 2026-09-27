@@ -82,3 +82,9 @@ def test_resolve_drops_known_and_in_batch_duplicates():
     )
     assert kept == []
     assert len(dropped) == 1
+
+
+def test_pick_match_ignores_diacritics_and_typographic_quotes():
+    assert pick_match([SHOGUN_2024], "Shogun", 2024)["id"] == 2
+    greys = {"id": 6, "name": "Grey's Anatomy", "first_air_date": "2005-03-27"}
+    assert pick_match([greys], "Grey’s  Anatomy", 2005)["id"] == 6
