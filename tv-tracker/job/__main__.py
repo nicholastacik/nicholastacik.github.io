@@ -83,7 +83,7 @@ def run() -> None:
     print(f"appended {report.appended} card(s), updated {report.updated} cell group(s)")
     if not report.ok:
         print(
-            f"failed shows: {report.failed_shows}; failed steps: {report.failed_steps}"
+            f"failed shows: {len(report.failed_shows)} (names in the Meta tab); failed steps: {report.failed_steps}"
         )
         sys.exit(1)
 

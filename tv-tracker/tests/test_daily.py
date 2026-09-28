@@ -223,3 +223,11 @@ def test_tmdb_failure_marks_show_failed_and_skips_it():
     report = run_daily(sheet, tmdb, tvmaze, llm, lambda url: None, NOW)
     assert report.failed_shows == ["One"]
     assert sheet.read_all()["Cards"] == []
+
+
+def test_failure_logs_never_name_shows(capsys):
+    _sp, sheet, tmdb, tvmaze, llm = world(tmdb_broken={1})
+    run_daily(sheet, tmdb, tvmaze, llm, lambda url: None, NOW)
+    output = capsys.readouterr()
+    assert "One" not in output.out + output.err
+    assert "FAILED" in output.out

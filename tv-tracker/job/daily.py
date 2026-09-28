@@ -75,7 +75,7 @@ def run_daily(sheet, tmdb, tvmaze, llm_client, fetch, now: datetime) -> RunRepor
             existing[card["card_id"]] = card
             appends.append(card)
 
-    for show in shows:
+    for number, show in enumerate(shows, start=1):
         try:
             data = tmdb.show(show.tmdb_id)
             poster = posters[show.tmdb_id] = (
@@ -125,7 +125,7 @@ def run_daily(sheet, tmdb, tvmaze, llm_client, fetch, now: datetime) -> RunRepor
             )
             fresh[show.tmdb_id] = schedule_rows(show, tvmaze_show, data, today, stamp)
         except Exception:  # noqa: BLE001 — spec: log and skip the show
-            _failed(show.name)
+            _failed(f"show {number} of {len(shows)} (name in the Meta tab)")
             report.failed_shows.append(show.name)
             failed.add(show.tmdb_id)
 
