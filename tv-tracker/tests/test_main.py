@@ -100,3 +100,10 @@ def test_news_validates_against_tracked_ids():
     )
     assert kept == []
     assert dropped == ["h: not a tracked show"]
+
+
+def test_news_uses_medium_effort_and_suggestions_low():
+    calls = []
+    run_news({"tracked": [SEVERANCE]}, client_returning({"news": []}, calls), lambda url: "", date(2026, 9, 27))
+    run_suggestions({"tracked": [SEVERANCE]}, client_returning({"suggestions": []}, calls), lambda t: [])
+    assert [c["reasoning"] for c in calls] == [{"effort": "medium"}, {"effort": "low"}]

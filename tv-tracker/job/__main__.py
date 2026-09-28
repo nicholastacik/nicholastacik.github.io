@@ -16,7 +16,13 @@ def run_suggestions(shows: dict, client, search):
     prompt = llm.suggestions_prompt(
         shows["tracked"], shows.get("ignored", []), pending, k
     )
-    result = llm.run(client, prompt, "suggestions", llm.SUGGESTIONS_SCHEMA)
+    result = llm.run(
+        client,
+        prompt,
+        "suggestions",
+        llm.SUGGESTIONS_SCHEMA,
+        effort=config.SUGGESTIONS_EFFORT,
+    )
     known = {
         s["tmdb_id"]
         for key in ("tracked", "ignored", "pending")
@@ -36,7 +42,7 @@ def run_news(shows: dict, client, fetch, today: date):
     prompt = llm.news_prompt(
         tracked, shows.get("recent_news", []), today, config.NEWS_WINDOW_DAYS
     )
-    result = llm.run(client, prompt, "news", llm.NEWS_SCHEMA)
+    result = llm.run(client, prompt, "news", llm.NEWS_SCHEMA, effort=config.NEWS_EFFORT)
     tracked_ids = {s["tmdb_id"] for s in tracked}
     kept, dropped = validate.validate_news(
         result.data["news"],
@@ -103,7 +109,7 @@ def main(argv: list[str] | None = None) -> None:
     tmdb = Tmdb(config.tmdb_token())
     client = OpenAI()
     print(
-        f"model {config.OPENAI_MODEL}, effort {config.OPENAI_REASONING_EFFORT}, {now:%Y-%m-%d %H:%M %Z}\n"
+        f"model {config.OPENAI_MODEL}, effort suggestions/news {config.SUGGESTIONS_EFFORT}/{config.NEWS_EFFORT}, {now:%Y-%m-%d %H:%M %Z}\n"
     )
 
     if "facts" not in args.skip:

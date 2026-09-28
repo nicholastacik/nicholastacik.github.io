@@ -119,7 +119,7 @@ def run(
     name: str,
     schema: dict,
     model: str = config.OPENAI_MODEL,
-    effort: str = config.OPENAI_REASONING_EFFORT,
+    effort: str = config.SUGGESTIONS_EFFORT,
 ) -> LlmResult:
     response = client.responses.create(
         model=model,
