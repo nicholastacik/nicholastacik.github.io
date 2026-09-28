@@ -141,7 +141,7 @@ stale read and re-read (see Writes).
 |---|---|
 | last_run_at | ISO timestamp |
 | last_run_ok | `TRUE`/`FALSE` |
-| schedule_week | `YYYY-MM-DD` (Monday) |
+| schedule_from | `YYYY-MM-DD` (first day of the schedule window) |
 | failed_shows | comma-separated show names, or blank |
 | failed_steps | e.g. `news`, `suggestions`, or blank |
 
@@ -196,11 +196,12 @@ Steps, in order. Only active tracked shows are processed.
      and the Sept 30 card goes `current = FALSE`. A season that premiered on
      its announced date keeps its card current; episode cards take over from
      there.
-5. **Schedule**: TVmaze `/shows/{id}/episodes`, keep this Mon–Sun by
-   `airstamp` in Eastern. For a show whose fetch fails, carry forward its
-   existing `Schedule` rows (they keep their old `refreshed_at`). If the
-   week has rolled over, drop carried rows outside the new week. Rewrite the
-   tab.
+5. **Schedule**: TVmaze `/shows/{id}/episodes`, keep a rolling window of
+   **2 days back through 7 days ahead** (10 days) by `airstamp` in Eastern,
+   so last night's airings are always listed. For a show whose fetch fails,
+   carry forward its existing `Schedule` rows (they keep their old
+   `refreshed_at`), dropping any that fall outside the new window. Rewrite
+   the tab.
 6. **Suggestions (LLM)**: only if pending (`status = new`) suggestion cards
    `< MAX_PENDING_SUGGESTIONS`; request `k = cap − pending`.
 7. **News (LLM)**: one call across all active tracked shows.
@@ -293,12 +294,11 @@ is protected by these, all required:
   image left; title, subtitle (`body` for suggestions), date, link right;
   buttons `Noted`, or `Track` / `Ignore` for suggestions. News cards show the
   source domain and link.
-- **This Week**: `Schedule` grouped by day, time + network, today
-  highlighted. The app computes the current Toronto week (Monday date) and
-  **only displays rows whose `airstamp` falls in it**. Header states, checked
-  in order:
-  1. `Meta.schedule_week` ≠ current week → "This week hasn't refreshed yet"
-     (e.g. Monday before 6 am; last week's rows are filtered out).
+- **This Week** (tab name kept): `Schedule` grouped by day over the same
+  rolling window (2 days back through 7 ahead, computed in Toronto time),
+  time + network, with Yesterday / Today / Tomorrow labels and today
+  highlighted. Header states, checked in order:
+  1. No `last_run_at` → "Not refreshed yet".
   2. `last_run_ok` false or `last_run_at` older than 36 h → "Couldn't
      refresh: Severance, The Bear — showing last known times".
   3. Otherwise → "Updated 6:02 am"; an empty week here says "Nothing airing
@@ -367,8 +367,8 @@ App (`node --test` on `state.js` with a fake Sheets client):
 - Untrack with duplicate rows, including one appended after page load → all
   rows inactive; show's cards hidden.
 - First Sheet read returns 403 → "This app is private".
-- This Week on a new Monday before the job runs → last week's rows hidden,
-  "hasn't refreshed yet" shown.
+- This Week window: 10 days from 2 days back; rows outside it hidden; never
+  refreshed → "Not refreshed yet".
 - Expired auth during a write → pending action kept, "Reconnect" shown,
   retried after reconnect.
 - Cached row key mismatch → write aborted, reload triggered.

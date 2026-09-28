@@ -81,14 +81,17 @@ export function addDays(day, n) {
   return date.toISOString().slice(0, 10);
 }
 
-export function weekStart(day) {
-  return addDays(day, -((utc(day).getUTCDay() + 6) % 7));
+const DAYS_BACK = 2;
+const DAYS_AHEAD = 7;
+const RELATIVE = { [-1]: "Yesterday", 0: "Today", 1: "Tomorrow" };
+
+export function windowStart(today) {
+  return addDays(today, -DAYS_BACK);
 }
 
-export function inWeek(stamp, today) {
-  const start = weekStart(today);
+export function inWindow(stamp, today) {
   const day = String(stamp).slice(0, 10);
-  return day >= start && day < addDays(start, 7);
+  return day >= windowStart(today) && day <= addDays(today, DAYS_AHEAD);
 }
 
 export function dayLabel(day) {
@@ -105,11 +108,12 @@ export function timeLabel(airstamp) {
 
 export function scheduleDays(rows, trackedRows, today) {
   const active = activeIds(trackedRows);
-  const start = weekStart(today);
-  return Array.from({ length: 7 }, (_, i) => addDays(start, i)).map((day) => ({
+  const start = windowStart(today);
+  return Array.from({ length: DAYS_BACK + DAYS_AHEAD + 1 }, (_, i) => addDays(start, i)).map((day, i) => ({
     day,
     label: dayLabel(day),
     isToday: day === today,
+    relative: RELATIVE[i - DAYS_BACK] ?? "",
     items: rows
       .filter((row) => String(row.airstamp).slice(0, 10) === day && active.has(Number(row.tmdb_id)))
       .sort((a, b) => String(a.airstamp).localeCompare(String(b.airstamp)))
@@ -125,7 +129,7 @@ function clock(ms) {
 
 export function scheduleHeader(metaRows, today, nowMs) {
   const meta = Object.fromEntries(metaRows.map((row) => [row.key, row.value]));
-  if (meta.schedule_week !== weekStart(today)) return { kind: "stale-week", text: "This week hasn't refreshed yet" };
+  if (!meta.last_run_at) return { kind: "stale", text: "Not refreshed yet" };
   const last = Date.parse(meta.last_run_at);
   if (!truthy(meta.last_run_ok) || !(nowMs - last <= 36 * 3600 * 1000)) {
     const names = meta.failed_shows ? `: ${meta.failed_shows}` : "";

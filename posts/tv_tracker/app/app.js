@@ -213,7 +213,7 @@ function renderWeek() {
         el(
           "section",
           { class: day.isToday ? "day today" : "day" },
-          el("h3", {}, day.isToday ? `Today · ${day.label}` : day.label),
+          el("h3", {}, day.relative ? `${day.relative} · ${day.label}` : day.label),
           day.items.length
             ? el(
                 "ul",
