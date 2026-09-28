@@ -63,3 +63,73 @@ export function domain(url) {
     return "";
   }
 }
+
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+export function torontoDate(date = new Date()) {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
+}
+
+function utc(day) {
+  return new Date(`${day}T00:00:00Z`);
+}
+
+export function addDays(day, n) {
+  const date = utc(day);
+  date.setUTCDate(date.getUTCDate() + n);
+  return date.toISOString().slice(0, 10);
+}
+
+export function weekStart(day) {
+  return addDays(day, -((utc(day).getUTCDay() + 6) % 7));
+}
+
+export function inWeek(stamp, today) {
+  const start = weekStart(today);
+  const day = String(stamp).slice(0, 10);
+  return day >= start && day < addDays(start, 7);
+}
+
+export function dayLabel(day) {
+  const date = utc(day);
+  return `${WEEKDAYS[date.getUTCDay()]}, ${MONTHS[date.getUTCMonth()]} ${date.getUTCDate()}`;
+}
+
+export function timeLabel(airstamp) {
+  const match = /T(\d{2}):(\d{2})/.exec(String(airstamp));
+  if (!match) return "";
+  const hour = Number(match[1]);
+  return `${hour % 12 || 12}:${match[2]} ${hour >= 12 ? "PM" : "AM"}`;
+}
+
+export function scheduleDays(rows, trackedRows, today) {
+  const active = activeIds(trackedRows);
+  const start = weekStart(today);
+  return Array.from({ length: 7 }, (_, i) => addDays(start, i)).map((day) => ({
+    day,
+    label: dayLabel(day),
+    isToday: day === today,
+    items: rows
+      .filter((row) => String(row.airstamp).slice(0, 10) === day && active.has(Number(row.tmdb_id)))
+      .sort((a, b) => String(a.airstamp).localeCompare(String(b.airstamp)))
+      .map((row) => ({ ...row, time: timeLabel(row.airstamp) })),
+  }));
+}
+
+function clock(ms) {
+  return new Intl.DateTimeFormat("en-US", { timeZone: TZ, hour: "numeric", minute: "2-digit" })
+    .format(new Date(ms))
+    .replace(/ /g, " ");
+}
+
+export function scheduleHeader(metaRows, today, nowMs) {
+  const meta = Object.fromEntries(metaRows.map((row) => [row.key, row.value]));
+  if (meta.schedule_week !== weekStart(today)) return { kind: "stale-week", text: "This week hasn't refreshed yet" };
+  const last = Date.parse(meta.last_run_at);
+  if (!truthy(meta.last_run_ok) || !(nowMs - last <= 36 * 3600 * 1000)) {
+    const names = meta.failed_shows ? `: ${meta.failed_shows}` : "";
+    return { kind: "failed", text: `Couldn't refresh${names} — showing last known times` };
+  }
+  return { kind: "ok", text: `Updated ${clock(last)}` };
+}
