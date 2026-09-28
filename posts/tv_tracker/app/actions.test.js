@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { HEADERS } from "./headers.js";
 import { AuthError } from "./sheets.js";
-import { StaleError, markCard, perform, resumePending, trackShow, untrackShow } from "./actions.js";
+import { StaleError, enqueue, markCard, perform, resume, resumePending, trackShow, untrackShow } from "./actions.js";
 
 const IDS = { Tracked: 10, Cards: 20, Schedule: 30, Meta: 40 };
 
@@ -29,9 +29,15 @@ function world({ tracked = [], cardKeys = ["card_id"], failNext = null } = {}) {
         throw error;
       }
       sheets.writes.push(requests);
+      for (const request of requests) {
+        if (request.appendCells) {
+          const values = request.appendCells.rows[0].values.map((cell) => Object.values(cell.userEnteredValue)[0]);
+          tracked.push(Object.fromEntries(HEADERS.Tracked.map((column, i) => [column, values[i]])));
+        }
+      }
     },
   };
-  const ctx = { sheets, nowIso: () => "T", today: () => "2026-09-28", pending: null, asked: 0, onAuthNeeded: () => { ctx.asked += 1; } };
+  const ctx = { sheets, nowIso: () => "T", today: () => "2026-09-28", pending: [], asked: 0, onAuthNeeded: () => { ctx.asked += 1; } };
   return ctx;
 }
 
@@ -72,10 +78,10 @@ test("perform keeps the action on AuthError and resumePending retries it once", 
   const action = () => markCard(ctx, { _row: 2, card_id: "x" }, "noted");
   assert.equal(await perform(ctx, action), "pending");
   assert.equal(ctx.asked, 1);
-  assert.equal(ctx.pending, action);
+  assert.deepEqual(ctx.pending, [action]);
   assert.equal(ctx.sheets.writes.length, 0);
   assert.equal(await resumePending(ctx), "done");
-  assert.equal(ctx.pending, null);
+  assert.deepEqual(ctx.pending, []);
   assert.equal(ctx.sheets.writes.length, 1);
   assert.equal(await resumePending(ctx), null);
 });
@@ -83,5 +89,36 @@ test("perform keeps the action on AuthError and resumePending retries it once", 
 test("perform rethrows non-auth errors", async () => {
   const ctx = world({ cardKeys: ["card_id", "x"], failNext: new Error("boom") });
   await assert.rejects(perform(ctx, () => markCard(ctx, { _row: 2, card_id: "x" }, "noted")), /boom/);
-  assert.equal(ctx.pending, null);
+  assert.deepEqual(ctx.pending, []);
+});
+
+test("enqueue runs Track then Untrack in order so Untrack sees the new row", async () => {
+  const ctx = world({ cardKeys: ["card_id"] });
+  const show = { tmdb_id: 5, name: "Five", first_air_year: 2020, poster_url: "" };
+  const first = enqueue(ctx, () => trackShow(ctx, show, "search"));
+  const second = enqueue(ctx, () => untrackShow(ctx, 5));
+  assert.deepEqual(await Promise.all([first, second]), ["done", "done"]);
+  const untrackWrite = ctx.sheets.writes[1][0].updateCells;
+  assert.equal(untrackWrite.range.startRowIndex, 1);
+  assert.deepEqual(untrackWrite.rows[0].values[0], { userEnteredValue: { boolValue: false } });
+});
+
+test("actions made while signed out queue in order and all resume", async () => {
+  const ctx = world({ cardKeys: ["card_id", "a", "b"], failNext: new AuthError("expired") });
+  const one = enqueue(ctx, () => markCard(ctx, { _row: 2, card_id: "a" }, "noted"));
+  const two = enqueue(ctx, () => markCard(ctx, { _row: 3, card_id: "b" }, "noted"));
+  assert.deepEqual(await Promise.all([one, two]), ["pending", "pending"]);
+  assert.equal(ctx.asked, 1);
+  assert.equal(ctx.pending.length, 2);
+  assert.equal(await resume(ctx), "done");
+  assert.deepEqual(ctx.sheets.writes.map((w) => w[0].updateCells.range.startRowIndex), [1, 2]);
+  assert.deepEqual(ctx.pending, []);
+});
+
+test("a failure in one queued action does not block the next", async () => {
+  const ctx = world({ cardKeys: ["card_id", "x"], failNext: new Error("boom") });
+  const one = enqueue(ctx, () => markCard(ctx, { _row: 2, card_id: "x" }, "noted"));
+  const two = enqueue(ctx, () => markCard(ctx, { _row: 2, card_id: "x" }, "ignored"));
+  await assert.rejects(one, /boom/);
+  assert.equal(await two, "done");
 });

@@ -47,8 +47,8 @@ export async function perform(ctx, action) {
     return "done";
   } catch (error) {
     if (error instanceof AuthError) {
-      ctx.pending = action;
-      ctx.onAuthNeeded();
+      ctx.pending.push(action);
+      if (ctx.pending.length === 1) ctx.onAuthNeeded();
       return "pending";
     }
     throw error;
@@ -56,7 +56,41 @@ export async function perform(ctx, action) {
 }
 
 export async function resumePending(ctx) {
-  const action = ctx.pending;
-  ctx.pending = null;
-  return action ? perform(ctx, action) : null;
+  const queued = ctx.pending.splice(0);
+  let outcome = null;
+  let failure = null;
+  for (const [i, action] of queued.entries()) {
+    try {
+      outcome = await perform(ctx, action);
+    } catch (error) {
+      failure ??= error;
+      continue;
+    }
+    if (outcome === "pending") {
+      ctx.pending.push(...queued.slice(i + 1));
+      break;
+    }
+  }
+  if (failure) throw failure;
+  return outcome;
+}
+
+function chain(ctx, run) {
+  const result = (ctx.queue ?? Promise.resolve()).then(run);
+  ctx.queue = result.catch(() => {});
+  return result;
+}
+
+export function enqueue(ctx, action) {
+  return chain(ctx, () => {
+    if (ctx.pending.length) {
+      ctx.pending.push(action);
+      return "pending";
+    }
+    return perform(ctx, action);
+  });
+}
+
+export function resume(ctx) {
+  return chain(ctx, () => resumePending(ctx));
 }

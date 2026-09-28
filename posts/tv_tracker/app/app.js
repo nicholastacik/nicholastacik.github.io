@@ -1,7 +1,7 @@
 import { CONFIG } from "./config.js";
 import { Auth } from "./auth.js";
 import { AuthError, ForbiddenError, SheetsClient } from "./sheets.js";
-import { StaleError, markCard, perform, resumePending, trackShow, untrackShow } from "./actions.js";
+import { StaleError, enqueue, markCard, resume, trackShow, untrackShow } from "./actions.js";
 import { searchShows } from "./tmdb.js";
 import { activeShows, dayLabel, domain, safeUrl, scheduleDays, scheduleHeader, torontoDate, visibleCards } from "./state.js";
 
@@ -22,7 +22,7 @@ const ctx = {
   sheets,
   nowIso: () => new Date().toISOString(),
   today: () => torontoDate(),
-  pending: null,
+  pending: [],
   onAuthNeeded: () => {
     auth.expire();
     showGate("Your Google session expired. Reconnect to save.", "Reconnect Google");
@@ -105,7 +105,7 @@ async function failed(error) {
 
 async function write(action, undo) {
   try {
-    if ((await perform(ctx, action)) === "done") await load();
+    if ((await enqueue(ctx, action)) === "done") await load();
   } catch (error) {
     undo();
     render();
@@ -306,9 +306,9 @@ $("connect").addEventListener("click", async () => {
     return;
   }
   $("gate").hidden = true;
-  if (ctx.pending) {
+  if (ctx.pending.length) {
     try {
-      await resumePending(ctx);
+      await resume(ctx);
     } catch (error) {
       await failed(error);
     }
