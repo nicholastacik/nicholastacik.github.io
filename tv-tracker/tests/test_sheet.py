@@ -1,5 +1,6 @@
 from fakes import FakeSpreadsheet, get_cell, make_spreadsheet
-from job.sheet import HEADERS, Sheet, Update, column_letter
+from job.sheet import HEADERS, Sheet, Update, column_letter, parse_rows
+from job.state import truthy
 
 TRACKED = {
     "tmdb_id": 1,
@@ -82,3 +83,23 @@ def test_ensure_tabs_creates_missing_tabs_and_writes_headers():
     sp = FakeSpreadsheet({"Tracked": []})
     assert Sheet(sp).ensure_tabs() == ["Cards", "Schedule", "Meta"]
     assert all(sp.grid[tab][0] == header for tab, header in HEADERS.items())
+
+
+def test_reads_are_unformatted_so_locale_cannot_change_values():
+    sp = make_spreadsheet(Tracked=[TRACKED])
+    sheet = Sheet(sp)
+    sheet.read_all()
+    sheet.write([Update("Tracked", 1, {"tvmaze_id": 5})], {})
+    assert sp.get_params == [{"valueRenderOption": "UNFORMATTED_VALUE"}] * 2
+
+
+def test_parse_rows_stringifies_unformatted_values():
+    [row] = parse_rows("Tracked", [HEADERS["Tracked"], [95396, "", "Name", 2020, "", "2026-09-20", "import", True]])
+    assert (row["tmdb_id"], row["first_air_year"], row["active"]) == ("95396", "2020", "True")
+    assert truthy(row["active"])
+
+
+def test_new_tabs_have_room_to_grow():
+    sp = FakeSpreadsheet({"Tracked": []})
+    Sheet(sp).ensure_tabs()
+    assert all(rows >= 10000 for _, rows, _ in sp.added)

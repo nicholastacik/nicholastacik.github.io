@@ -41,6 +41,8 @@ HEADERS = {
     "Meta": ["key", "value"],
 }
 
+UNFORMATTED = {"valueRenderOption": "UNFORMATTED_VALUE"}
+
 
 @dataclass
 class Update:
@@ -64,7 +66,8 @@ def _last_column(tab: str) -> str:
 def parse_rows(tab: str, values: list[list[str]]) -> list[dict]:
     header = HEADERS[tab]
     rows = []
-    for number, raw in enumerate(values[1:], start=2):
+    for number, cells in enumerate(values[1:], start=2):
+        raw = [str(cell) for cell in cells]
         if not any(raw):
             continue
         row = dict(zip(header, raw + [""] * (len(header) - len(raw))))
@@ -94,7 +97,7 @@ class Sheet:
     def read_all(self) -> dict[str, list[dict]]:
         tabs = list(HEADERS)
         response = self.spreadsheet.values_batch_get(
-            [f"{tab}!A:{_last_column(tab)}" for tab in tabs]
+            [f"{tab}!A:{_last_column(tab)}" for tab in tabs], params=UNFORMATTED
         )
         return {
             tab: parse_rows(tab, vr.get("values", []))
@@ -107,9 +110,11 @@ class Sheet:
         )
         if not tabs:
             return
-        response = self.spreadsheet.values_batch_get([f"{tab}!A:A" for tab in tabs])
+        response = self.spreadsheet.values_batch_get(
+            [f"{tab}!A:A" for tab in tabs], params=UNFORMATTED
+        )
         keys = {
-            tab: [row[0] if row else "" for row in vr.get("values", [])]
+            tab: [str(row[0]) if row else "" for row in vr.get("values", [])]
             for tab, vr in zip(tabs, response["valueRanges"])
         }
         data = []
@@ -147,7 +152,9 @@ class Sheet:
         existing = {worksheet.title for worksheet in self.spreadsheet.worksheets()}
         created = [tab for tab in HEADERS if tab not in existing]
         for tab in created:
-            self.spreadsheet.add_worksheet(title=tab, rows=1000, cols=len(HEADERS[tab]))
+            self.spreadsheet.add_worksheet(
+                title=tab, rows=10000, cols=len(HEADERS[tab])
+            )
         self.spreadsheet.values_batch_update(
             {
                 "valueInputOption": "RAW",

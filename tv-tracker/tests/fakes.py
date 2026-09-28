@@ -41,6 +41,7 @@ class FakeSpreadsheet:
         return [NS(title=tab) for tab in self.grid]
 
     def add_worksheet(self, title, rows, cols):
+        self.added = getattr(self, "added", []) + [(title, rows, cols)]
         self.grid[title] = []
 
     def _parse(self, a1: str):
@@ -56,6 +57,7 @@ class FakeSpreadsheet:
         return grid[number - 1]
 
     def values_batch_get(self, ranges, params=None):
+        self.get_params = getattr(self, "get_params", []) + [params]
         out = []
         for a1 in ranges:
             tab, r1, c1, c2 = self._parse(a1)
