@@ -29,6 +29,9 @@ jobs:
       - name: TV tracker tests
         run: uv run --frozen --group tv-tracker python -m pytest tv-tracker/tests -q
 
+      - name: TV tracker app tests
+        run: node --test posts/tv_tracker/app/*.test.js
+
       - name: JS unit tests (pure scheduler)
         run: node --test jeopardy/analysis/practice.test.js
 

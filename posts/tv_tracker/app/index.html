@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#14161a" />
+    <title>TV Tracker</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://accounts.google.com/gsi/client" async></script>
+    <script type="module" src="app.js"></script>
+  </head>
+  <body>
+    <header class="top">
+      <h1>TV Tracker</h1>
+      <button id="refresh" class="icon" aria-label="Refresh">↻</button>
+    </header>
+    <main>
+      <section id="view-feed" class="view">
+        <p id="feed-empty" class="empty" hidden>All caught up.</p>
+        <ul id="feed" class="cards"></ul>
+      </section>
+      <section id="view-week" class="view" hidden>
+        <p id="week-status" class="status"></p>
+        <div id="week"></div>
+      </section>
+      <section id="view-shows" class="view" hidden>
+        <input id="search" type="search" placeholder="Search to track a show" autocomplete="off" />
+        <ul id="results" class="shows"></ul>
+        <h2>Tracking</h2>
+        <ul id="tracked" class="shows"></ul>
+      </section>
+    </main>
+    <nav class="tabs">
+      <button data-view="feed" class="active">Feed</button>
+      <button data-view="week">This Week</button>
+      <button data-view="shows">Shows</button>
+    </nav>
+    <div id="gate" class="gate" hidden>
+      <div class="gate-box">
+        <h2>TV Tracker</h2>
+        <p id="gate-text"></p>
+        <button id="connect" class="primary">Connect Google</button>
+      </div>
+    </div>
+    <div id="toast" class="toast" role="status" hidden></div>
+  </body>
+</html>
