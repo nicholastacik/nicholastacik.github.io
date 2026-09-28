@@ -1,9 +1,13 @@
 import argparse
 import json
+import sys
 from datetime import datetime
 from pathlib import Path
 
 from job import config, llm, validate
+from job.daily import run_daily
+from job.setup import import_rows
+from job.sheet import Sheet
 from job.steps import run_news, run_suggestions
 from job.tmdb import Tmdb
 from job.tvmaze import Tvmaze, eastern, next_airing
@@ -47,17 +51,44 @@ def print_dropped(dropped: list[str]) -> None:
         print(f"  dropped: {reason}")
 
 
-def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(prog="job")
-    parser.add_argument("--dry-run", action="store_true")
-    parser.add_argument("--shows", type=Path, default=Path("shows.example.json"))
-    parser.add_argument(
-        "--skip", action="append", choices=["facts", "suggestions", "news"], default=[]
-    )
-    args = parser.parse_args(argv)
-    if not args.dry_run:
-        parser.error("only --dry-run exists until the Sheet is wired up (Plan 2)")
+def open_sheet() -> Sheet:
+    return Sheet.open(config.service_account_info(), config.sheet_id())
 
+
+def setup(shows_path: Path) -> None:
+    sheet = open_sheet()
+    print(f"created tabs: {sheet.ensure_tabs() or 'none'}")
+    tracked = json.loads(shows_path.read_text())["tracked"]
+    rows = import_rows(
+        tracked,
+        sheet.read_all()["Tracked"],
+        Tmdb(config.tmdb_token()),
+        datetime.now(config.TZ),
+    )
+    sheet.write([], {"Tracked": rows})
+    print(f"imported {len(rows)} show(s)")
+
+
+def run() -> None:
+    from openai import OpenAI
+
+    report = run_daily(
+        open_sheet(),
+        Tmdb(config.tmdb_token()),
+        Tvmaze(),
+        OpenAI(),
+        validate.fetch_page,
+        datetime.now(config.TZ),
+    )
+    print(f"appended {report.appended} card(s), updated {report.updated} cell group(s)")
+    if not report.ok:
+        print(
+            f"failed shows: {report.failed_shows}; failed steps: {report.failed_steps}"
+        )
+        sys.exit(1)
+
+
+def dry_run(args) -> None:
     from openai import OpenAI
 
     shows = json.loads(args.shows.read_text())
@@ -101,6 +132,23 @@ def main(argv: list[str] | None = None) -> None:
             print_dropped(dropped)
             print(f"  sources returned by search: {len(result.sources)}")
             print_usage(result)
+
+
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(prog="job")
+    parser.add_argument("command", nargs="?", choices=["run", "setup"], default="run")
+    parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--shows", type=Path, default=Path("shows.example.json"))
+    parser.add_argument(
+        "--skip", action="append", choices=["facts", "suggestions", "news"], default=[]
+    )
+    args = parser.parse_args(argv)
+    if args.command == "setup":
+        setup(args.shows)
+    elif args.dry_run:
+        dry_run(args)
+    else:
+        run()
 
 
 if __name__ == "__main__":

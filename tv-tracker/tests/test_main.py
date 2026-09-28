@@ -20,9 +20,9 @@ def client_returning(payload, calls):
     return NS(responses=NS(create=create))
 
 
-def test_requires_dry_run_flag():
+def test_rejects_unknown_command():
     with pytest.raises(SystemExit):
-        main([])
+        main(["bogus"])
 
 
 def test_news_skipped_when_nothing_tracked():
