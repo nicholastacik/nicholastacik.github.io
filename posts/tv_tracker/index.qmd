@@ -1,0 +1,198 @@
+---
+title: "A TV Tracker That Updates Itself"
+description: "A daily job that asks TV databases for facts and an LLM for taste, a Google Sheet as the only database, and a two-person web app with no backend."
+date: "2026-09-28"
+categories: [AI, projects, automation]
+draft: true
+---
+
+My wife and I watch a lot of the same shows, and we're bad at keeping up with them. We miss that a
+new season started, or that a finale aired last week, and every so often we'd like a suggestion that isn't
+just "more of the same." I wanted something that would check every morning and hand us a short
+stack of cards: *new episode*, *season date announced*, *you might like this*, *news about a show you
+watch*. We tap **Noted** and the card goes away.
+
+The app is private: it only works for our two Google accounts. So this post is screenshots
+and a write-up of how it's built, and of what went wrong along the way.
+
+<!-- TODO(screenshot): Feed view on a phone, 3-4 cards visible -->
+
+## The first plan, and why it changed
+
+The original idea was simple: have ChatGPT do a daily web search about our shows and write what it
+found into a spreadsheet. Then an app reads the spreadsheet.
+
+The problem showed up as soon as I wrote down the cards I wanted. *"New episode of {show} released on
+{date}, {title}, {IMDb link}"* is all specifics. Titles, air dates, air times, links and poster
+images are exactly what a web-searching LLM gets slightly wrong, and a wrong air date is worse than no
+air date. Structured TV databases, though, have all of it for free:
+
+- **TMDB** has episodes, season air dates, posters, IMDb IDs and a "next episode to air".
+- **TVmaze** has the actual broadcast schedule, with air times, including streaming drop dates.
+
+So the design became a hybrid. **APIs for facts, the LLM for taste.** The LLM does two jobs a
+database can't:
+
+- **Suggestions:** shows we might like, given what we track and what we've rejected.
+- **News:** renewals, cancellations, trailers and casting news, often before the databases catch up.
+
+## How it fits together
+
+```{mermaid}
+flowchart LR
+  A[GitHub Actions<br/>6 am daily] --> J[Python job]
+  J -->|facts| T[(TMDB / TVmaze)]
+  J -->|suggestions + news| O[OpenAI<br/>web search]
+  J -->|append cards,<br/>rewrite schedule| S[(Google Sheet)]
+  P[Web app<br/>on GitHub Pages] <-->|read cards,<br/>write Noted / Track| S
+```
+
+There are two programs, and they never talk to each other. The Sheet is the whole interface between
+them:
+
+- **The job**, a Python script on a GitHub Actions cron, adds rows and rewrites the schedule.
+- **The app**, a static page, reads the Sheet and flips a `status` cell when you tap a button.
+
+## A spreadsheet as a database
+
+Using a Google Sheet as the only datastore is either a great idea or a terrible one, depending on how
+disciplined you are about it. It's great because you can open it and *see* the state, fix a typo by
+hand, and there's no server to run. It's terrible because it has no transactions, no locks, and nothing
+stops two writers from stepping on each other.
+
+What made it work was a few rules:
+
+- **Rows are never deleted or reordered.** Untracking a show sets `active = FALSE` instead of
+  deleting the row, so a row number read a minute ago still points at the same row.
+- **Every column has exactly one writer.** The job writes card content (titles, dates, images). The
+  app writes `status`. Early on I had the job moving season cards to a `superseded` status. A design
+  review pointed out that if you tapped Noted between the job's read and its write, the job would
+  overwrite your tap. The fix was a separate job-owned `current` column. The feed shows a card
+  only when `status = new` *and* `current = TRUE`, so neither writer ever touches the other's cell.
+- **Card IDs are deterministic**, e.g. `ep:{show}:S02E05` or `season:{show}:3:2026-12-01`, and the job
+  never appends an ID that already exists. Running the job twice in one day is a no-op. The first
+  GitHub Actions run, right after a local one, appended zero cards, which is exactly what you want.
+
+Putting the date in the season card's ID turned out nicely. If a premiere date moves, that's a new ID,
+so a new card, and the old card goes `current = FALSE`. If the date moves *back*, the original card
+becomes current again.
+
+## The LLM proposes, the code confirms
+
+Nothing the LLM says reaches the Sheet without being checked by ordinary code.
+
+**Suggestions are confirmed against TMDB.** The model returns just a title, a year and a one-line
+reason. The job searches TMDB for that title and year, and only a real match becomes a card. The ID,
+poster and link all come from TMDB, never from the model. A made-up show simply fails the lookup and
+disappears.
+
+**News can't be confirmed the same way**, since there's no database of TV news to check against. So it
+gets a weaker, explicit trust level: *cited, not confirmed*:
+
+1. The article URL must be one the web search tool **actually returned**. The OpenAI Responses API
+   will list the sources it retrieved if you ask (`include: ["web_search_call.action.sources"]`).
+2. The job fetches the page and reads its own publish date from the metadata. If that date falls
+   outside the last 7 days, the item is dropped.
+3. The card always shows the source's domain, so we can judge it ourselves.
+
+```python
+elif key not in allowed:
+    dropped.append(f"{headline}: URL not among search sources")
+elif (html := fetch(url)) is None:
+    dropped.append(f"{headline}: page unreachable")
+elif not cutoff <= published <= today:
+    dropped.append(f"{headline}: published {published}, outside window")
+```
+
+## Debugging an empty news feed
+
+Before building any of the Sheet or app plumbing, I wrote a `--dry-run` that runs the two LLM calls
+against a hand-written list of shows and prints everything, including what got dropped and why.
+Suggestions were good from the first run. News came back **empty**, every time.
+
+The instinct is to start rewording the prompt. It's more useful to find out *why* first. I asked the
+API for the model's reasoning summaries (`reasoning: {"summary": "auto"}`), printed every search query
+it ran, and found four separate problems, each needing a different fix:
+
+1. **My sample list was actually quiet.** One show had ended, one had been renewed a year earlier, and one
+   was between seasons. For those three, "no news this week" was the right answer. I'd assumed a month
+   must have *something*, and it didn't.
+2. **The prompt told the model to self-filter.** It said "an empty list is a good answer", and asked for
+   news "published in the last 7 days". So when the model found relevant articles but couldn't confirm
+   their exact dates from the search snippets, it played safe and returned nothing. But the code already
+   checks the date from the page itself. The fix was to tell the model to *propose* everything that might
+   qualify, with its best-guess date, and let the code decide.
+3. **It made up the source URL.** It read a story on one site, then cited a Variety URL it had never
+   retrieved, presumably because the prompt asked for "the original report where possible". The source
+   check dropped it, which was correct. The prompt now says to use only URLs from the search results.
+4. **It embedded citations in the JSON.** Suggestion reasons arrived with inline markdown links like
+   `([themoviedb.org](…?utm_source=openai))`. Those are now stripped in code, *and* the prompt asks for
+   plain text. The code is what guarantees it; the prompt just reduces how often the code has to.
+
+Two more observations. Identical runs gave 0 items and then 1, so a single dry run tells you very
+little. And reasoning effort mattered for news, though not for suggestions:
+
+| News call | Input tokens | Searches | Found the test story |
+|---|---|---|---|
+| effort `low` | ~30k | 4 | no |
+| effort `medium` | ~80k | 9 | yes |
+
+News now runs at `medium` and suggestions at `low`. Nearly all of those tokens are the search results
+the tool pulls in, not my prompt.
+
+## Auth without a backend
+
+The app is a static page on GitHub Pages, with no server of mine behind it. It signs in with Google
+(the token flow from Google Identity Services) and calls the Sheets API directly from the browser,
+using your own token.
+
+That means **the Sheet's sharing settings are the access control.** The Sheet is shared with exactly
+three accounts: mine, my wife's, and the job's service account. Anyone can load the page and even sign
+in, but the first read returns a 403 and they see "This app is private". There's nothing to protect
+in the page itself, because the data isn't in the page.
+
+Two surprises here:
+
+- **Google's "Testing" mode expires consent every 7 days.** I'd planned to use its test-user list as a
+  free allowlist, but a weekly re-consent screen is the kind of friction that makes you stop using a
+  thing. Publishing the OAuth app to Production *without* verification avoids that. The costs are a
+  one-time "Google hasn't verified this app" screen, and filling in a home page, a privacy policy and an
+  authorized domain before Google lets you publish.
+- **A wrong-account sign-in was a dead end.** The final code review spotted it. The app saved the token
+  so you wouldn't have to sign in on every visit, but if you'd signed in with an account that didn't
+  have the Sheet, every reload reused that token, got a 403, and showed "private" for an hour. Now a
+  403 clears the saved token and offers "Use another account".
+
+<!-- TODO(screenshot): This Week view -->
+<!-- TODO(screenshot): Shows tab with a search result -->
+
+## What the reviews caught
+
+I had a fresh reviewer read each piece before it shipped. Almost everything they caught was a
+mismatch between my code and the real world, exactly where the fake spreadsheet in my tests couldn't
+help:
+
+- **The Sheet's locale.** Reading cells "as displayed" returns booleans in the spreadsheet's language.
+  A Sheet created from a French-Canadian account shows `VRAI`/`FAUX`, so every show would have looked
+  inactive. The job would have processed nothing, reported success, and exited cleanly. Both the job
+  and the app now read unformatted values.
+- **Public logs.** A GitHub Pages repo is public, so its Actions logs are too. My job printed the
+  names of any shows that failed to refresh. It now logs "show 3 of 11" and keeps the names in the
+  Sheet's private status tab.
+- **A schedule special that TVmaze didn't list.** A Halloween special was in TMDB but missing from TVmaze,
+  and the schedule was built from TVmaze alone. This one came from real output rather than a review,
+  but it was the same kind of gap. The schedule now falls back to TMDB's next episode.
+
+## Cost
+
+Per day, about 20k input tokens and 2 searches for suggestions, plus about 70–80k input tokens and 8–9
+searches for news. Everything else is free: TMDB, TVmaze, GitHub Actions and Pages, and the Sheets API.
+
+<!-- TODO: add the actual daily dollar figure from the OpenAI usage dashboard after a week -->
+
+## What's next
+
+A week of real cards will show whether news dedupe holds up over time, and whether suggestions get
+repetitive once a few have been ignored. For the next post, the interesting question is whether the
+"ignored" list actually steers the model away from *similar* shows, or only stops the exact ones we
+rejected.
