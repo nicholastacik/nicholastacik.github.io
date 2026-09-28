@@ -1,14 +1,12 @@
 from datetime import date
 
-from job.cards import new_card, parse_date
+from job.cards import EPISODE_CONTENT, new_card, parse_date
 from job.sheet import Update
 from job.state import truthy
 from job.tmdb import image_url
 
 
-def content_updates(
-    existing: dict[str, dict], facts: list[dict], fields
-) -> list[Update]:
+def episode_updates(existing: dict[str, dict], facts: list[dict]) -> list[Update]:
     updates = []
     for fact in facts:
         row = existing.get(fact["card_id"])
@@ -16,9 +14,11 @@ def content_updates(
             continue
         changed = {
             field: fact[field]
-            for field in fields
+            for field in EPISODE_CONTENT
             if str(fact[field]) != str(row[field])
         }
+        if truthy(row["current"]) != fact["released"]:
+            changed["current"] = fact["released"]
         if changed:
             updates.append(Update("Cards", fact["card_id"], changed))
     return updates

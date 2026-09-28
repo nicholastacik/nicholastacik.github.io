@@ -5,14 +5,13 @@ from datetime import date, datetime
 
 from job import config
 from job.cards import (
-    EPISODE_CONTENT,
-    episode_facts,
+    all_episode_facts,
     episode_link,
     new_card,
     seasons_to_fetch,
 )
 from job.llm_cards import llm_inputs, news_card, suggestion_card
-from job.reconcile import content_updates, reconcile_seasons
+from job.reconcile import episode_updates, reconcile_seasons
 from job.schedule import merge_schedule, schedule_rows, week_start
 from job.sheet import Update
 from job.state import active_shows
@@ -93,8 +92,9 @@ def run_daily(sheet, tmdb, tvmaze, llm_client, fetch, now: datetime) -> RunRepor
                     )
             if numbers := seasons_to_fetch(data, show.added_at, today):
                 data = tmdb.show(show.tmdb_id, numbers)
-            facts = episode_facts(show, data, today)
-            updates += content_updates(existing, facts, EPISODE_CONTENT)
+            all_facts = all_episode_facts(show, data, today)
+            updates += episode_updates(existing, all_facts)
+            facts = [fact for fact in all_facts if fact["eligible"]]
             for fact in facts:
                 if fact["card_id"] not in existing:
                     link = episode_link(

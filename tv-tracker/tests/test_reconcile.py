@@ -1,12 +1,12 @@
 from datetime import date
 
-from job.reconcile import content_updates, reconcile_seasons
+from job.reconcile import episode_updates, reconcile_seasons
 from job.sheet import Update
 
 TODAY = date(2026, 9, 27)
 
 
-def test_content_updates_only_changed_fields_of_existing_cards():
+def test_episode_updates_touch_only_changed_content_and_current():
     existing = {
         "ep:1:S01E01": {
             "card_id": "ep:1:S01E01",
@@ -14,6 +14,7 @@ def test_content_updates_only_changed_fields_of_existing_cards():
             "headline": "S01E01 · TBA",
             "date": "2026-09-27",
             "image_url": "i",
+            "current": "True",
             "status": "noted",
         }
     }
@@ -22,8 +23,9 @@ def test_content_updates_only_changed_fields_of_existing_cards():
             "card_id": "ep:1:S01E01",
             "show_name": "One",
             "headline": "S01E01 · Pilot",
-            "date": "2026-09-27",
+            "date": "2026-09-30",
             "image_url": "i",
+            "released": False,
         },
         {
             "card_id": "ep:1:S01E02",
@@ -31,11 +33,16 @@ def test_content_updates_only_changed_fields_of_existing_cards():
             "headline": "new",
             "date": "2026-09-27",
             "image_url": "i",
+            "released": True,
         },
     ]
-    assert content_updates(
-        existing, facts, ("show_name", "headline", "date", "image_url")
-    ) == [Update("Cards", "ep:1:S01E01", {"headline": "S01E01 · Pilot"})]
+    assert episode_updates(existing, facts) == [
+        Update(
+            "Cards",
+            "ep:1:S01E01",
+            {"headline": "S01E01 · Pilot", "date": "2026-09-30", "current": False},
+        )
+    ]
 
 
 def season_card(date_, current="TRUE", status="new"):

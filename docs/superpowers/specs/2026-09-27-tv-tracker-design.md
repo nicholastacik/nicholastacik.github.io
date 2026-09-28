@@ -105,8 +105,9 @@ stale read and re-read (see Writes).
 - `status`: `new` → `noted` (episode/season/news) or `tracked` / `ignored`
   (suggestion). **Written only by the app.** The job writes `new` when it
   appends a row and never touches `status` again.
-- `current`: `TRUE`/`FALSE`, **written only by the job**. Always `TRUE`
-  except season cards whose announcement is obsolete (see Season cards).
+- `current`: `TRUE`/`FALSE`, **written only by the job**. `FALSE` for season
+  cards whose announcement is obsolete (see Season cards) and for episode cards
+  whose TMDB air date moved past today or was cleared; `TRUE` otherwise.
 - `card_id` (dedupe key):
   - `ep:{tmdb}:S{ss}E{ee}`
   - `season:{tmdb}:{n}:{air_date}`

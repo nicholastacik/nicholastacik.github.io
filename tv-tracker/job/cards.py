@@ -42,7 +42,7 @@ def seasons_to_fetch(data: dict, added_at: date, today: date) -> list[int]:
     return [number for number, _ in aired if number >= first][-MAX_SEASONS:]
 
 
-def episode_facts(show: Show, data: dict, today: date) -> list[dict]:
+def all_episode_facts(show: Show, data: dict, today: date) -> list[dict]:
     show_name = data.get("name") or show.name
     poster = image_url(data.get("poster_path")) or show.poster_url
     facts = []
@@ -51,8 +51,6 @@ def episode_facts(show: Show, data: dict, today: date) -> list[dict]:
             continue
         for episode in season.get("episodes", []):
             aired = parse_date(episode.get("air_date"))
-            if aired is None or not show.added_at <= aired <= today:
-                continue
             s, e = episode["season_number"], episode["episode_number"]
             facts.append(
                 {
@@ -61,13 +59,19 @@ def episode_facts(show: Show, data: dict, today: date) -> list[dict]:
                     "tmdb_id": show.tmdb_id,
                     "show_name": show_name,
                     "headline": f"S{s:02}E{e:02} · {episode.get('name') or 'TBA'}",
-                    "date": aired.isoformat(),
+                    "date": aired.isoformat() if aired else "",
                     "image_url": image_url(episode.get("still_path")) or poster,
                     "season": s,
                     "episode": e,
+                    "eligible": aired is not None and show.added_at <= aired <= today,
+                    "released": aired is not None and aired <= today,
                 }
             )
     return facts
+
+
+def episode_facts(show: Show, data: dict, today: date) -> list[dict]:
+    return [fact for fact in all_episode_facts(show, data, today) if fact["eligible"]]
 
 
 def episode_link(

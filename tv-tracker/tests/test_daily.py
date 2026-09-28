@@ -236,8 +236,14 @@ def test_failure_logs_never_name_shows(capsys):
 def test_http_failure_logs_leak_no_urls_or_ids(capsys):
     import httpx
 
-    request = httpx.Request("GET", "https://api.themoviedb.org/3/tv/1434?append_to_response=external_ids")
-    error = httpx.HTTPStatusError("Client error '404 Not Found' for url '…/tv/1434'", request=request, response=httpx.Response(404, request=request))
+    request = httpx.Request(
+        "GET", "https://api.themoviedb.org/3/tv/1434?append_to_response=external_ids"
+    )
+    error = httpx.HTTPStatusError(
+        "Client error '404 Not Found' for url '…/tv/1434'",
+        request=request,
+        response=httpx.Response(404, request=request),
+    )
     _sp, sheet, tmdb, tvmaze, llm = world()
     tmdb.show = lambda *a, **k: (_ for _ in ()).throw(error)
     run_daily(sheet, tmdb, tvmaze, llm, lambda url: None, NOW)
@@ -245,3 +251,31 @@ def test_http_failure_logs_leak_no_urls_or_ids(capsys):
     logged = out.out + out.err
     assert "1434" not in logged and "themoviedb" not in logged
     assert "HTTPStatusError 404" in logged
+
+
+def test_postponed_or_undated_episode_corrects_existing_card_and_hides_it():
+    sp, sheet, tmdb, tvmaze, llm = world()
+    run_daily(sheet, tmdb, tvmaze, llm, lambda url: None, NOW)
+    tmdb.seasons[(1, 1)] = episodes(
+        (1, 1, "Pilot", "2026-09-01"), (1, 2, "Two (delayed)", "2026-09-30")
+    )
+    run_daily(sheet, tmdb, tvmaze, llm, lambda url: None, NOW)
+    assert get_cell(sp, "Cards", "ep:1:S01E02", "date") == "2026-09-30"
+    assert get_cell(sp, "Cards", "ep:1:S01E02", "headline") == "S01E02 · Two (delayed)"
+    assert get_cell(sp, "Cards", "ep:1:S01E02", "current") == "FALSE"
+    assert get_cell(sp, "Cards", "ep:1:S01E02", "status") == "new"
+
+    run_daily(
+        sheet,
+        tmdb,
+        tvmaze,
+        llm,
+        lambda url: None,
+        datetime(2026, 9, 30, 6, 0, tzinfo=TZ),
+    )
+    assert get_cell(sp, "Cards", "ep:1:S01E02", "current") == "TRUE"
+
+    tmdb.seasons[(1, 1)] = episodes((1, 1, "Pilot", "2026-09-01"), (1, 2, "Two", None))
+    run_daily(sheet, tmdb, tvmaze, llm, lambda url: None, NOW)
+    assert get_cell(sp, "Cards", "ep:1:S01E02", "date") == ""
+    assert get_cell(sp, "Cards", "ep:1:S01E02", "current") == "FALSE"

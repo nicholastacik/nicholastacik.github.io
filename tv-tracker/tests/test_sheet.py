@@ -95,8 +95,18 @@ def test_reads_are_unformatted_so_locale_cannot_change_values():
 
 
 def test_parse_rows_stringifies_unformatted_values():
-    [row] = parse_rows("Tracked", [HEADERS["Tracked"], [95396, "", "Name", 2020, "", "2026-09-20", "import", True]])
-    assert (row["tmdb_id"], row["first_air_year"], row["active"]) == ("95396", "2020", "True")
+    [row] = parse_rows(
+        "Tracked",
+        [
+            HEADERS["Tracked"],
+            [95396, "", "Name", 2020, "", "2026-09-20", "import", True],
+        ],
+    )
+    assert (row["tmdb_id"], row["first_air_year"], row["active"]) == (
+        "95396",
+        "2020",
+        "True",
+    )
     assert truthy(row["active"])
 
 
@@ -107,11 +117,21 @@ def test_new_tabs_have_room_to_grow():
 
 
 def test_replace_is_one_write_that_blanks_surplus_rows():
-    sp = make_spreadsheet(Schedule=[{"tmdb_id": 1, "airstamp": "a"}, {"tmdb_id": 2, "airstamp": "b"}, {"tmdb_id": 3, "airstamp": "c"}])
-    sp.values_clear = lambda a1: (_ for _ in ()).throw(AssertionError("replace must not clear separately"))
+    sp = make_spreadsheet(
+        Schedule=[
+            {"tmdb_id": 1, "airstamp": "a"},
+            {"tmdb_id": 2, "airstamp": "b"},
+            {"tmdb_id": 3, "airstamp": "c"},
+        ]
+    )
+    sp.values_clear = lambda a1: (_ for _ in ()).throw(
+        AssertionError("replace must not clear separately")
+    )
     Sheet(sp).replace("Schedule", [{"tmdb_id": 9, "airstamp": "z"}])
     assert len(sp.batch_updates) == 1
-    assert [(r["tmdb_id"], r["airstamp"]) for r in Sheet(sp).read_all()["Schedule"]] == [("9", "z")]
+    assert [
+        (r["tmdb_id"], r["airstamp"]) for r in Sheet(sp).read_all()["Schedule"]
+    ] == [("9", "z")]
 
 
 def test_failed_replace_leaves_previous_rows():
@@ -123,4 +143,6 @@ def test_failed_replace_leaves_previous_rows():
     sp.values_batch_update = broken
     with pytest.raises(RuntimeError):
         Sheet(sp).replace("Schedule", [{"tmdb_id": 9, "airstamp": "z"}])
-    assert [(r["tmdb_id"], r["airstamp"]) for r in Sheet(sp).read_all()["Schedule"]] == [("1", "a")]
+    assert [
+        (r["tmdb_id"], r["airstamp"]) for r in Sheet(sp).read_all()["Schedule"]
+    ] == [("1", "a")]
