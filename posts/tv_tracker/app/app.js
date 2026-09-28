@@ -2,7 +2,7 @@ import { CONFIG } from "./config.js";
 import { Auth } from "./auth.js";
 import { AuthError, ForbiddenError, SheetsClient } from "./sheets.js";
 import { StaleError, enqueue, markCard, resume, trackShow, untrackShow } from "./actions.js";
-import { searchShows } from "./tmdb.js";
+import { resultLabel, searchShows } from "./tmdb.js";
 import { activeShows, dayLabel, domain, safeUrl, scheduleDays, scheduleHeader, showLink, torontoDate, visibleCards } from "./state.js";
 
 const SCOPE = "https://www.googleapis.com/auth/spreadsheets";
@@ -247,7 +247,7 @@ function renderResults() {
         "li",
         {},
         poster(show.poster_url),
-        el("span", {}, link(showLink(show), show.first_air_year ? `${show.name} (${show.first_air_year})` : show.name)),
+        el("span", {}, link(showLink(show), resultLabel(show))),
         tracking.has(show.tmdb_id)
           ? el("span", { class: "tag" }, "Tracking")
           : el("button", { class: "primary", onclick: () => track(show, "search", pendingSuggestion(show.tmdb_id)) }, "Track"),
