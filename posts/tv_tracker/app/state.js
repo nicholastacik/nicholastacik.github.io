@@ -133,3 +133,68 @@ export function scheduleHeader(metaRows, today, nowMs) {
   }
   return { kind: "ok", text: `Updated ${clock(last)}` };
 }
+
+export function toCell(value) {
+  if (typeof value === "boolean") return { userEnteredValue: { boolValue: value } };
+  if (typeof value === "number") return { userEnteredValue: { numberValue: value } };
+  return { userEnteredValue: { stringValue: String(value ?? "") } };
+}
+
+function updateRow(sheetIds, tab, row, firstColumn, values) {
+  const column = HEADERS[tab].indexOf(firstColumn);
+  return {
+    updateCells: {
+      range: {
+        sheetId: sheetIds[tab],
+        startRowIndex: row - 1,
+        endRowIndex: row,
+        startColumnIndex: column,
+        endColumnIndex: column + values.length,
+      },
+      rows: [{ values: values.map(toCell) }],
+      fields: "userEnteredValue",
+    },
+  };
+}
+
+export function planCardStatus(card, status, nowIso, sheetIds) {
+  return [updateRow(sheetIds, "Cards", card._row, "status", [status, nowIso])];
+}
+
+export function planTrack({ tracked, show, source, card, today, nowIso, sheetIds }) {
+  const requests = card ? planCardStatus(card, "tracked", nowIso, sheetIds) : [];
+  const rows = tracked.filter((row) => Number(row.tmdb_id) === show.tmdb_id);
+  if (rows.length === 0) {
+    const row = {
+      tmdb_id: show.tmdb_id,
+      tvmaze_id: "",
+      name: show.name,
+      first_air_year: show.first_air_year ?? "",
+      poster_url: show.poster_url ?? "",
+      added_at: today,
+      source,
+      active: true,
+      updated_at: nowIso,
+    };
+    requests.push({
+      appendCells: {
+        sheetId: sheetIds.Tracked,
+        rows: [{ values: HEADERS.Tracked.map((column) => toCell(row[column])) }],
+        fields: "userEnteredValue",
+      },
+    });
+    return requests;
+  }
+  const wasActive = rows.some((row) => truthy(row.active));
+  for (const row of rows) {
+    if (!wasActive) requests.push(updateRow(sheetIds, "Tracked", row._row, "added_at", [today]));
+    requests.push(updateRow(sheetIds, "Tracked", row._row, "active", [true, nowIso]));
+  }
+  return requests;
+}
+
+export function planUntrack({ tracked, tmdbId, nowIso, sheetIds }) {
+  return tracked
+    .filter((row) => Number(row.tmdb_id) === tmdbId)
+    .map((row) => updateRow(sheetIds, "Tracked", row._row, "active", [false, nowIso]));
+}
