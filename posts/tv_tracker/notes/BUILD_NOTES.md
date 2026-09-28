@@ -42,3 +42,17 @@ list is private (`tv-tracker/shows.json`, gitignored).
   episode metadata updates.
 - TMDB dates vs TVmaze UTC airstamps differ by a day for evening airings;
   convert everything to America/Toronto.
+
+## Plan 2 go-live (2026-09-28)
+
+- `setup` created the four tabs and imported 11 shows; the first local run
+  appended 7 cards (1 season, 1 episode, 3 suggestions, 2 news) and backfilled
+  every TVmaze id. A special missing from TVmaze reached This Week through the
+  TMDB fallback.
+- The first GitHub Actions run (manual dispatch) was green and appended
+  nothing: card ids made the second run of the day a no-op.
+- Final review caught a locale trap: formatted reads return booleans in the
+  Sheet's language (a French Sheet says VRAI/FAUX), which would have made every
+  show look inactive while reporting success. Reads are now unformatted.
+- Actions logs are public on a Pages repo, so the job logs counts and
+  positions, never show names; names live in the private Meta tab.
