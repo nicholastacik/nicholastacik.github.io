@@ -33,7 +33,7 @@ export class Auth {
     }
   }
 
-  connect() {
+  connect(prompt = "") {
     return new Promise((resolve, reject) => {
       const client = globalThis.google.accounts.oauth2.initTokenClient({
         client_id: this.clientId,
@@ -54,7 +54,7 @@ export class Auth {
         },
         error_callback: (error) => reject(new Error(error?.type ?? "popup_closed")),
       });
-      client.requestAccessToken({ prompt: "" });
+      client.requestAccessToken({ prompt });
     });
   }
 }

@@ -64,3 +64,12 @@ test("works without storage", () => {
   assert.equal(auth.token, null);
   auth.expire();
 });
+
+test("connect can ask Google to pick a different account", async () => {
+  const seen = fakeGoogle({ access_token: "t", expires_in: 3599 });
+  const auth = new Auth(opts(memoryStorage()));
+  await auth.connect();
+  assert.deepEqual(seen.args, { prompt: "" });
+  await auth.connect("select_account");
+  assert.deepEqual(seen.args, { prompt: "select_account" });
+});

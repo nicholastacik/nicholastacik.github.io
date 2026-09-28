@@ -29,6 +29,7 @@ const ctx = {
   },
 };
 let data = null;
+let connectPrompt = "";
 let results = [];
 
 const $ = (id) => document.getElementById(id);
@@ -66,11 +67,17 @@ function toast(message) {
   }, 4000);
 }
 
-function showGate(text, button) {
+function showGate(text, button, prompt = "") {
+  connectPrompt = prompt;
   $("gate-text").textContent = text;
   $("connect").hidden = !button;
   if (button) $("connect").textContent = button;
   $("gate").hidden = false;
+}
+
+function showPrivate() {
+  auth.expire();
+  showGate("This app is private.", "Use another account", "select_account");
 }
 
 async function load() {
@@ -79,7 +86,7 @@ async function load() {
     $("gate").hidden = true;
     render();
   } catch (error) {
-    if (error instanceof ForbiddenError) showGate("This app is private.", null);
+    if (error instanceof ForbiddenError) showPrivate();
     else if (error instanceof AuthError) ctx.onAuthNeeded();
     else toast("Couldn't load the Sheet");
   }
@@ -90,7 +97,7 @@ async function failed(error) {
     toast("The Sheet changed, so it was reloaded");
     await load();
   } else if (error instanceof ForbiddenError) {
-    showGate("This app is private.", null);
+    showPrivate();
   } else {
     toast("Couldn't save");
   }
@@ -293,7 +300,7 @@ for (const button of document.querySelectorAll(".tabs button")) {
 
 $("connect").addEventListener("click", async () => {
   try {
-    await auth.connect();
+    await auth.connect(connectPrompt);
   } catch {
     toast("Google sign-in didn't finish");
     return;
