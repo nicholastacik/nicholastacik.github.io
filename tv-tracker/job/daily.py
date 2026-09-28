@@ -124,7 +124,7 @@ def run_daily(sheet, tmdb, tvmaze, llm_client, fetch, now: datetime) -> RunRepor
                 tvmaze.show_with_episodes(show.tvmaze_id) if show.tvmaze_id else {}
             )
             fresh[show.tmdb_id] = schedule_rows(show, tvmaze_show, data, today, stamp)
-        except Exception:
+        except Exception:  # noqa: BLE001 — spec: log and skip the show
             _failed(show.name)
             report.failed_shows.append(show.name)
             failed.add(show.tmdb_id)
@@ -134,7 +134,7 @@ def run_daily(sheet, tmdb, tvmaze, llm_client, fetch, now: datetime) -> RunRepor
         outcome = run_suggestions(inputs, llm_client, tmdb.search)
         for suggestion in outcome[1] if outcome else []:
             add(suggestion_card(suggestion, stamp))
-    except Exception:
+    except Exception:  # noqa: BLE001 — spec: a failed step never blocks fact cards
         _failed("suggestions")
         report.failed_steps.append("suggestions")
     try:
@@ -146,7 +146,7 @@ def run_daily(sheet, tmdb, tvmaze, llm_client, fetch, now: datetime) -> RunRepor
                     item, names[item.tmdb_id], posters.get(item.tmdb_id, ""), stamp
                 )
             )
-    except Exception:
+    except Exception:  # noqa: BLE001 — spec: a failed step never blocks fact cards
         _failed("news")
         report.failed_steps.append("news")
 

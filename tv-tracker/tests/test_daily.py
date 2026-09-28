@@ -116,7 +116,7 @@ def test_first_run_writes_cards_tvmaze_id_schedule_and_meta():
 
 
 def test_second_run_is_idempotent():
-    sp, sheet, tmdb, tvmaze, llm = world()
+    _sp, sheet, tmdb, tvmaze, llm = world()
     run_daily(sheet, tmdb, tvmaze, llm, lambda url: None, NOW)
     report = run_daily(sheet, tmdb, tvmaze, llm, lambda url: None, NOW)
     assert (report.appended, report.updated) == (0, 0)
@@ -184,7 +184,7 @@ def test_duplicate_news_in_one_run_appended_once():
     llm = FakeLlm(
         {"news": {"news": [item, item | {"headline": "Same story"}]}}, sources=[url]
     )
-    sp, sheet, tmdb, tvmaze, _ = world(llm=llm)
+    _sp, sheet, tmdb, tvmaze, _ = world(llm=llm)
     run_daily(sheet, tmdb, tvmaze, llm, lambda u: "<html></html>", NOW)
     news = [r for r in sheet.read_all()["Cards"] if r["type"] == "news"]
     assert [(r["headline"], r["show_name"], r["image_url"]) for r in news] == [
@@ -202,7 +202,7 @@ def test_news_already_in_sheet_is_not_appended_again():
         "published_date": "2026-09-27",
     }
     llm = FakeLlm({"news": {"news": [item]}}, sources=[url])
-    sp, sheet, tmdb, tvmaze, _ = world(llm=llm)
+    _sp, sheet, tmdb, tvmaze, _ = world(llm=llm)
     run_daily(sheet, tmdb, tvmaze, llm, lambda u: "<html></html>", NOW)
     report = run_daily(sheet, tmdb, tvmaze, llm, lambda u: "<html></html>", NOW)
     assert report.appended == 0
@@ -219,7 +219,7 @@ def test_empty_sheet_skips_llm_and_writes_meta():
 
 
 def test_tmdb_failure_marks_show_failed_and_skips_it():
-    sp, sheet, tmdb, tvmaze, llm = world(tmdb_broken={1})
+    _sp, sheet, tmdb, tvmaze, llm = world(tmdb_broken={1})
     report = run_daily(sheet, tmdb, tvmaze, llm, lambda url: None, NOW)
     assert report.failed_shows == ["One"]
     assert sheet.read_all()["Cards"] == []

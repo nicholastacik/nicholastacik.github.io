@@ -1,5 +1,4 @@
 from fakes import FakeSpreadsheet, get_cell, make_spreadsheet
-
 from job.sheet import HEADERS, Sheet, Update, column_letter
 
 TRACKED = {
