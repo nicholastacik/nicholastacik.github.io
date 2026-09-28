@@ -173,7 +173,7 @@ Steps, in order. Only active tracked shows are processed.
      in one call via `append_to_response=season/N,season/M,…` (TMDB allows
      up to 20).
    - Emit an episode card for each episode with
-     `added_at ≤ air_date ≤ today` (both plain dates, Eastern) whose
+     `added_at − 2 days ≤ air_date ≤ today` (the same 2-day look-back as the schedule, so an episode that aired just before you tracked the show still gets a card) (both plain dates, Eastern) whose
      `card_id` doesn't exist.
    - For existing episode cards, compare content columns with the fresh data
      and queue an update if different.

@@ -1,5 +1,6 @@
-from datetime import date
+from datetime import date, timedelta
 
+from job.schedule import DAYS_BACK
 from job.state import Show
 from job.tmdb import image_url
 
@@ -63,7 +64,8 @@ def all_episode_facts(show: Show, data: dict, today: date) -> list[dict]:
                     "image_url": image_url(episode.get("still_path")) or poster,
                     "season": s,
                     "episode": e,
-                    "eligible": aired is not None and show.added_at <= aired <= today,
+                    "eligible": aired is not None
+                    and show.added_at - timedelta(days=DAYS_BACK) <= aired <= today,
                     "released": aired is not None and aired <= today,
                 }
             )
