@@ -47,3 +47,10 @@ def test_next_airing_none_when_nothing_upcoming():
     assert (
         next_airing([{"id": 1, "airstamp": "2026-09-20T02:00:00+00:00"}], now) is None
     )
+
+
+def test_eastern_converts_utc_airstamp_to_toronto_time():
+    from job.tvmaze import eastern
+
+    assert eastern("2026-09-29T01:00:00+00:00") == "2026-09-28 21:00 EDT"
+    assert eastern("2026-12-08T17:00:00+00:00") == "2026-12-08 12:00 EST"

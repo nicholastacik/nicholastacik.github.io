@@ -5,7 +5,7 @@ from pathlib import Path
 
 from job import config, llm, validate
 from job.tmdb import Tmdb
-from job.tvmaze import Tvmaze, next_airing
+from job.tvmaze import Tvmaze, eastern, next_airing
 
 
 def run_suggestions(shows: dict, client, search):
@@ -75,7 +75,9 @@ def print_facts(tracked: list[dict], tmdb: Tmdb, tvmaze: Tvmaze, now: datetime) 
             print(
                 f"    TMDB next: {next_tmdb.get('air_date')} {next_tmdb.get('name') or ''}"
             )
-            print(f"    TVmaze next: {upcoming['airstamp'] if upcoming else None}")
+            print(
+                f"    TVmaze next: {eastern(upcoming['airstamp']) if upcoming else None}"
+            )
         except Exception as error:  # noqa: BLE001 — spec: log and skip the show
             print(f"- {show['name']}: FAILED ({error!r})")
 

@@ -2,6 +2,7 @@ from datetime import datetime
 
 import httpx
 
+from job.config import TZ
 from job.http import get_json
 
 BASE = "https://api.tvmaze.com"
@@ -32,3 +33,7 @@ def next_airing(episodes: list[dict], now: datetime) -> dict | None:
         if e.get("airstamp") and datetime.fromisoformat(e["airstamp"]) >= now
     ]
     return min(upcoming, key=lambda pair: pair[0], default=(None, None))[1]
+
+
+def eastern(airstamp: str) -> str:
+    return datetime.fromisoformat(airstamp).astimezone(TZ).strftime("%Y-%m-%d %H:%M %Z")
