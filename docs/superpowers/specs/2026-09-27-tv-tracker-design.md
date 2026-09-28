@@ -126,10 +126,13 @@ stale read and re-read (see Writes).
 
 ### `Schedule` — derived, per-show
 
-| tmdb_id | airstamp | show_name | episode_label | network | image_url | refreshed_at |
-|---|---|---|---|---|---|---|
+| tmdb_id | airstamp | show_name | episode_label | network | image_url | refreshed_at | link |
+|---|---|---|---|---|---|---|---|
 
 - `airstamp`: ISO 8601 in America/Toronto; date-only when TVmaze has no time.
+- `link`: the episode's IMDb page when TMDB has one, else the show's IMDb page,
+  else TMDB's episode page (same fallback as episode cards; a TMDB 404 for a
+  mismatched episode number falls back instead of failing the show).
 - Rewritten wholesale each run (the app never writes here, so index stability
   doesn't matter for this tab), **but per-show rows are carried forward** when
   that show's refresh fails (see Schedule).

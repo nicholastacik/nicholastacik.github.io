@@ -105,6 +105,7 @@ def test_first_run_writes_cards_tvmaze_id_schedule_and_meta():
     assert [(r["airstamp"], r["network"]) for r in schedule] == [
         ("2026-09-28T21:00-04:00", "FX")
     ]
+    assert schedule[0]["link"] == "https://www.imdb.com/title/tt1/"
     assert meta(sp) == {
         "last_run_at": "2026-09-28T06:00:00-04:00",
         "last_run_ok": "TRUE",

@@ -128,5 +128,16 @@ def test_episode_link_prefers_episode_then_show_imdb_then_tmdb():
 
 
 def test_episodes_up_to_two_days_before_tracking_still_get_cards():
-    data = {"season/3": {"episodes": [episode(3, 1, "2026-09-17"), episode(3, 2, "2026-09-18"), episode(3, 3, "2026-09-19")]}}
-    assert [f["card_id"] for f in episode_facts(SHOW, data, date(2026, 9, 28))] == ["ep:1:S03E02", "ep:1:S03E03"]
+    data = {
+        "season/3": {
+            "episodes": [
+                episode(3, 1, "2026-09-17"),
+                episode(3, 2, "2026-09-18"),
+                episode(3, 3, "2026-09-19"),
+            ]
+        }
+    }
+    assert [f["card_id"] for f in episode_facts(SHOW, data, date(2026, 9, 28))] == [
+        "ep:1:S03E02",
+        "ep:1:S03E03",
+    ]

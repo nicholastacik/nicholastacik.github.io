@@ -226,7 +226,7 @@ function renderWeek() {
                     el(
                       "div",
                       {},
-                      el("strong", {}, String(item.show_name)),
+                      el("strong", {}, link(item.link, String(item.show_name)) ?? String(item.show_name)),
                       el("p", {}, String(item.episode_label)),
                       el("p", { class: "meta" }, [item.time, item.network].filter(Boolean).join(" · ")),
                     ),

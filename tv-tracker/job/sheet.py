@@ -37,6 +37,7 @@ HEADERS = {
         "network",
         "image_url",
         "refreshed_at",
+        "link",
     ],
     "Meta": ["key", "value"],
 }

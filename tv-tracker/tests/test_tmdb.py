@@ -47,3 +47,8 @@ def test_episode_imdb():
     transport, seen = recording({"imdb_id": "tt9"})
     assert Tmdb("tok", transport=transport).episode_imdb(1, 2, 3) == "tt9"
     assert seen[0].url.path == "/3/tv/1/season/2/episode/3/external_ids"
+
+
+def test_episode_imdb_missing_episode_is_none():
+    transport = httpx.MockTransport(lambda request: httpx.Response(404))
+    assert Tmdb("tok", transport=transport).episode_imdb(1, 9, 99) is None

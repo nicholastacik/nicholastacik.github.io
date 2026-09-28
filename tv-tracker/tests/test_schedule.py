@@ -54,6 +54,7 @@ def test_rows_in_toronto_week_with_times_and_labels():
         "network": "FX",
         "image_url": "https://tvm",
         "refreshed_at": "T",
+        "link": "",
     }
 
 
@@ -144,3 +145,33 @@ def test_merge_carries_failed_shows_in_window_and_sorts():
         {"tmdb_id": "2", "airstamp": "2026-09-29", "show_name": "Two"},
         {"tmdb_id": 1, "airstamp": "2026-10-01T21:00-04:00"},
     ]
+
+
+def test_rows_get_links_from_the_lookup_by_season_and_episode():
+    seen = []
+
+    def link_for(season, number):
+        seen.append((season, number))
+        return f"https://www.imdb.com/title/tt{season}{number or 0}/"
+
+    show_json = tv(
+        ep(1, 2, "2026-09-29T01:00:00+00:00"), ep(3, None, "2026-10-01T01:00:00+00:00")
+    )
+    rows = schedule_rows(SHOW, show_json, {}, TODAY, "T", link_for)
+    assert [r["link"] for r in rows] == [
+        "https://www.imdb.com/title/tt12/",
+        "https://www.imdb.com/title/tt30/",
+    ]
+    assert seen == [(1, 2), (3, None)]
+    tmdb = {
+        "next_episode_to_air": {
+            "air_date": "2026-10-03",
+            "season_number": 1,
+            "episode_number": 7,
+            "name": "x",
+        }
+    }
+    assert (
+        schedule_rows(SHOW, {}, tmdb, TODAY, "T", link_for)[0]["link"]
+        == "https://www.imdb.com/title/tt17/"
+    )

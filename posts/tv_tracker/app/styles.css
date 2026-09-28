@@ -87,3 +87,4 @@ h2 { font-size: 1rem; margin: 20px 0 8px; }
 [hidden] { display: none !important; }
 .policy { max-width: 640px; margin: 0 auto; padding-block: 24px; line-height: 1.55; }
 .policy a { color: var(--accent); }
+.airings strong a { color: inherit; text-decoration-color: var(--line); text-underline-offset: 3px; }

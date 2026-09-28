@@ -23,7 +23,7 @@ def _label(season: int, number: int | None, name: str | None) -> str:
 
 
 def _row(
-    show: Show, airstamp: str, label: str, network: str, image: str, now: str
+    show: Show, airstamp: str, label: str, network: str, image: str, now: str, link: str
 ) -> dict:
     return {
         "tmdb_id": show.tmdb_id,
@@ -33,12 +33,14 @@ def _row(
         "network": network,
         "image_url": image,
         "refreshed_at": now,
+        "link": link,
     }
 
 
 def schedule_rows(
-    show: Show, tvmaze_show: dict, tmdb_data: dict, today: date, now: str
+    show: Show, tvmaze_show: dict, tmdb_data: dict, today: date, now: str, link_for=None
 ) -> list[dict]:
+    link_for = link_for or (lambda season, number: "")
     network = (tvmaze_show.get("network") or tvmaze_show.get("webChannel") or {}).get(
         "name", ""
     )
@@ -62,7 +64,8 @@ def schedule_rows(
             label = _label(
                 episode["season"], episode.get("number"), episode.get("name")
             )
-            rows.append(_row(show, stamp, label, network, image, now))
+            link = link_for(episode["season"], episode.get("number"))
+            rows.append(_row(show, stamp, label, network, image, now, link))
 
     upcoming = tmdb_data.get("next_episode_to_air") or {}
     if not rows and upcoming.get("air_date") and in_window(upcoming["air_date"], today):
@@ -74,7 +77,15 @@ def schedule_rows(
         )
         image = image_url(upcoming.get("still_path")) or show_image
         rows.append(
-            _row(show, upcoming["air_date"], label, network or tmdb_network, image, now)
+            _row(
+                show,
+                upcoming["air_date"],
+                label,
+                network or tmdb_network,
+                image,
+                now,
+                link_for(upcoming["season_number"], upcoming.get("episode_number")),
+            )
         )
     return rows
 

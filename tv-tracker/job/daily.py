@@ -126,7 +126,19 @@ def run_daily(sheet, tmdb, tvmaze, llm_client, fetch, now: datetime) -> RunRepor
             tvmaze_show = (
                 tvmaze.show_with_episodes(show.tvmaze_id) if show.tvmaze_id else {}
             )
-            fresh[show.tmdb_id] = schedule_rows(show, tvmaze_show, data, today, stamp)
+
+            def link_for(season, number, tmdb_id=show.tmdb_id, show_imdb=show_imdb):
+                if not number:
+                    return (
+                        f"https://www.imdb.com/title/{show_imdb}/" if show_imdb else ""
+                    )
+                return episode_link(
+                    tmdb.episode_imdb, tmdb_id, show_imdb, season, number
+                )
+
+            fresh[show.tmdb_id] = schedule_rows(
+                show, tvmaze_show, data, today, stamp, link_for
+            )
         except Exception as error:  # noqa: BLE001 — spec: log and skip the show
             _failed(f"show {number} of {len(shows)} (name in the Meta tab)", error)
             report.failed_shows.append(show.name)

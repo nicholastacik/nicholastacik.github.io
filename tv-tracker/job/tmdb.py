@@ -32,4 +32,9 @@ class Tmdb:
 
     def episode_imdb(self, tmdb_id: int, season: int, episode: int) -> str | None:
         path = f"/tv/{tmdb_id}/season/{season}/episode/{episode}/external_ids"
-        return get_json(self.client, path).get("imdb_id")
+        try:
+            return get_json(self.client, path).get("imdb_id")
+        except httpx.HTTPStatusError as error:
+            if error.response.status_code == 404:
+                return None
+            raise
