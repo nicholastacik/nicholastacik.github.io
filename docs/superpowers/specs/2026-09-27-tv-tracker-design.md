@@ -77,10 +77,10 @@ which don't reorder the underlying rows. Every row carries its key in column
 A; before writing to a cached row index, writers treat a key mismatch as a
 stale read and re-read (see Writes).
 
-### `Tracked` — app owns `active`; job owns `tvmaze_id`
+### `Tracked` — app owns `active`; job owns `tvmaze_id` and `imdb_id`
 
-| tmdb_id | tvmaze_id | name | first_air_year | poster_url | added_at | source | active | updated_at |
-|---|---|---|---|---|---|---|---|---|
+| tmdb_id | tvmaze_id | name | first_air_year | poster_url | added_at | source | active | updated_at | imdb_id |
+|---|---|---|---|---|---|---|---|---|---|
 
 - `source`: `search` or `suggestion`. `added_at`: date in America/Toronto
   (`YYYY-MM-DD`).

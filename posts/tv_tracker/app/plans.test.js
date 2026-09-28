@@ -45,6 +45,7 @@ test("planTrack appends a new show and marks the suggestion card", () => {
     str("suggestion"),
     { userEnteredValue: { boolValue: true } },
     str("T"),
+    str(""),
   ]);
 });
 

@@ -104,6 +104,7 @@ def test_first_run_writes_cards_tvmaze_id_schedule_and_meta():
     )
     assert cards["ep:1:S01E02"]["status"] == "new"
     assert get_cell(sp, "Tracked", 1, "tvmaze_id") == "11"
+    assert get_cell(sp, "Tracked", 1, "imdb_id") == "tt1"
     schedule = sheet.read_all()["Schedule"]
     assert [(r["airstamp"], r["network"]) for r in schedule] == [
         ("2026-09-28T21:00-04:00", "FX")

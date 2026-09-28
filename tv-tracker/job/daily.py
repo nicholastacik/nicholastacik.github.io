@@ -86,6 +86,8 @@ def run_daily(
                 image_url(data.get("poster_path")) or show.poster_url
             )
             show_imdb = data["external_ids"].get("imdb_id")
+            if show_imdb and show.imdb_id != show_imdb:
+                updates.append(Update("Tracked", show.tmdb_id, {"imdb_id": show_imdb}))
             if show.tvmaze_id is None and show_imdb:
                 show.tvmaze_id = tvmaze.lookup_imdb(show_imdb)
                 if show.tvmaze_id:

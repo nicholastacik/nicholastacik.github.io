@@ -14,6 +14,7 @@ class Show:
     poster_url: str
     added_at: date
     tvmaze_id: int | None
+    imdb_id: str = ""
 
 
 def _int(value: str) -> int | None:
@@ -40,6 +41,7 @@ def active_shows(rows: list[dict]) -> list[Show]:
                 row["poster_url"],
                 added_at,
                 tvmaze_id,
+                str(row.get("imdb_id", "")),
             )
         else:
             show.added_at = min(show.added_at, added_at)

@@ -59,3 +59,10 @@ def test_all_tracked_ids_includes_inactive():
     assert all_tracked_ids(
         [row(), row(tmdb_id="2", active="FALSE"), row(tmdb_id="")]
     ) == {1, 2}
+
+
+def test_active_shows_carry_imdb_id():
+    [show] = active_shows([row(imdb_id="tt0096697")])
+    assert show.imdb_id == "tt0096697"
+    [show] = active_shows([row()])
+    assert show.imdb_id == ""

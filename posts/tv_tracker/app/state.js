@@ -33,10 +33,22 @@ export function activeShows(trackedRows) {
   for (const row of trackedRows.filter(isActive)) {
     const id = Number(row.tmdb_id);
     if (!shows.has(id)) {
-      shows.set(id, { tmdb_id: id, name: String(row.name), poster_url: row.poster_url, first_air_year: row.first_air_year });
+      shows.set(id, {
+        tmdb_id: id,
+        name: String(row.name),
+        poster_url: row.poster_url,
+        first_air_year: row.first_air_year,
+        imdb_id: String(row.imdb_id ?? ""),
+      });
     }
   }
   return [...shows.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export function showLink(show) {
+  return /^tt\d+$/.test(String(show.imdb_id ?? ""))
+    ? `https://www.imdb.com/title/${show.imdb_id}/`
+    : `https://www.themoviedb.org/tv/${show.tmdb_id}`;
 }
 
 export function visibleCards(cards, trackedRows) {

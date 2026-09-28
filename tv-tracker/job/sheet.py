@@ -12,6 +12,7 @@ HEADERS = {
         "source",
         "active",
         "updated_at",
+        "imdb_id",
     ],
     "Cards": [
         "card_id",

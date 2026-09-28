@@ -3,7 +3,7 @@ import { Auth } from "./auth.js";
 import { AuthError, ForbiddenError, SheetsClient } from "./sheets.js";
 import { StaleError, enqueue, markCard, resume, trackShow, untrackShow } from "./actions.js";
 import { searchShows } from "./tmdb.js";
-import { activeShows, dayLabel, domain, safeUrl, scheduleDays, scheduleHeader, torontoDate, visibleCards } from "./state.js";
+import { activeShows, dayLabel, domain, safeUrl, scheduleDays, scheduleHeader, showLink, torontoDate, visibleCards } from "./state.js";
 
 const SCOPE = "https://www.googleapis.com/auth/spreadsheets";
 const TYPE_LABEL = { episode: "New episode", season: "Season date", news: "News", suggestion: "You might like" };
@@ -247,7 +247,7 @@ function renderResults() {
         "li",
         {},
         poster(show.poster_url),
-        el("span", {}, show.first_air_year ? `${show.name} (${show.first_air_year})` : show.name),
+        el("span", {}, link(showLink(show), show.first_air_year ? `${show.name} (${show.first_air_year})` : show.name)),
         tracking.has(show.tmdb_id)
           ? el("span", { class: "tag" }, "Tracking")
           : el("button", { class: "primary", onclick: () => track(show, "search", pendingSuggestion(show.tmdb_id)) }, "Track"),
@@ -259,7 +259,7 @@ function renderResults() {
 function renderShows() {
   $("tracked").replaceChildren(
     ...activeShows(data.Tracked).map((show) =>
-      el("li", {}, poster(show.poster_url), el("span", {}, show.name), el("button", { onclick: () => untrack(show.tmdb_id) }, "Untrack")),
+      el("li", {}, poster(show.poster_url), el("span", {}, link(showLink(show), show.name)), el("button", { onclick: () => untrack(show.tmdb_id) }, "Untrack")),
     ),
   );
   renderResults();

@@ -21,17 +21,17 @@ const client = (responses) => {
 
 test("tabRange covers each tab's columns", () => {
   assert.equal(tabRange("Cards"), "Cards!A:N");
-  assert.equal(tabRange("Tracked"), "Tracked!A:I");
+  assert.equal(tabRange("Tracked"), "Tracked!A:J");
   assert.equal(tabRange("Meta"), "Meta!A:B");
 });
 
 test("get sends unformatted batchGet with bearer token", async () => {
   const { sheets, calls } = client([{ body: { valueRanges: [{ values: [["a"]] }, {}] } }]);
-  assert.deepEqual(await sheets.get(["Cards!A:A", "Tracked!A:I"]), [[["a"]], []]);
+  assert.deepEqual(await sheets.get(["Cards!A:A", "Tracked!A:J"]), [[["a"]], []]);
   const url = new URL(calls[0].url);
   assert.equal(url.origin + url.pathname, "https://sheets.googleapis.com/v4/spreadsheets/SID/values:batchGet");
   assert.equal(url.searchParams.get("valueRenderOption"), "UNFORMATTED_VALUE");
-  assert.deepEqual(url.searchParams.getAll("ranges"), ["Cards!A:A", "Tracked!A:I"]);
+  assert.deepEqual(url.searchParams.getAll("ranges"), ["Cards!A:A", "Tracked!A:J"]);
   assert.equal(calls[0].init.headers.Authorization, "Bearer tok");
 });
 

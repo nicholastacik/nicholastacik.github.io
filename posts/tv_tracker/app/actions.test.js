@@ -57,7 +57,7 @@ test("markCard aborts with StaleError when the row moved", async () => {
 test("trackShow reads Tracked and Cards in one batchGet and writes once", async () => {
   const ctx = world({ cardKeys: ["card_id", "sugg:9"] });
   await trackShow(ctx, { tmdb_id: 9, name: "Nine", first_air_year: 2025, poster_url: "" }, "suggestion", { _row: 2, card_id: "sugg:9" });
-  assert.deepEqual(ctx.sheets.reads, [["Tracked!A:I", "Cards!A:A"]]);
+  assert.deepEqual(ctx.sheets.reads, [["Tracked!A:J", "Cards!A:A"]]);
   assert.equal(ctx.sheets.writes.length, 1);
   assert.deepEqual(ctx.sheets.writes[0].map((r) => Object.keys(r)[0]), ["updateCells", "appendCells"]);
 });

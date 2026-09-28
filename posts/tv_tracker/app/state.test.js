@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { HEADERS } from "./headers.js";
-import { activeIds, activeShows, domain, rowsFromValues, safeUrl, truthy, visibleCards } from "./state.js";
+import { activeIds, activeShows, domain, rowsFromValues, safeUrl, showLink, truthy, visibleCards } from "./state.js";
 
 test("truthy accepts booleans and any-case TRUE only", () => {
   assert.ok(truthy(true) && truthy("TRUE") && truthy("True") && truthy(" true "));
@@ -58,4 +58,12 @@ test("safeUrl allows only http(s); domain strips www", () => {
   for (const bad of ["javascript:alert(1)", "data:text/html,x", "", undefined, "//evil.com"]) assert.equal(safeUrl(bad), null);
   assert.equal(domain("https://www.deadline.com/2026/x"), "deadline.com");
   assert.equal(domain("not a url"), "");
+});
+
+test("activeShows carries imdb_id and showLink prefers IMDb then TMDB", () => {
+  const [show] = activeShows([{ tmdb_id: 456, name: "The Simpsons", active: true, imdb_id: "tt0096697" }]);
+  assert.equal(show.imdb_id, "tt0096697");
+  assert.equal(showLink(show), "https://www.imdb.com/title/tt0096697/");
+  assert.equal(showLink({ tmdb_id: 60625, imdb_id: "" }), "https://www.themoviedb.org/tv/60625");
+  assert.equal(showLink({ tmdb_id: 1, imdb_id: "not-an-id" }), "https://www.themoviedb.org/tv/1");
 });
