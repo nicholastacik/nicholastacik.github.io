@@ -98,14 +98,17 @@ def test_first_run_writes_cards_tvmaze_id_schedule_and_meta():
     assert report.ok
     cards = {r["card_id"]: r for r in sheet.read_all()["Cards"]}
     assert set(cards) == {"ep:1:S01E02", "season:1:2:2026-12-01"}
-    assert cards["ep:1:S01E02"]["link"] == "https://www.imdb.com/title/tt1/"
+    assert (
+        cards["ep:1:S01E02"]["link"]
+        == "https://www.imdb.com/title/tt1/episodes/?season=1"
+    )
     assert cards["ep:1:S01E02"]["status"] == "new"
     assert get_cell(sp, "Tracked", 1, "tvmaze_id") == "11"
     schedule = sheet.read_all()["Schedule"]
     assert [(r["airstamp"], r["network"]) for r in schedule] == [
         ("2026-09-28T21:00-04:00", "FX")
     ]
-    assert schedule[0]["link"] == "https://www.imdb.com/title/tt1/"
+    assert schedule[0]["link"] == "https://www.imdb.com/title/tt1/episodes/?season=1"
     assert meta(sp) == {
         "last_run_at": "2026-09-28T06:00:00-04:00",
         "last_run_ok": "TRUE",
@@ -280,3 +283,35 @@ def test_postponed_or_undated_episode_corrects_existing_card_and_hides_it():
     run_daily(sheet, tmdb, tvmaze, llm, lambda url: None, NOW)
     assert get_cell(sp, "Cards", "ep:1:S01E02", "date") == ""
     assert get_cell(sp, "Cards", "ep:1:S01E02", "current") == "FALSE"
+
+
+def test_schedule_links_match_tmdb_episodes_by_air_date_not_number():
+    _sp, sheet, tmdb, tvmaze, llm = world()
+    renumbered = {
+        "network": {"name": "Hulu"},
+        "_embedded": {
+            "episodes": [
+                {
+                    "season": 14,
+                    "number": 2,
+                    "name": "Two",
+                    "airstamp": "2026-09-29T01:00:00+00:00",
+                    "airtime": "21:00",
+                    "airdate": "2026-09-28",
+                },
+            ]
+        },
+    }
+    tvmaze.shows[11] = renumbered
+    looked_up = []
+
+    def episode_imdb(tmdb_id, season, episode):
+        looked_up.append((season, episode))
+        return "tt777" if (season, episode) == (1, 2) else None
+
+    tmdb.episode_imdb = episode_imdb
+    run_daily(sheet, tmdb, tvmaze, llm, lambda url: None, NOW)
+    assert (
+        sheet.read_all()["Schedule"][0]["link"] == "https://www.imdb.com/title/tt777/"
+    )
+    assert (14, 2) not in looked_up

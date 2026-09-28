@@ -127,10 +127,33 @@ def run_daily(sheet, tmdb, tvmaze, llm_client, fetch, now: datetime) -> RunRepor
                 tvmaze.show_with_episodes(show.tvmaze_id) if show.tvmaze_id else {}
             )
 
-            def link_for(season, number, tmdb_id=show.tmdb_id, show_imdb=show_imdb):
+            by_date: dict[str, list[tuple[int, int]]] = {}
+            for key, season_data in data.items():
+                if key.startswith("season/"):
+                    for ep in season_data.get("episodes", []):
+                        if ep.get("air_date"):
+                            by_date.setdefault(ep["air_date"], []).append(
+                                (ep["season_number"], ep["episode_number"])
+                            )
+
+            def link_for(
+                season,
+                number,
+                airdate,
+                tmdb_id=show.tmdb_id,
+                show_imdb=show_imdb,
+                by_date=by_date,
+            ):
+                candidates = by_date.get(airdate, [])
+                match = next((c for c in candidates if c[1] == number), None)
+                if match is None and len(candidates) == 1:
+                    match = candidates[0]
+                season, number = match or (season, number)
                 if not number:
                     return (
-                        f"https://www.imdb.com/title/{show_imdb}/" if show_imdb else ""
+                        f"https://www.imdb.com/title/{show_imdb}/episodes/?season={season}"
+                        if show_imdb
+                        else ""
                     )
                 return episode_link(
                     tmdb.episode_imdb, tmdb_id, show_imdb, season, number

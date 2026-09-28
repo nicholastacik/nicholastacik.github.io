@@ -150,7 +150,7 @@ def test_merge_carries_failed_shows_in_window_and_sorts():
 def test_rows_get_links_from_the_lookup_by_season_and_episode():
     seen = []
 
-    def link_for(season, number):
+    def link_for(season, number, airdate):
         seen.append((season, number))
         return f"https://www.imdb.com/title/tt{season}{number or 0}/"
 

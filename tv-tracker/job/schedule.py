@@ -40,7 +40,7 @@ def _row(
 def schedule_rows(
     show: Show, tvmaze_show: dict, tmdb_data: dict, today: date, now: str, link_for=None
 ) -> list[dict]:
-    link_for = link_for or (lambda season, number: "")
+    link_for = link_for or (lambda season, number, airdate: "")
     network = (tvmaze_show.get("network") or tvmaze_show.get("webChannel") or {}).get(
         "name", ""
     )
@@ -64,7 +64,8 @@ def schedule_rows(
             label = _label(
                 episode["season"], episode.get("number"), episode.get("name")
             )
-            link = link_for(episode["season"], episode.get("number"))
+            airdate = episode.get("airdate") or local.date().isoformat()
+            link = link_for(episode["season"], episode.get("number"), airdate)
             rows.append(_row(show, stamp, label, network, image, now, link))
 
     upcoming = tmdb_data.get("next_episode_to_air") or {}
@@ -84,7 +85,11 @@ def schedule_rows(
                 network or tmdb_network,
                 image,
                 now,
-                link_for(upcoming["season_number"], upcoming.get("episode_number")),
+                link_for(
+                    upcoming["season_number"],
+                    upcoming.get("episode_number"),
+                    upcoming["air_date"],
+                ),
             )
         )
     return rows

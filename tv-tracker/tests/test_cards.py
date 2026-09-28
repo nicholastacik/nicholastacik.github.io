@@ -112,14 +112,14 @@ def test_new_card_defaults():
     }
 
 
-def test_episode_link_prefers_episode_then_show_imdb_then_tmdb():
+def test_episode_link_prefers_episode_then_imdb_season_list_then_tmdb():
     assert (
         episode_link(lambda *a: "tt9", 1, "tt1", 3, 2)
         == "https://www.imdb.com/title/tt9/"
     )
     assert (
         episode_link(lambda *a: None, 1, "tt1", 3, 2)
-        == "https://www.imdb.com/title/tt1/"
+        == "https://www.imdb.com/title/tt1/episodes/?season=3"
     )
     assert (
         episode_link(lambda *a: None, 1, None, 3, 2)
