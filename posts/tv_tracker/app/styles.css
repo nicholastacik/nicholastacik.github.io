@@ -85,3 +85,5 @@ h2 { font-size: 1rem; margin: 20px 0 8px; }
   background: var(--text); color: var(--bg); padding: 10px 14px; border-radius: var(--radius); text-align: center;
 }
 [hidden] { display: none !important; }
+.policy { max-width: 640px; margin: 0 auto; padding-block: 24px; line-height: 1.55; }
+.policy a { color: var(--accent); }
