@@ -108,7 +108,7 @@ def test_first_run_writes_cards_tvmaze_id_schedule_and_meta():
     assert meta(sp) == {
         "last_run_at": "2026-09-28T06:00:00-04:00",
         "last_run_ok": "TRUE",
-        "schedule_week": "2026-09-28",
+        "schedule_from": "2026-09-26",
         "failed_shows": "",
         "failed_steps": "",
     }

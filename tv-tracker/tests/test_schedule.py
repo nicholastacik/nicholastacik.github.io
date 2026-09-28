@@ -1,9 +1,9 @@
 from datetime import date
 
-from job.schedule import in_week, merge_schedule, schedule_rows, week_start
+from job.schedule import in_window, merge_schedule, schedule_rows, window_start
 from job.state import Show
 
-TODAY = date(2026, 9, 30)  # Wednesday; week is Mon 09-28 .. Sun 10-04
+TODAY = date(2026, 9, 30)  # window is 09-28 .. 10-07
 SHOW = Show(1, "One", 2020, "https://poster", date(2026, 9, 1), 11)
 
 
@@ -27,18 +27,18 @@ def tv(*episodes, network="FX", web=None):
     }
 
 
-def test_week_bounds():
-    assert week_start(TODAY) == date(2026, 9, 28)
-    assert week_start(date(2026, 9, 28)) == date(2026, 9, 28)
-    assert in_week("2026-09-28", TODAY) and in_week("2026-10-04T23:30-04:00", TODAY)
-    assert not in_week("2026-09-27", TODAY) and not in_week("2026-10-05", TODAY)
+def test_window_is_two_days_back_through_seven_ahead():
+    assert window_start(TODAY) == date(2026, 9, 28)
+    assert in_window("2026-09-28", TODAY) and in_window("2026-10-07T23:30-04:00", TODAY)
+    assert not in_window("2026-09-27", TODAY) and not in_window("2026-10-08", TODAY)
 
 
 def test_rows_in_toronto_week_with_times_and_labels():
     show_json = tv(
         ep(1, 1, "2026-09-28T01:00:00+00:00"),  # Sun 09-27 21:00 local: last week
         ep(1, 2, "2026-09-29T01:00:00+00:00", name="Two"),  # Mon 09-28 21:00
-        ep(1, 3, "2026-10-05T01:00:00+00:00"),  # Sun 10-04 21:00: this week
+        ep(1, 3, "2026-10-05T01:00:00+00:00"),  # Sun 10-04 21:00: in window
+        ep(1, 5, "2026-10-09T01:00:00+00:00"),  # Thu 10-08 21:00: past the window
         ep(1, 4, None),
     )
     rows = schedule_rows(SHOW, show_json, {}, TODAY, "T")
@@ -131,7 +131,7 @@ def test_no_tmdb_fallback_when_tvmaze_has_rows():
     assert len(rows) == 1
 
 
-def test_merge_carries_failed_shows_in_week_and_sorts():
+def test_merge_carries_failed_shows_in_window_and_sorts():
     fresh = {1: [{"tmdb_id": 1, "airstamp": "2026-10-01T21:00-04:00"}]}
     previous = [
         {"tmdb_id": "2", "airstamp": "2026-09-29", "show_name": "Two", "_row": 2},

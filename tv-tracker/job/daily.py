@@ -12,7 +12,7 @@ from job.cards import (
 )
 from job.llm_cards import llm_inputs, news_card, suggestion_card
 from job.reconcile import episode_updates, reconcile_seasons
-from job.schedule import merge_schedule, schedule_rows, week_start
+from job.schedule import merge_schedule, schedule_rows, window_start
 from job.sheet import Update
 from job.state import active_shows
 from job.steps import run_news, run_suggestions
@@ -45,7 +45,7 @@ def meta_rows(report: RunReport, now: str, today: date) -> list[dict]:
     values = {
         "last_run_at": now,
         "last_run_ok": report.ok,
-        "schedule_week": week_start(today).isoformat(),
+        "schedule_from": window_start(today).isoformat(),
         "failed_shows": ", ".join(report.failed_shows),
         "failed_steps": ", ".join(report.failed_steps),
     }

@@ -4,14 +4,17 @@ from job.config import TZ
 from job.state import Show
 from job.tmdb import image_url
 
+DAYS_BACK = 2
+DAYS_AHEAD = 7
 
-def week_start(today: date) -> date:
-    return today - timedelta(days=today.weekday())
+
+def window_start(today: date) -> date:
+    return today - timedelta(days=DAYS_BACK)
 
 
-def in_week(stamp: str, today: date) -> bool:
-    start = week_start(today)
-    return start <= date.fromisoformat(stamp[:10]) < start + timedelta(days=7)
+def in_window(stamp: str, today: date) -> bool:
+    day = date.fromisoformat(stamp[:10])
+    return window_start(today) <= day <= today + timedelta(days=DAYS_AHEAD)
 
 
 def _label(season: int, number: int | None, name: str | None) -> str:
@@ -54,7 +57,7 @@ def schedule_rows(
             if episode.get("airtime")
             else local.date().isoformat()
         )
-        if in_week(stamp, today):
+        if in_window(stamp, today):
             image = (episode.get("image") or {}).get("medium") or show_image
             label = _label(
                 episode["season"], episode.get("number"), episode.get("name")
@@ -62,7 +65,7 @@ def schedule_rows(
             rows.append(_row(show, stamp, label, network, image, now))
 
     upcoming = tmdb_data.get("next_episode_to_air") or {}
-    if not rows and upcoming.get("air_date") and in_week(upcoming["air_date"], today):
+    if not rows and upcoming.get("air_date") and in_window(upcoming["air_date"], today):
         tmdb_network = (tmdb_data.get("networks") or [{}])[0].get("name", "")
         label = _label(
             upcoming["season_number"],
@@ -85,7 +88,7 @@ def merge_schedule(
         if row["tmdb_id"].isdigit()
         and int(row["tmdb_id"]) in failed
         and row["airstamp"]
-        and in_week(row["airstamp"], today)
+        and in_window(row["airstamp"], today)
     ]
     rows = [row for show_rows in fresh.values() for row in show_rows] + carried
     return sorted(rows, key=lambda row: row["airstamp"])
