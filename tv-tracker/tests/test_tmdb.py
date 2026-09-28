@@ -41,3 +41,9 @@ def test_image_url():
     assert image_url("/abc.jpg") == "https://image.tmdb.org/t/p/w342/abc.jpg"
     assert image_url(None) == ""
     assert image_url("") == ""
+
+
+def test_episode_imdb():
+    transport, seen = recording({"imdb_id": "tt9"})
+    assert Tmdb("tok", transport=transport).episode_imdb(1, 2, 3) == "tt9"
+    assert seen[0].url.path == "/3/tv/1/season/2/episode/3/external_ids"

@@ -29,3 +29,7 @@ class Tmdb:
 
     def search(self, title: str) -> list[dict]:
         return get_json(self.client, "/search/tv", {"query": title})["results"]
+
+    def episode_imdb(self, tmdb_id: int, season: int, episode: int) -> str | None:
+        path = f"/tv/{tmdb_id}/season/{season}/episode/{episode}/external_ids"
+        return get_json(self.client, path).get("imdb_id")
