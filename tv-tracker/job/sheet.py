@@ -2,12 +2,42 @@ import string
 from dataclasses import dataclass
 
 HEADERS = {
-    "Tracked": ["tmdb_id", "tvmaze_id", "name", "first_air_year", "poster_url", "added_at", "source", "active", "updated_at"],
-    "Cards": [
-        "card_id", "type", "tmdb_id", "show_name", "headline", "body", "date", "link",
-        "image_url", "source_url", "created_at", "current", "status", "updated_at",
+    "Tracked": [
+        "tmdb_id",
+        "tvmaze_id",
+        "name",
+        "first_air_year",
+        "poster_url",
+        "added_at",
+        "source",
+        "active",
+        "updated_at",
     ],
-    "Schedule": ["tmdb_id", "airstamp", "show_name", "episode_label", "network", "image_url", "refreshed_at"],
+    "Cards": [
+        "card_id",
+        "type",
+        "tmdb_id",
+        "show_name",
+        "headline",
+        "body",
+        "date",
+        "link",
+        "image_url",
+        "source_url",
+        "created_at",
+        "current",
+        "status",
+        "updated_at",
+    ],
+    "Schedule": [
+        "tmdb_id",
+        "airstamp",
+        "show_name",
+        "episode_label",
+        "network",
+        "image_url",
+        "refreshed_at",
+    ],
     "Meta": ["key", "value"],
 }
 
@@ -55,15 +85,26 @@ class Sheet:
     def open(cls, service_account_info: dict, sheet_id: str) -> "Sheet":
         import gspread
 
-        return cls(gspread.service_account_from_dict(service_account_info).open_by_key(sheet_id))
+        return cls(
+            gspread.service_account_from_dict(service_account_info).open_by_key(
+                sheet_id
+            )
+        )
 
     def read_all(self) -> dict[str, list[dict]]:
         tabs = list(HEADERS)
-        response = self.spreadsheet.values_batch_get([f"{tab}!A:{_last_column(tab)}" for tab in tabs])
-        return {tab: parse_rows(tab, vr.get("values", [])) for tab, vr in zip(tabs, response["valueRanges"])}
+        response = self.spreadsheet.values_batch_get(
+            [f"{tab}!A:{_last_column(tab)}" for tab in tabs]
+        )
+        return {
+            tab: parse_rows(tab, vr.get("values", []))
+            for tab, vr in zip(tabs, response["valueRanges"])
+        }
 
     def write(self, updates: list[Update], appends: dict[str, list[dict]]) -> None:
-        tabs = sorted({u.tab for u in updates} | {tab for tab, rows in appends.items() if rows})
+        tabs = sorted(
+            {u.tab for u in updates} | {tab for tab, rows in appends.items() if rows}
+        )
         if not tabs:
             return
         response = self.spreadsheet.values_batch_get([f"{tab}!A:A" for tab in tabs])
@@ -81,15 +122,25 @@ class Sheet:
                         data.append({"range": cell, "values": [[value]]})
         for tab, rows in appends.items():
             if rows:
-                data.append({"range": f"{tab}!A{len(keys[tab]) + 1}", "values": _values(tab, rows)})
+                data.append(
+                    {
+                        "range": f"{tab}!A{len(keys[tab]) + 1}",
+                        "values": _values(tab, rows),
+                    }
+                )
         if data:
-            self.spreadsheet.values_batch_update({"valueInputOption": "RAW", "data": data})
+            self.spreadsheet.values_batch_update(
+                {"valueInputOption": "RAW", "data": data}
+            )
 
     def replace(self, tab: str, rows: list[dict]) -> None:
         self.spreadsheet.values_clear(f"{tab}!A2:{_last_column(tab)}")
         if rows:
             self.spreadsheet.values_batch_update(
-                {"valueInputOption": "RAW", "data": [{"range": f"{tab}!A2", "values": _values(tab, rows)}]}
+                {
+                    "valueInputOption": "RAW",
+                    "data": [{"range": f"{tab}!A2", "values": _values(tab, rows)}],
+                }
             )
 
     def ensure_tabs(self) -> list[str]:
@@ -98,6 +149,11 @@ class Sheet:
         for tab in created:
             self.spreadsheet.add_worksheet(title=tab, rows=1000, cols=len(HEADERS[tab]))
         self.spreadsheet.values_batch_update(
-            {"valueInputOption": "RAW", "data": [{"range": f"{tab}!A1", "values": [h]} for tab, h in HEADERS.items()]}
+            {
+                "valueInputOption": "RAW",
+                "data": [
+                    {"range": f"{tab}!A1", "values": [h]} for tab, h in HEADERS.items()
+                ],
+            }
         )
         return created

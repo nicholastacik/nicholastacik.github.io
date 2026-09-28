@@ -70,7 +70,9 @@ def episode_facts(show: Show, data: dict, today: date) -> list[dict]:
     return facts
 
 
-def episode_link(lookup, tmdb_id: int, show_imdb: str | None, season: int, episode: int) -> str:
+def episode_link(
+    lookup, tmdb_id: int, show_imdb: str | None, season: int, episode: int
+) -> str:
     imdb_id = lookup(tmdb_id, season, episode) or show_imdb
     if imdb_id:
         return f"https://www.imdb.com/title/{imdb_id}/"

@@ -33,7 +33,14 @@ def active_shows(rows: list[dict]) -> list[Show]:
         tvmaze_id = _int(row["tvmaze_id"])
         show = shows.get(tmdb_id)
         if show is None:
-            shows[tmdb_id] = Show(tmdb_id, row["name"], _int(row["first_air_year"]), row["poster_url"], added_at, tvmaze_id)
+            shows[tmdb_id] = Show(
+                tmdb_id,
+                row["name"],
+                _int(row["first_air_year"]),
+                row["poster_url"],
+                added_at,
+                tvmaze_id,
+            )
         else:
             show.added_at = min(show.added_at, added_at)
             show.tvmaze_id = show.tvmaze_id or tvmaze_id
