@@ -56,3 +56,17 @@ list is private (`tv-tracker/shows.json`, gitignored).
   show look inactive while reporting success. Reads are now unformatted.
 - Actions logs are public on a Pages repo, so the job logs counts and
   positions, never show names; names live in the private Meta tab.
+
+## Plan 3 app go-live (2026-09-28)
+
+- Static ES-module app, no framework or build; 36 node tests on the pure
+  modules, DOM wiring checked by hand. A Python test pins the app's column list
+  to the job's so the two writers can't drift.
+- Publishing the OAuth app to Production needed a home page, a privacy policy
+  link and the authorized domain `nicholastacik.github.io` (a public-suffix
+  domain, so it only covers this site). The "unverified app" screen appears
+  once per account.
+- First real writes from the browser: a Noted tap changed exactly two cells;
+  a Track from search appended one Tracked row that the next job run completes.
+- Final review caught a dead end: a wrong-account sign-in cached a token that
+  kept hitting 403 for an hour. A 403 now clears it and offers another account.
