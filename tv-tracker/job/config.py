@@ -1,4 +1,6 @@
+import json
 import os
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 TZ = ZoneInfo("America/Toronto")
@@ -12,3 +14,13 @@ NEWS_EFFORT = os.environ.get("NEWS_EFFORT", "medium")
 
 def tmdb_token() -> str:
     return os.environ["TMDB_TOKEN"]
+
+
+def sheet_id() -> str:
+    return os.environ["SHEET_ID"]
+
+
+def service_account_info() -> dict:
+    if raw := os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON"):
+        return json.loads(raw)
+    return json.loads(Path(os.environ["GOOGLE_SERVICE_ACCOUNT_FILE"]).expanduser().read_text())
