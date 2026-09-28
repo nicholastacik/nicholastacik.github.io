@@ -7,14 +7,35 @@ TODAY = date(2026, 9, 27)
 
 
 def test_content_updates_only_changed_fields_of_existing_cards():
-    existing = {"ep:1:S01E01": {"card_id": "ep:1:S01E01", "show_name": "One", "headline": "S01E01 · TBA", "date": "2026-09-27", "image_url": "i", "status": "noted"}}
+    existing = {
+        "ep:1:S01E01": {
+            "card_id": "ep:1:S01E01",
+            "show_name": "One",
+            "headline": "S01E01 · TBA",
+            "date": "2026-09-27",
+            "image_url": "i",
+            "status": "noted",
+        }
+    }
     facts = [
-        {"card_id": "ep:1:S01E01", "show_name": "One", "headline": "S01E01 · Pilot", "date": "2026-09-27", "image_url": "i"},
-        {"card_id": "ep:1:S01E02", "show_name": "One", "headline": "new", "date": "2026-09-27", "image_url": "i"},
+        {
+            "card_id": "ep:1:S01E01",
+            "show_name": "One",
+            "headline": "S01E01 · Pilot",
+            "date": "2026-09-27",
+            "image_url": "i",
+        },
+        {
+            "card_id": "ep:1:S01E02",
+            "show_name": "One",
+            "headline": "new",
+            "date": "2026-09-27",
+            "image_url": "i",
+        },
     ]
-    assert content_updates(existing, facts, ("show_name", "headline", "date", "image_url")) == [
-        Update("Cards", "ep:1:S01E01", {"headline": "S01E01 · Pilot"})
-    ]
+    assert content_updates(
+        existing, facts, ("show_name", "headline", "date", "image_url")
+    ) == [Update("Cards", "ep:1:S01E01", {"headline": "S01E01 · Pilot"})]
 
 
 def season_card(date_, current="TRUE", status="new"):
@@ -22,7 +43,14 @@ def season_card(date_, current="TRUE", status="new"):
 
 
 def run(air_date, cards, seasons=None):
-    data = {"seasons": seasons if seasons is not None else [{"season_number": 1, "air_date": "2025-01-01"}, {"season_number": 2, "air_date": air_date, "poster_path": "/s2.jpg"}]}
+    data = {
+        "seasons": seasons
+        if seasons is not None
+        else [
+            {"season_number": 1, "air_date": "2025-01-01"},
+            {"season_number": 2, "air_date": air_date, "poster_path": "/s2.jpg"},
+        ]
+    }
     return reconcile_seasons(1, "One", data, cards, TODAY, "poster", "T")
 
 
@@ -31,7 +59,13 @@ def test_announced_date_appends_current_card():
     assert updates == []
     [card] = appends
     assert card["card_id"] == "season:1:2:2026-12-01"
-    assert (card["type"], card["headline"], card["date"], card["current"], card["status"]) == ("season", "Season 2 premieres", "2026-12-01", True, "new")
+    assert (
+        card["type"],
+        card["headline"],
+        card["date"],
+        card["current"],
+        card["status"],
+    ) == ("season", "Season 2 premieres", "2026-12-01", True, "new")
     assert card["link"] == "https://www.themoviedb.org/tv/1/season/2"
     assert card["image_url"] == "https://image.tmdb.org/t/p/w342/s2.jpg"
 
@@ -55,7 +89,11 @@ def test_date_changing_back_reactivates_original():
 def test_withdrawn_date_and_removed_season_hide_cards():
     _, updates = run(None, [season_card("2026-12-01")])
     assert updates == [Update("Cards", "season:1:2:2026-12-01", {"current": False})]
-    _, updates = run("x", [season_card("2026-12-01")], seasons=[{"season_number": 1, "air_date": "2025-01-01"}])
+    _, updates = run(
+        "x",
+        [season_card("2026-12-01")],
+        seasons=[{"season_number": 1, "air_date": "2025-01-01"}],
+    )
     assert updates == [Update("Cards", "season:1:2:2026-12-01", {"current": False})]
 
 

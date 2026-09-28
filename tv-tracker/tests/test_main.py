@@ -104,6 +104,27 @@ def test_news_validates_against_tracked_ids():
 
 def test_news_uses_medium_effort_and_suggestions_low():
     calls = []
-    run_news({"tracked": [SEVERANCE]}, client_returning({"news": []}, calls), lambda url: "", date(2026, 9, 27))
-    run_suggestions({"tracked": [SEVERANCE]}, client_returning({"suggestions": []}, calls), lambda t: [])
+    run_news(
+        {"tracked": [SEVERANCE]},
+        client_returning({"news": []}, calls),
+        lambda url: "",
+        date(2026, 9, 27),
+    )
+    run_suggestions(
+        {"tracked": [SEVERANCE]},
+        client_returning({"suggestions": []}, calls),
+        lambda t: [],
+    )
     assert [c["reasoning"] for c in calls] == [{"effort": "medium"}, {"effort": "low"}]
+
+
+def test_suggestions_treat_other_known_ids_as_known():
+    calls = []
+    payload = {"suggestions": [{"title": "X", "year": 2020, "reason": "r"}]}
+    x_result = [{"id": 7, "name": "X", "first_air_date": "2020-01-01"}]
+    shows = {"tracked": [SEVERANCE], "other_known_ids": [7]}
+    _, kept, dropped = run_suggestions(
+        shows, client_returning(payload, calls), lambda title: x_result
+    )
+    assert kept == []
+    assert dropped == ["X (2020): already tracked, ignored or suggested"]

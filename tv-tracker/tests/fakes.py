@@ -4,7 +4,9 @@ from types import SimpleNamespace as NS
 
 from job.sheet import HEADERS
 
-RANGE = re.compile(r"^(?P<tab>\w+)!(?P<c1>[A-Z]+)(?P<r1>\d*)(?::(?P<c2>[A-Z]+)(?P<r2>\d*))?$")
+RANGE = re.compile(
+    r"^(?P<tab>\w+)!(?P<c1>[A-Z]+)(?P<r1>\d*)(?::(?P<c2>[A-Z]+)(?P<r2>\d*))?$"
+)
 
 
 def col_index(letters: str) -> int:
@@ -29,7 +31,10 @@ def _trim(row: list[str]) -> list[str]:
 
 class FakeSpreadsheet:
     def __init__(self, tabs: dict[str, list[list]] | None = None):
-        self.grid = {tab: [[fmt(v) for v in row] for row in rows] for tab, rows in (tabs or {}).items()}
+        self.grid = {
+            tab: [[fmt(v) for v in row] for row in rows]
+            for tab, rows in (tabs or {}).items()
+        }
         self.batch_updates: list[dict] = []
 
     def worksheets(self):
@@ -104,7 +109,12 @@ def set_cell(sp: FakeSpreadsheet, tab: str, key, column: str, value) -> None:
 
 
 class FakeTmdb:
-    def __init__(self, shows: dict[int, dict], seasons: dict[tuple[int, int], dict] | None = None, broken=()):
+    def __init__(
+        self,
+        shows: dict[int, dict],
+        seasons: dict[tuple[int, int], dict] | None = None,
+        broken=(),
+    ):
         self.shows, self.seasons, self.broken = shows, seasons or {}, set(broken)
         self.calls = []
 
@@ -148,7 +158,12 @@ class FakeLlm:
         self.calls.append(name)
         if self.fail:
             raise RuntimeError("openai down")
-        output = [NS(type="web_search_call", action=NS(type="search", sources=[NS(url=u) for u in self.sources]))]
+        output = [
+            NS(
+                type="web_search_call",
+                action=NS(type="search", sources=[NS(url=u) for u in self.sources]),
+            )
+        ]
         return NS(
             output=output,
             output_text=json.dumps(self.payloads.get(name, {name: []})),

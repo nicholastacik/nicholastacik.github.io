@@ -63,6 +63,8 @@ def test_show_with_episodes_embeds_episodes():
         seen.append(request)
         return httpx.Response(200, json={"id": 5, "_embedded": {"episodes": []}})
 
-    assert Tvmaze(transport=httpx.MockTransport(handler)).show_with_episodes(5)["id"] == 5
+    assert (
+        Tvmaze(transport=httpx.MockTransport(handler)).show_with_episodes(5)["id"] == 5
+    )
     assert seen[0].url.path == "/shows/5"
     assert seen[0].url.params["embed"] == "episodes"
