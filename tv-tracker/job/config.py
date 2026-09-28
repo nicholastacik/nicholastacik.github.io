@@ -26,3 +26,7 @@ def service_account_info() -> dict:
     return json.loads(
         Path(os.environ["GOOGLE_SERVICE_ACCOUNT_FILE"]).expanduser().read_text()
     )
+
+
+def omdb_key() -> str | None:
+    return os.environ.get("OMDB_API_KEY") or None

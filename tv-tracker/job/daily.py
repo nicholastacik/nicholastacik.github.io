@@ -59,7 +59,9 @@ def _failed(what: str, error: Exception) -> None:
         traceback.print_exc()
 
 
-def run_daily(sheet, tmdb, tvmaze, llm_client, fetch, now: datetime) -> RunReport:
+def run_daily(
+    sheet, tmdb, tvmaze, llm_client, fetch, now: datetime, omdb=None
+) -> RunReport:
     today, stamp = now.date(), now.isoformat(timespec="seconds")
     state = sheet.read_all()
     cards = state["Cards"]
@@ -148,6 +150,7 @@ def run_daily(sheet, tmdb, tvmaze, llm_client, fetch, now: datetime) -> RunRepor
                 match = next((c for c in candidates if c[1] == number), None)
                 if match is None and len(candidates) == 1:
                     match = candidates[0]
+                listed_season, listed_number = season, number
                 season, number = match or (season, number)
                 if not number:
                     return (
@@ -155,9 +158,19 @@ def run_daily(sheet, tmdb, tvmaze, llm_client, fetch, now: datetime) -> RunRepor
                         if show_imdb
                         else ""
                     )
-                return episode_link(
-                    tmdb.episode_imdb, tmdb_id, show_imdb, season, number
-                )
+
+                def lookup(tmdb_id, season, number):
+                    found = tmdb.episode_imdb(tmdb_id, season, number)
+                    if found or omdb is None or not show_imdb:
+                        return found
+                    found = omdb.episode_imdb(show_imdb, season, airdate, number)
+                    if found is None and listed_season != season:
+                        found = omdb.episode_imdb(
+                            show_imdb, listed_season, airdate, listed_number
+                        )
+                    return found
+
+                return episode_link(lookup, tmdb_id, show_imdb, season, number)
 
             fresh[show.tmdb_id] = schedule_rows(
                 show, tvmaze_show, data, today, stamp, link_for

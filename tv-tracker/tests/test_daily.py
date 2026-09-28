@@ -315,3 +315,30 @@ def test_schedule_links_match_tmdb_episodes_by_air_date_not_number():
         sheet.read_all()["Schedule"][0]["link"] == "https://www.imdb.com/title/tt777/"
     )
     assert (14, 2) not in looked_up
+
+
+class FakeOmdb:
+    def __init__(self, answers):
+        self.answers, self.calls = answers, []
+
+    def episode_imdb(self, show_imdb, season, airdate, number):
+        self.calls.append((show_imdb, season, airdate, number))
+        return self.answers.get((show_imdb, season, airdate, number))
+
+
+def test_schedule_link_falls_back_to_omdb_when_tmdb_has_no_imdb_id():
+    _sp, sheet, tmdb, tvmaze, llm = world()
+    omdb = FakeOmdb({("tt1", 1, "2026-09-28", 2): "tt555"})
+    run_daily(sheet, tmdb, tvmaze, llm, lambda url: None, NOW, omdb=omdb)
+    assert (
+        sheet.read_all()["Schedule"][0]["link"] == "https://www.imdb.com/title/tt555/"
+    )
+
+
+def test_omdb_miss_keeps_the_season_list_link():
+    _sp, sheet, tmdb, tvmaze, llm = world()
+    run_daily(sheet, tmdb, tvmaze, llm, lambda url: None, NOW, omdb=FakeOmdb({}))
+    assert (
+        sheet.read_all()["Schedule"][0]["link"]
+        == "https://www.imdb.com/title/tt1/episodes/?season=1"
+    )

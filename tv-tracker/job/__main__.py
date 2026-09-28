@@ -6,6 +6,7 @@ from pathlib import Path
 
 from job import config, llm, validate
 from job.daily import run_daily
+from job.omdb import Omdb
 from job.setup import import_rows
 from job.sheet import Sheet
 from job.steps import run_news, run_suggestions
@@ -72,6 +73,7 @@ def setup(shows_path: Path) -> None:
 def run() -> None:
     from openai import OpenAI
 
+    omdb = Omdb(key) if (key := config.omdb_key()) else None
     report = run_daily(
         open_sheet(),
         Tmdb(config.tmdb_token()),
@@ -79,6 +81,7 @@ def run() -> None:
         OpenAI(),
         validate.fetch_page,
         datetime.now(config.TZ),
+        omdb=omdb,
     )
     print(f"appended {report.appended} card(s), updated {report.updated} cell group(s)")
     if not report.ok:
