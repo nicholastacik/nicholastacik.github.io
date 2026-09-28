@@ -231,3 +231,17 @@ def test_failure_logs_never_name_shows(capsys):
     output = capsys.readouterr()
     assert "One" not in output.out + output.err
     assert "FAILED" in output.out
+
+
+def test_http_failure_logs_leak_no_urls_or_ids(capsys):
+    import httpx
+
+    request = httpx.Request("GET", "https://api.themoviedb.org/3/tv/1434?append_to_response=external_ids")
+    error = httpx.HTTPStatusError("Client error '404 Not Found' for url '…/tv/1434'", request=request, response=httpx.Response(404, request=request))
+    _sp, sheet, tmdb, tvmaze, llm = world()
+    tmdb.show = lambda *a, **k: (_ for _ in ()).throw(error)
+    run_daily(sheet, tmdb, tvmaze, llm, lambda url: None, NOW)
+    out = capsys.readouterr()
+    logged = out.out + out.err
+    assert "1434" not in logged and "themoviedb" not in logged
+    assert "HTTPStatusError 404" in logged

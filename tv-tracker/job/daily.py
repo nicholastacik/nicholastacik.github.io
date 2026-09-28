@@ -1,3 +1,4 @@
+import os
 import traceback
 from dataclasses import dataclass, field
 from datetime import date, datetime
@@ -52,9 +53,11 @@ def meta_rows(report: RunReport, now: str, today: date) -> list[dict]:
     return [{"key": key, "value": value} for key, value in values.items()]
 
 
-def _failed(what: str) -> None:
-    print(f"FAILED {what}:")
-    traceback.print_exc()
+def _failed(what: str, error: Exception) -> None:
+    status = getattr(getattr(error, "response", None), "status_code", None)
+    print(f"FAILED {what}: {type(error).__name__}{f' {status}' if status else ''}")
+    if os.environ.get("TV_TRACKER_DEBUG") == "1":
+        traceback.print_exc()
 
 
 def run_daily(sheet, tmdb, tvmaze, llm_client, fetch, now: datetime) -> RunReport:
@@ -124,8 +127,8 @@ def run_daily(sheet, tmdb, tvmaze, llm_client, fetch, now: datetime) -> RunRepor
                 tvmaze.show_with_episodes(show.tvmaze_id) if show.tvmaze_id else {}
             )
             fresh[show.tmdb_id] = schedule_rows(show, tvmaze_show, data, today, stamp)
-        except Exception:  # noqa: BLE001 — spec: log and skip the show
-            _failed(f"show {number} of {len(shows)} (name in the Meta tab)")
+        except Exception as error:  # noqa: BLE001 — spec: log and skip the show
+            _failed(f"show {number} of {len(shows)} (name in the Meta tab)", error)
             report.failed_shows.append(show.name)
             failed.add(show.tmdb_id)
 
@@ -134,8 +137,8 @@ def run_daily(sheet, tmdb, tvmaze, llm_client, fetch, now: datetime) -> RunRepor
         outcome = run_suggestions(inputs, llm_client, tmdb.search)
         for suggestion in outcome[1] if outcome else []:
             add(suggestion_card(suggestion, stamp))
-    except Exception:  # noqa: BLE001 — spec: a failed step never blocks fact cards
-        _failed("suggestions")
+    except Exception as error:  # noqa: BLE001 — spec: a failed step never blocks fact cards
+        _failed("suggestions", error)
         report.failed_steps.append("suggestions")
     try:
         outcome = run_news(inputs, llm_client, fetch, today)
@@ -146,8 +149,8 @@ def run_daily(sheet, tmdb, tvmaze, llm_client, fetch, now: datetime) -> RunRepor
                     item, names[item.tmdb_id], posters.get(item.tmdb_id, ""), stamp
                 )
             )
-    except Exception:  # noqa: BLE001 — spec: a failed step never blocks fact cards
-        _failed("news")
+    except Exception as error:  # noqa: BLE001 — spec: a failed step never blocks fact cards
+        _failed("news", error)
         report.failed_steps.append("news")
 
     report.appended, report.updated = len(appends), len(updates)
