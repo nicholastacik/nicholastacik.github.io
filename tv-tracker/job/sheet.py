@@ -139,12 +139,15 @@ class Sheet:
             )
 
     def replace(self, tab: str, rows: list[dict]) -> None:
-        self.spreadsheet.values_clear(f"{tab}!A2:{_last_column(tab)}")
-        if rows:
+        response = self.spreadsheet.values_batch_get([f"{tab}!A:A"], params=UNFORMATTED)
+        existing = len(response["valueRanges"][0].get("values", [])) - 1
+        values = _values(tab, rows)
+        values += [[""] * len(HEADERS[tab])] * max(0, existing - len(values))
+        if values:
             self.spreadsheet.values_batch_update(
                 {
                     "valueInputOption": "RAW",
-                    "data": [{"range": f"{tab}!A2", "values": _values(tab, rows)}],
+                    "data": [{"range": f"{tab}!A2", "values": values}],
                 }
             )
 

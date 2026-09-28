@@ -1,3 +1,4 @@
+import pytest
 from fakes import FakeSpreadsheet, get_cell, make_spreadsheet
 from job.sheet import HEADERS, Sheet, Update, column_letter, parse_rows
 from job.state import truthy
@@ -103,3 +104,23 @@ def test_new_tabs_have_room_to_grow():
     sp = FakeSpreadsheet({"Tracked": []})
     Sheet(sp).ensure_tabs()
     assert all(rows >= 10000 for _, rows, _ in sp.added)
+
+
+def test_replace_is_one_write_that_blanks_surplus_rows():
+    sp = make_spreadsheet(Schedule=[{"tmdb_id": 1, "airstamp": "a"}, {"tmdb_id": 2, "airstamp": "b"}, {"tmdb_id": 3, "airstamp": "c"}])
+    sp.values_clear = lambda a1: (_ for _ in ()).throw(AssertionError("replace must not clear separately"))
+    Sheet(sp).replace("Schedule", [{"tmdb_id": 9, "airstamp": "z"}])
+    assert len(sp.batch_updates) == 1
+    assert [(r["tmdb_id"], r["airstamp"]) for r in Sheet(sp).read_all()["Schedule"]] == [("9", "z")]
+
+
+def test_failed_replace_leaves_previous_rows():
+    sp = make_spreadsheet(Schedule=[{"tmdb_id": 1, "airstamp": "a"}])
+
+    def broken(body):
+        raise RuntimeError("write failed")
+
+    sp.values_batch_update = broken
+    with pytest.raises(RuntimeError):
+        Sheet(sp).replace("Schedule", [{"tmdb_id": 9, "airstamp": "z"}])
+    assert [(r["tmdb_id"], r["airstamp"]) for r in Sheet(sp).read_all()["Schedule"]] == [("1", "a")]
