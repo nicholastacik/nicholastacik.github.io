@@ -25,6 +25,9 @@ class Tvmaze:
     def episodes(self, tvmaze_id: int) -> list[dict]:
         return get_json(self.client, f"/shows/{tvmaze_id}/episodes")
 
+    def show_with_episodes(self, tvmaze_id: int) -> dict:
+        return get_json(self.client, f"/shows/{tvmaze_id}", {"embed": "episodes"})
+
 
 def next_airing(episodes: list[dict], now: datetime) -> dict | None:
     upcoming = [

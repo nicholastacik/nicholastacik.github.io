@@ -54,3 +54,15 @@ def test_eastern_converts_utc_airstamp_to_toronto_time():
 
     assert eastern("2026-09-29T01:00:00+00:00") == "2026-09-28 21:00 EDT"
     assert eastern("2026-12-08T17:00:00+00:00") == "2026-12-08 12:00 EST"
+
+
+def test_show_with_episodes_embeds_episodes():
+    seen = []
+
+    def handler(request):
+        seen.append(request)
+        return httpx.Response(200, json={"id": 5, "_embedded": {"episodes": []}})
+
+    assert Tvmaze(transport=httpx.MockTransport(handler)).show_with_episodes(5)["id"] == 5
+    assert seen[0].url.path == "/shows/5"
+    assert seen[0].url.params["embed"] == "episodes"
