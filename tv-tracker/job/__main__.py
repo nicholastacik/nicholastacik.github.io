@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 from job import config, llm, validate
-from job.daily import run_daily
+from job.daily import ran_today, run_daily
 from job.omdb import Omdb
 from job.setup import import_rows
 from job.sheet import Sheet
@@ -70,17 +70,23 @@ def setup(shows_path: Path) -> None:
     print(f"imported {len(rows)} show(s)")
 
 
-def run() -> None:
+def run(skip_if_ran_today: bool = False) -> None:
     from openai import OpenAI
+
+    sheet = open_sheet()
+    now = datetime.now(config.TZ)
+    if skip_if_ran_today and ran_today(sheet.read_all()["Meta"], now.date()):
+        print("already ran successfully today; skipping")
+        return
 
     omdb = Omdb(key) if (key := config.omdb_key()) else None
     report = run_daily(
-        open_sheet(),
+        sheet,
         Tmdb(config.tmdb_token()),
         Tvmaze(),
         OpenAI(),
         validate.fetch_page,
-        datetime.now(config.TZ),
+        now,
         omdb=omdb,
     )
     print(f"appended {report.appended} card(s), updated {report.updated} cell group(s)")
@@ -141,6 +147,7 @@ def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="job")
     parser.add_argument("command", nargs="?", choices=["run", "setup"], default="run")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--skip-if-ran-today", action="store_true")
     parser.add_argument("--shows", type=Path, default=Path("shows.example.json"))
     parser.add_argument(
         "--skip", action="append", choices=["facts", "suggestions", "news"], default=[]
@@ -151,7 +158,7 @@ def main(argv: list[str] | None = None) -> None:
     elif args.dry_run:
         dry_run(args)
     else:
-        run()
+        run(args.skip_if_ran_today)
 
 
 if __name__ == "__main__":

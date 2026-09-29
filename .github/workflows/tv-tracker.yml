@@ -2,7 +2,10 @@ name: TV tracker daily
 
 on:
   schedule:
-    - cron: "0 10 * * *"
+    # Off the top of the hour (GitHub drops/delays on-the-hour runs under load).
+    # 10:17 UTC = 6:17 am EDT; 13:47 UTC is a backup that skips if 10:17 succeeded.
+    - cron: "17 10 * * *"
+    - cron: "47 13 * * *"
   workflow_dispatch:
 
 permissions:
@@ -30,4 +33,4 @@ jobs:
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
           SHEET_ID: ${{ secrets.SHEET_ID }}
           OMDB_API_KEY: ${{ secrets.OMDB_API_KEY }}
-        run: uv run --frozen --group tv-tracker python -m job
+        run: uv run --frozen --group tv-tracker python -m job ${{ github.event_name == 'schedule' && '--skip-if-ran-today' || '' }}

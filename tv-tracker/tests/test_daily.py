@@ -343,3 +343,32 @@ def test_omdb_miss_keeps_the_season_list_link():
         sheet.read_all()["Schedule"][0]["link"]
         == "https://www.imdb.com/title/tt1/episodes/?season=1"
     )
+
+
+def test_ran_today_only_counts_a_successful_run_on_the_same_toronto_day():
+    from datetime import date
+
+    from job.daily import ran_today
+
+    today = date(2026, 9, 29)
+
+    def meta(**values):
+        return [{"key": k, "value": v} for k, v in values.items()]
+
+    assert ran_today(
+        meta(last_run_at="2026-09-29T06:17:40-04:00", last_run_ok="True"), today
+    )
+    assert ran_today(
+        meta(last_run_at="2026-09-29T10:17:40+00:00", last_run_ok="True"), today
+    )
+    assert not ran_today(
+        meta(last_run_at="2026-09-29T06:17:40-04:00", last_run_ok="False"), today
+    )
+    assert not ran_today(
+        meta(last_run_at="2026-09-28T23:30:00-04:00", last_run_ok="True"), today
+    )
+    assert not ran_today(
+        meta(last_run_at="2026-09-29T03:30:00+00:00", last_run_ok="True"), today
+    )
+    assert not ran_today([], today)
+    assert not ran_today(meta(last_run_at="garbage", last_run_ok="True"), today)

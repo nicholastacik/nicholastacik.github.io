@@ -14,7 +14,7 @@ from job.llm_cards import llm_inputs, news_card, suggestion_card
 from job.reconcile import episode_updates, reconcile_seasons
 from job.schedule import merge_schedule, schedule_rows, window_start
 from job.sheet import Update
-from job.state import active_shows
+from job.state import active_shows, truthy
 from job.steps import run_news, run_suggestions
 from job.tmdb import image_url
 
@@ -50,6 +50,17 @@ def meta_rows(report: RunReport, now: str, today: date) -> list[dict]:
         "failed_steps": ", ".join(report.failed_steps),
     }
     return [{"key": key, "value": value} for key, value in values.items()]
+
+
+def ran_today(meta: list[dict], today: date) -> bool:
+    values = {row["key"]: row["value"] for row in meta}
+    try:
+        last = (
+            datetime.fromisoformat(values["last_run_at"]).astimezone(config.TZ).date()
+        )
+    except (KeyError, ValueError):
+        return False
+    return truthy(values.get("last_run_ok", "")) and last == today
 
 
 def _failed(what: str, error: Exception) -> None:
