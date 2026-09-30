@@ -64,7 +64,7 @@ def score_with_jev(prompt_text: str, api_key: str) -> dict:
 
 
 if __name__ == "__main__":
-    api_key = os.environ["JEVAI_API_KEY"]
+    api_key = os.environ["JEV_API_KEY"]
     all_game_ids = pd.read_parquet(CLUES, columns=["game_id"])["game_id"].unique()
     rng = __import__("numpy").random.default_rng(42)
     test_game_ids = set(rng.choice(all_game_ids, size=int(len(all_game_ids) * 0.2), replace=False))

@@ -125,5 +125,5 @@ def run_scoring(api_key: str) -> None:
 
 
 if __name__ == "__main__":
-    api_key = os.environ["JEVAI_API_KEY"]
+    api_key = os.environ["JEV_API_KEY"]
     run_scoring(api_key)
