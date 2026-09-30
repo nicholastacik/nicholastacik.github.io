@@ -1,1 +1,1 @@
-Rate the difficulty of this Jeopardy clue on a scale of 1 (very easy) to 10 (very hard). Consider how much specialized knowledge is needed to answer it correctly. Category: {category}. Clue: {clue}. Answer: {answer}. Return JSON: {{"difficulty": <int 1-10>, "confidence": <float 0-1>}}
+Rate the difficulty of this Jeopardy clue on a scale of 1 (very easy) to 10 (very hard). Consider how much specialized knowledge is needed to answer it correctly. Category: {category}. Clue: {clue}. Answer: {answer}.

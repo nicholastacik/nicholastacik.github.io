@@ -10,6 +10,7 @@ dependencies = [
     "pandas",
     "plotly>=6.8.0",
     "pyarrow>=24.0.0",
+    "pydantic-ai[typesafe]>=2.52.0",
 ]
 
 [tool.uv]

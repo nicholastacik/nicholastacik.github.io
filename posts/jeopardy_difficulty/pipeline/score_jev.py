@@ -30,17 +30,20 @@ def score_clue(jev_client, prompt_text: str) -> dict:
     return {"difficulty": difficulty, "jev_confidence": float(result["confidence"])}
 
 
-def make_jev_client(api_key: str):
-    import httpx
+def make_jev_client():
+    from pydantic import BaseModel
+    from pydantic_ai import Agent
+    from pydantic_ai.models.typesafe import TypeSafeModel
+
+    class DifficultyScore(BaseModel):
+        difficulty: int
+        confidence: float
+
+    agent = Agent(TypeSafeModel("jev-latest"), output_type=DifficultyScore)
+
     def call(prompt_text: str) -> dict:
-        resp = httpx.post(
-            "https://api.typesafe.ai/v1/completions",
-            headers={"Authorization": f"Bearer {api_key}"},
-            json={"prompt": prompt_text},
-            timeout=60.0,
-        )
-        resp.raise_for_status()
-        return resp.json()
+        result = agent.run_sync(prompt_text)
+        return {"difficulty": result.output.difficulty, "confidence": float(result.output.confidence)}
     return call
 
 
@@ -80,7 +83,7 @@ def _cleanup_checkpoint(checkpoint: Path, n_failed: int) -> None:
         print(f"  {n_failed:,} clues exhausted retries — checkpoint kept for next run")
 
 
-def run_scoring(api_key: str) -> None:
+def run_scoring() -> None:
     import hashlib
     template = PROMPT_PATH.read_text().strip()
     prompt_hash = hashlib.sha256(template.encode()).hexdigest()[:16]
@@ -92,7 +95,7 @@ def run_scoring(api_key: str) -> None:
     hash_file = OUT_PATH.with_suffix(".prompt_hash")
     rows, done_keys, _ = _load_checkpoint(checkpoint, hash_file, prompt_hash)
 
-    client = make_jev_client(api_key)
+    client = make_jev_client()
     n_failed = 0
     for i, (_, row) in enumerate(df.iterrows()):
         key = _clue_key(row)
@@ -125,5 +128,4 @@ def run_scoring(api_key: str) -> None:
 
 
 if __name__ == "__main__":
-    api_key = os.environ["JEV_API_KEY"]
-    run_scoring(api_key)
+    run_scoring()
