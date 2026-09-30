@@ -1,5 +1,4 @@
 """Batch Jev scoring for text-only clues across all game types and rounds."""
-import os
 import time
 from pathlib import Path
 
@@ -9,6 +8,23 @@ ROOT = Path(__file__).resolve().parents[3]
 CLUES_PATH = ROOT / "posts" / "jeopardy_ds" / "clues.parquet"
 PROMPT_PATH = Path(__file__).parent / "prompt.txt"
 OUT_PATH = Path(__file__).parent.parent / "jev_scores.parquet"
+
+CLUE_FORMAT = "Category: {category}. Clue: {clue}. Correct answer: {answer}."
+
+# 10 rubric levels (0–9); +1 maps to difficulty 1–10 in output.
+# Percentile-anchored: spike corr=-0.227, median=5.0 (best of 3 variants tested).
+DIFFICULTY_CRITERIA = [
+    "~90%+ of contestants answer correctly",
+    "~80% of contestants answer correctly",
+    "~70% of contestants answer correctly",
+    "~55% of contestants answer correctly",
+    "~45% of contestants answer correctly — median Jeopardy clue",
+    "~35% of contestants answer correctly",
+    "~25% of contestants answer correctly",
+    "~15% of contestants answer correctly",
+    "~8% of contestants answer correctly",
+    "~2% of contestants answer correctly",
+]
 
 
 def filter_scoreable(df: pd.DataFrame) -> pd.DataFrame:
@@ -20,30 +36,35 @@ def filter_scoreable(df: pd.DataFrame) -> pd.DataFrame:
     ].copy()
 
 
-def build_prompt(template: str, category: str, clue: str, answer: str) -> str:
-    return template.format(category=category, clue=clue, answer=answer)
+def build_prompt(category: str, clue: str, answer: str) -> str:
+    return CLUE_FORMAT.format(category=category, clue=clue, answer=answer)
 
 
-def score_clue(jev_client, prompt_text: str) -> dict:
-    result = jev_client(prompt_text)
+def score_clue(jev_client, clue_state: str) -> dict:
+    result = jev_client(clue_state)
     difficulty = max(1, min(10, int(result["difficulty"])))
     return {"difficulty": difficulty, "jev_confidence": float(result["confidence"])}
 
 
-def make_jev_client():
-    from pydantic import BaseModel
-    from pydantic_ai import Agent
-    from pydantic_ai.models.typesafe import TypeSafeModel
+def make_jev_client(instructions: str):
+    from typesafe_sdk import TypeSafeClient, Score
 
-    class DifficultyScore(BaseModel):
-        difficulty: int
-        confidence: float
+    client = TypeSafeClient()
 
-    agent = Agent(TypeSafeModel("jev-latest"), output_type=DifficultyScore)
-
-    def call(prompt_text: str) -> dict:
-        result = agent.run_sync(prompt_text)
-        return {"difficulty": result.output.difficulty, "confidence": float(result.output.confidence)}
+    def call(clue_state: str) -> dict:
+        resp = client.system_one(
+            state=clue_state,
+            questions={
+                "difficulty": Score(
+                    instructions=instructions,
+                    criteria=DIFFICULTY_CRITERIA,
+                ),
+            },
+        )
+        ans = resp.scores["difficulty"]
+        raw_score = ans.score  # float 0–9
+        difficulty = max(1, min(10, int(round(raw_score)) + 1))
+        return {"difficulty": difficulty, "confidence": ans.confidence}
     return call
 
 
@@ -85,8 +106,8 @@ def _cleanup_checkpoint(checkpoint: Path, n_failed: int) -> None:
 
 def run_scoring() -> None:
     import hashlib
-    template = PROMPT_PATH.read_text().strip()
-    prompt_hash = hashlib.sha256(template.encode()).hexdigest()[:16]
+    instructions = PROMPT_PATH.read_text().strip()
+    prompt_hash = hashlib.sha256(instructions.encode()).hexdigest()[:16]
 
     df = filter_scoreable(pd.read_parquet(CLUES_PATH))
     print(f"Scoring {len(df):,} clues...")
@@ -95,16 +116,16 @@ def run_scoring() -> None:
     hash_file = OUT_PATH.with_suffix(".prompt_hash")
     rows, done_keys, _ = _load_checkpoint(checkpoint, hash_file, prompt_hash)
 
-    client = make_jev_client()
+    client = make_jev_client(instructions)
     n_failed = 0
     for i, (_, row) in enumerate(df.iterrows()):
         key = _clue_key(row)
         if key in done_keys:
             continue
-        prompt = build_prompt(template, row["category"], row["clue"], row["answer"])
+        clue_state = build_prompt(row["category"], row["clue"], row["answer"])
         for attempt in range(3):
             try:
-                scored = score_clue(client, prompt)
+                scored = score_clue(client, clue_state)
                 break
             except Exception as e:
                 if attempt == 2:

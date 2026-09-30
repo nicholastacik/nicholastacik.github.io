@@ -8,20 +8,19 @@ from pipeline.score_jev import (
 )
 
 
-def test_build_prompt_fills_placeholders():
-    template = "Category: {category}. Clue: {clue}. Answer: {answer}."
-    result = build_prompt(template, category="SCIENCE", clue="It orbits Earth", answer="the Moon")
+def test_build_prompt_fills_clue_fields():
+    result = build_prompt(category="SCIENCE", clue="It orbits Earth", answer="the Moon")
     assert "SCIENCE" in result
     assert "It orbits Earth" in result
     assert "the Moon" in result
 
 
-def test_build_prompt_with_real_prompt_txt():
-    template = PROMPT_PATH.read_text().strip()
-    result = build_prompt(template, category="SCIENCE", clue="It orbits Earth", answer="the Moon")
-    assert "SCIENCE" in result
-    assert "It orbits Earth" in result
-    assert "the Moon" in result
+def test_build_prompt_clue_format_is_self_contained():
+    """Clue state must include all three fields without reading prompt.txt."""
+    result = build_prompt(category="HISTORY", clue="She led France", answer="Joan of Arc")
+    assert "HISTORY" in result
+    assert "She led France" in result
+    assert "Joan of Arc" in result
 
 
 def test_filter_scoreable_excludes_media():
