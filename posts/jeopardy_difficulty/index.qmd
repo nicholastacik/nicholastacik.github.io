@@ -93,7 +93,7 @@ Now the key question: does the AI's difficulty rating track with actual player p
 
 ```{python}
 #| label: fig-jev-vs-correct
-#| fig-cap: "Mean fraction correct by Jev difficulty bucket (1–10), with a linear trend. Each point is ~50k clues."
+#| fig-cap: "Mean fraction correct by Jev difficulty bucket (1–10), with a linear trend."
 bucket_corr = board.groupby("difficulty")["any_correct"].mean().reset_index()
 m, b = np.polyfit(bucket_corr["difficulty"], bucket_corr["any_correct"], 1)
 bucket_corr["trend"] = m * bucket_corr["difficulty"] + b
@@ -158,7 +158,7 @@ fig = px.bar(
     x=["Baseline (row + round)", "Baseline + Jev difficulty"],
     y=[brier(y_true, baseline_pred), brier(y_true, full_pred)],
     labels={"x": "", "y": "Brier score (lower = better)"},
-    title="Adding Jev difficulty reduces prediction error",
+    title="Brier score: baseline vs. baseline + Jev difficulty",
     color_discrete_sequence=["#636efa", "#00cc96"],
 )
 fig.update_layout(showlegend=False, margin={"t": 50})
@@ -182,11 +182,15 @@ fig.show()
 
 ```{python}
 #| label: fig-game-type
-#| fig-cap: "Distribution of Jev difficulty scores across regular, Tournament of Champions, Celebrity, and other game types."
-fig = px.violin(scored[scored["difficulty"].notna()].rename(columns={"game_type": "Game type"}),
-                x="Game type", y="difficulty", box=True,
-                title="Difficulty distribution by game type",
-                labels={"difficulty": "Jev difficulty (1–10)"})
+#| fig-cap: "Fraction of clues at each Jev difficulty level (1–10), broken out by game type."
+agg = (scored[scored["difficulty"].notna()]
+       .groupby(["game_type", "difficulty"])
+       .size().reset_index(name="count"))
+agg["pct"] = agg["count"] / agg.groupby("game_type")["count"].transform("sum")
+fig = px.bar(agg, x="difficulty", y="pct", color="game_type", barmode="group",
+             title="Difficulty distribution by game type",
+             labels={"difficulty": "Jev difficulty (1–10)", "pct": "Fraction of clues",
+                     "game_type": "Game type"})
 fig.update_layout(margin={"t": 50})
 fig.show()
 ```
@@ -197,7 +201,7 @@ Categories cluster into recognizable types — for details on the clustering met
 
 ```{python}
 #| label: fig-clusters
-#| fig-cap: "Mean Jev difficulty for the 20 most common category types. Pop culture and wordplay categories skew easier; science and literature categories skew harder."
+#| fig-cap: "Mean Jev difficulty for the 20 most common category types, ranked by volume."
 clusters_raw = pd.read_parquet(ROOT.parent / "jeopardy_ds" / "category_clusters.parquet")
 board_with_cluster = board.merge(
     clusters_raw[["game_id", "round", "category", "cluster_id"]],
@@ -219,7 +223,7 @@ fig.show()
 
 Finding a prompt that reliably produces calibrated 1–10 ratings took some trial and error. I sampled 2,000 clues stratified by board position and ran three candidate prompts through Jev, then measured each variant's correlation with the actual player outcome (`any_correct`) on those clues.
 
-The prompts varied on two dimensions: framing (general knowledge vs. Jeopardy-contestant perspective) and format (inline JSON vs. separated). The winning prompt used the contestant-perspective framing with inline JSON — it produced the strongest negative correlation between difficulty and correctness (harder = fewer correct), and its confidence scores were reasonably calibrated against disagreement between the variants.
+The prompts varied on two dimensions: framing (general knowledge vs. Jeopardy-contestant perspective) and format (inline JSON vs. separated). *(Spike results and winning prompt to be filled in after scoring runs.)*
 
 The spike sample was carved out *before* any prompt development, and those clues are excluded from the training set used in the validation above — so the prompt selection process can't leak into the test result.
 

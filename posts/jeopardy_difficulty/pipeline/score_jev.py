@@ -52,6 +52,34 @@ def _clue_key(row) -> tuple:
             -1.0 if (c is None or (isinstance(c, float) and _math.isnan(c))) else float(c))
 
 
+def _load_checkpoint(checkpoint: Path, hash_file: Path, prompt_hash: str) -> tuple:
+    """Load a scoring checkpoint. Returns (rows, done_keys, n_failed_from_checkpoint)."""
+    if not checkpoint.exists():
+        hash_file.write_text(prompt_hash)
+        return [], set(), 0
+    saved_hash = hash_file.read_text().strip() if hash_file.exists() else ""
+    if saved_hash != prompt_hash:
+        print("Prompt changed — discarding checkpoint and starting fresh")
+        checkpoint.unlink()
+        hash_file.unlink(missing_ok=True)
+        hash_file.write_text(prompt_hash)
+        return [], set(), 0
+    prev = pd.read_parquet(checkpoint)
+    all_prev = prev.to_dict(orient="records")
+    rows = [r for r in all_prev if pd.notna(r.get("difficulty"))]
+    done_keys = {_clue_key(r) for r in rows}
+    n_failed = len(all_prev) - len(rows)
+    print(f"Resuming: {len(done_keys):,} successful, {n_failed:,} failed rows will retry")
+    return rows, done_keys, n_failed
+
+
+def _cleanup_checkpoint(checkpoint: Path, n_failed: int) -> None:
+    if n_failed == 0:
+        checkpoint.unlink(missing_ok=True)
+    else:
+        print(f"  {n_failed:,} clues exhausted retries — checkpoint kept for next run")
+
+
 def run_scoring(api_key: str) -> None:
     import hashlib
     template = PROMPT_PATH.read_text().strip()
@@ -62,25 +90,7 @@ def run_scoring(api_key: str) -> None:
 
     checkpoint = OUT_PATH.with_suffix(".checkpoint.parquet")
     hash_file = OUT_PATH.with_suffix(".prompt_hash")
-    done_keys: set = set()
-    rows = []
-
-    if checkpoint.exists():
-        saved_hash = hash_file.read_text().strip() if hash_file.exists() else ""
-        if saved_hash != prompt_hash:
-            print("Prompt changed — discarding checkpoint and starting fresh")
-            checkpoint.unlink()
-            hash_file.unlink(missing_ok=True)
-            hash_file.write_text(prompt_hash)
-        else:
-            prev = pd.read_parquet(checkpoint)
-            all_prev = prev.to_dict(orient="records")
-            rows = [r for r in all_prev if pd.notna(r.get("difficulty"))]
-            done_keys = {_clue_key(r) for r in rows}
-            n_failed = len(all_prev) - len(rows)
-            print(f"Resuming: {len(done_keys):,} successful, {n_failed:,} failed rows will retry")
-    else:
-        hash_file.write_text(prompt_hash)
+    rows, done_keys, _ = _load_checkpoint(checkpoint, hash_file, prompt_hash)
 
     client = make_jev_client(api_key)
     n_failed = 0
@@ -110,10 +120,7 @@ def run_scoring(api_key: str) -> None:
 
     out = pd.DataFrame(rows)
     out.to_parquet(OUT_PATH, compression="zstd", index=False)
-    if n_failed == 0:
-        checkpoint.unlink(missing_ok=True)
-    else:
-        print(f"  {n_failed:,} clues exhausted retries — checkpoint kept for next run")
+    _cleanup_checkpoint(checkpoint, n_failed)
     print(f"Wrote {len(out):,} rows to {OUT_PATH}")
 
 
