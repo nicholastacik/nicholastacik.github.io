@@ -397,19 +397,26 @@ if __name__ == "__main__":
     OUT.write_text("\n".join(json.dumps(r) for r in results))
     print(f"Wrote {len(results)} spike results to {OUT}")
 
-    # Validate signal: join scored spike against correctness and print correlation
+    # Validate signal: for each prompt variant, join against correctness and print correlation
     if CORRECTNESS.exists():
         import numpy as np
         corr = pd.read_parquet(CORRECTNESS)
-        scored_df = pd.DataFrame([
-            {**r, "difficulty": r["result"].get("difficulty")}
-            for r in results if r["prompt"] == list(PROMPTS.keys())[0]
-        ])
-        merged = scored_df.merge(corr, on=["game_id", "round", "row", "column"], how="inner")
-        merged = merged[(merged["n_right"] + merged["n_wrong"]) > 0]
-        merged["any_correct"] = (merged["n_right"] > 0).astype(float)
-        corr_val = np.corrcoef(merged["difficulty"], merged["any_correct"])[0, 1]
-        print(f"\nSpike signal check (prompt v1): difficulty vs any_correct corr = {corr_val:.3f}")
+        for variant_name in PROMPTS:
+            scored_df = pd.DataFrame([
+                {**r, "difficulty": r["result"].get("difficulty")}
+                for r in results if r["prompt"] == variant_name
+                and r["result"].get("difficulty") is not None
+            ])
+            if scored_df.empty:
+                print(f"\n{variant_name}: no successful scores — skipping signal check")
+                continue
+            merged = scored_df.merge(corr, on=["game_id", "round", "row", "column"], how="inner")
+            # Include triple stumpers (they ARE observed outcomes: everyone got it wrong)
+            has_response = (merged["n_right"] > 0) | (merged["n_wrong"] > 0) | merged["is_triple_stumper"]
+            merged = merged[has_response]
+            merged["any_correct"] = (merged["n_right"] > 0).astype(float)
+            corr_val = np.corrcoef(merged["difficulty"], merged["any_correct"])[0, 1]
+            print(f"\nSpike signal check ({variant_name}): difficulty vs any_correct corr = {corr_val:.3f}")
         print("Expected: negative (harder clues → fewer correct). If |corr| < 0.05, the prompt is not capturing difficulty.")
 ```
 
@@ -472,6 +479,7 @@ def test_build_prompt_fills_placeholders():
 
 
 def test_filter_scoreable_excludes_media():
+    # game_type is no longer filtered — all game types are scored
     df = pd.DataFrame({
         "media": [True, False, False],
         "game_type": ["regular", "regular", "toc"],
@@ -481,8 +489,8 @@ def test_filter_scoreable_excludes_media():
         "category": ["A", "B", "C"],
     })
     result = filter_scoreable(df)
-    assert len(result) == 1
-    assert result.iloc[0]["clue"] == "b"
+    assert len(result) == 2  # both non-media clues kept regardless of game_type
+    assert set(result["clue"]) == {"b", "c"}
 
 
 def test_score_clue_returns_difficulty_and_confidence():
@@ -560,24 +568,44 @@ def make_jev_client(api_key: str):
 
 
 def _clue_key(row) -> tuple:
-    return (int(row["game_id"]), str(row["round"]), row["row"], row["column"])
+    # Normalize NaN coordinates to -1 so Final Jeopardy keys are hashable and comparable
+    import math as _math
+    r = row["row"]; c = row["column"]
+    return (int(row["game_id"]), str(row["round"]),
+            -1.0 if (r is None or (isinstance(r, float) and _math.isnan(r))) else float(r),
+            -1.0 if (c is None or (isinstance(c, float) and _math.isnan(c))) else float(c))
 
 
 def run_scoring(api_key: str) -> None:
+    import hashlib
     template = PROMPT_PATH.read_text().strip()
+    prompt_hash = hashlib.sha256(template.encode()).hexdigest()[:16]
+
     df = filter_scoreable(pd.read_parquet(CLUES_PATH))
     print(f"Scoring {len(df):,} clues...")
 
-    # Resume: skip clues already in checkpoint
     checkpoint = OUT_PATH.with_suffix(".checkpoint.parquet")
-    done_keys: set = set()
+    hash_file = OUT_PATH.with_suffix(".prompt_hash")
+    done_keys: set = set()  # only successfully scored keys
     rows = []
+
     if checkpoint.exists():
-        prev = pd.read_parquet(checkpoint)
-        for _, r in prev.iterrows():
-            done_keys.add(_clue_key(r))
-        rows = prev.to_dict(orient="records")
-        print(f"Resuming: {len(done_keys):,} already scored")
+        saved_hash = hash_file.read_text().strip() if hash_file.exists() else ""
+        if saved_hash != prompt_hash:
+            print("Prompt changed — discarding checkpoint and starting fresh")
+            checkpoint.unlink()
+            hash_file.unlink(missing_ok=True)
+        else:
+            prev = pd.read_parquet(checkpoint)
+            all_prev = prev.to_dict(orient="records")
+            # Only keep successful rows; failed (null difficulty) will be retried
+            rows = [r for r in all_prev if r.get("difficulty") is not None]
+            done_keys = {_clue_key(r) for r in rows}
+            n_failed = len(all_prev) - len(rows)
+            print(f"Resuming: {len(done_keys):,} successful, {n_failed:,} failed rows will retry")
+    else:
+        # Fresh run: record which prompt was used so resume can validate
+        hash_file.write_text(prompt_hash)
 
     client = make_jev_client(api_key)
     for i, (_, row) in enumerate(df.iterrows()):
@@ -598,7 +626,9 @@ def run_scoring(api_key: str) -> None:
                     time.sleep(2 ** attempt)
         rows.append({"game_id": row["game_id"], "round": row["round"],
                      "row": row["row"], "column": row["column"], **scored})
-        done_keys.add(key)
+        # Only mark as done if scoring succeeded; null-difficulty rows remain retryable
+        if scored["difficulty"] is not None:
+            done_keys.add(key)
         if len(rows) % 1000 == 0:
             print(f"  {len(rows):,}/{len(df):,}")
             pd.DataFrame(rows).to_parquet(checkpoint, compression="zstd", index=False)
@@ -698,7 +728,8 @@ def _make_scores():
 
 
 def test_final_jeopardy_joins_correctly():
-    result = merge_datasets(_make_clues(), _make_correctness(), _make_scores(), spike_ids=set())
+    result = merge_datasets(_make_clues(), _make_correctness(), _make_scores(),
+                            spike_game_ids=set(), test_game_ids=set())
     fj = result[result["round"] == "Final"]
     assert len(fj) == 1
     assert fj.iloc[0]["n_right"] == 1
@@ -707,7 +738,8 @@ def test_final_jeopardy_joins_correctly():
 
 
 def test_round_specific_join_no_collision():
-    result = merge_datasets(_make_clues(), _make_correctness(), _make_scores(), spike_ids=set())
+    result = merge_datasets(_make_clues(), _make_correctness(), _make_scores(),
+                            spike_game_ids=set(), test_game_ids=set())
     j_row = result[result["round"] == "Jeopardy"].iloc[0]
     dj_row = result[result["round"] == "Double Jeopardy"].iloc[0]
     assert j_row["n_right"] == 2
@@ -719,8 +751,9 @@ def test_spike_game_flag():
     result = merge_datasets(_make_clues(), _make_correctness(), _make_scores(),
                             spike_game_ids={1}, test_game_ids={2})
     j_row = result[result["round"] == "Jeopardy"].iloc[0]
-    assert j_row["in_spike_game"]   # numpy bool — truthy assert, not `is True`
-    assert j_row["in_test_game"] is False
+    assert j_row["in_spike_game"]       # truthy assert — numpy bool, never `is True`
+    assert not j_row["in_test_game"]    # same: not `is False`
+
 
 def test_test_game_flag():
     result = merge_datasets(_make_clues(), _make_correctness(), _make_scores(),
@@ -732,7 +765,8 @@ def test_test_game_flag():
 def test_one_to_one_violation_raises():
     dup_correctness = pd.concat([_make_correctness(), _make_correctness()])
     with pytest.raises(AssertionError, match="one-to-one"):
-        merge_datasets(_make_clues(), dup_correctness, _make_scores(), spike_ids=set())
+        merge_datasets(_make_clues(), dup_correctness, _make_scores(),
+                       spike_game_ids=set(), test_game_ids=set())
 ```
 
 - [ ] **Step 2: Run tests to confirm they fail**
@@ -884,11 +918,12 @@ def _make_scored(n=10):
     return pd.DataFrame(rows)
 
 
-def _make_clusters():
-    return pd.DataFrame({
-        "category": ["CAT0", "CAT1", "CAT2"],
-        "cluster_id": [0, 1, 2],
-    })
+def _make_clusters(n=10):
+    # Must include game_id and round to match (game_id, round, category) join key
+    return pd.DataFrame([
+        {"game_id": i, "round": "Jeopardy", "category": f"CAT{i % 3}", "cluster_id": i % 3}
+        for i in range(n)
+    ])
 
 
 def _make_labels():
@@ -916,7 +951,7 @@ def test_bucket_underflow_takes_all():
     # Only 3 rows in bucket 1 — should return all 3, not error
     df = _make_scored(3)
     df["difficulty"] = 1
-    clusters = _make_clusters()
+    clusters = _make_clusters(3)
     labels = _make_labels()
     result = build_app_data(df, clusters, labels, per_bucket=2000)
     assert len(result) == 3
@@ -924,7 +959,7 @@ def test_bucket_underflow_takes_all():
 
 def test_output_has_required_keys():
     df = _make_scored(10)
-    clusters = _make_clusters()
+    clusters = _make_clusters(10)
     labels = _make_labels()
     result = build_app_data(df, clusters, labels, per_bucket=2000)
     required = {"clue", "answer", "category", "cluster_name", "difficulty",
@@ -1321,15 +1356,19 @@ full_pred = np.array(predict_full(test[["adj_row", "round_num", "difficulty"]]))
 
 def brier(y, yhat): return np.mean((yhat - y) ** 2)
 
-# Bootstrap by game for uncertainty
+# Bootstrap by game for uncertainty — preserve multiplicity when a game is drawn twice
+from collections import defaultdict
 rng = np.random.default_rng(0)
 game_ids = test["game_id"].unique()
+game_to_idx = defaultdict(list)
+for pos, gid in enumerate(test["game_id"]):
+    game_to_idx[gid].append(pos)
 boot_diff = []
 for _ in range(500):
-    sample_games = rng.choice(game_ids, size=len(game_ids), replace=True)
-    mask = test["game_id"].isin(sample_games)
-    boot_diff.append(brier(y_true[mask], baseline_pred[mask]) -
-                     brier(y_true[mask], full_pred[mask]))
+    sampled_games = rng.choice(game_ids, size=len(game_ids), replace=True)
+    boot_idx = np.concatenate([game_to_idx[gid] for gid in sampled_games])
+    boot_diff.append(brier(y_true[boot_idx], baseline_pred[boot_idx]) -
+                     brier(y_true[boot_idx], full_pred[boot_idx]))
 improvement = brier(y_true, baseline_pred) - brier(y_true, full_pred)
 ci_lo, ci_hi = np.percentile(boot_diff, [2.5, 97.5])
 print(f"Brier improvement (baseline → +Jev): {improvement:.4f} "
