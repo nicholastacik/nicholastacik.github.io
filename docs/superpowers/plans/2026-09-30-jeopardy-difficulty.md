@@ -14,18 +14,20 @@
 
 - Run scripts with `uv run python posts/jeopardy_difficulty/pipeline/<script>.py`
 - Run tests with `uv run --group scraper pytest posts/jeopardy_difficulty/pipeline/tests/ -v`
-- Correctness join key: `(game_id, round, row, column)` — `round` is the full name ("Jeopardy", "Double Jeopardy", "Final"); Final rows carry `row=NaN, column=NaN` in `clues.parquet` — fill with sentinel -1 before joining, restore after
+- Correctness join key: `(game_id, round, row, column)` — `round` is the full name ("Jeopardy", "Double Jeopardy", "Final"); Final rows carry `row=NaN, column=NaN` — fill with sentinel -1 before joining (pandas does match NaN keys in merges, but the sentinel avoids silent type issues with float NaN equality)
 - `Triple Stumper` appears as a single `<td class="wrong">Triple Stumper</td>` cell — is_triple_stumper=True, n_right=0, n_wrong=0
-- Exclude `media=True` clues from Jev scoring and from app data export
-- App data: 2,000 clues per difficulty bucket 1–10 (take all available if fewer), text-only regular-game board clues with at least one response recorded
-- Spike clues (2,000 stratified sample) must be excluded from the validation Brier score test set; tag them with `in_spike=True` in the merged dataset
-- Use era-adjusted row (1–5) as the dollar-value baseline feature in the post validation, not raw dollar value — dollar values doubled on 2001-11-26 (`jeopardy.config.VALUE_DOUBLING_DATE`)
+- `any_correct = n_right > 0` is the single outcome used throughout: for computing the training target, for chart axes, and as `y_true` in the Brier score — never mix `correctness_rate` for training with `n_right > 0` for evaluation
+- Score all game types (not just regular) so the game-type chart has real data; media=True exclusion still applies
+- Spike samples 2,000 clues stratified by **round and row** from the non-test 80% of games; saves `spike_game_ids.txt` (unique game_ids from the spike sample); `merge.py` adds `in_spike_game: bool` — test set excludes all spike game IDs, not just spike clues
+- Category cluster joins use key `(game_id, round, category)` — unique in `category_clusters.parquet`; do not deduplicate by mode
+- Brier score implemented with numpy (`np.mean((y_pred - y_true)**2)`); no sklearn or statsmodels imports in the post; remove `trendline="ols"` from scatter charts
+- Use era-adjusted row (1–5) as the dollar-value baseline feature, not raw dollar value — dollar values doubled on 2001-11-26 (`jeopardy.config.VALUE_DOUBLING_DATE`); include round in both baseline and full model
 
 ## Review Focus
 
 1. **Final Jeopardy join on NaN keys** — `clues.parquet` and `correctness.parquet` both have row=NaN, column=NaN for Final; a naive pandas merge produces no matches. The -1 sentinel fill must happen in both dataframes before the merge and be verified by the 1:1 join assertion in `merge.py`. Test: add a Final row to the merge fixture and assert it appears in the output.
 2. **Triple Stumper inflates n_wrong** — `<td class="wrong">Triple Stumper</td>` must set is_triple_stumper=True and contribute 0 to n_wrong. Test: Task 1 includes an explicit test asserting n_wrong==0 for a known Triple Stumper clue.
-3. **Spike clues leak into test set** — the 2,000 spike clues used during prompt development must be excluded from the Brier score validation split in the post. The `in_spike` column set by `merge.py` handles this; the post must filter `~in_spike` before splitting by game.
+3. **Spike games leak into test set** — excluding individual spike clue IDs leaves other clues from the same 348 spike games eligible for the test set. `spike_prompt.py` saves `spike_game_ids.txt` (game-level); `merge.py` adds `in_spike_game: bool`; the post samples test games only from `~in_spike_game` games.
 4. **App bucket underflow** — difficulty buckets 1 and 10 may have far fewer than 2,000 qualifying clues; `build_app_data.py` must not raise on small buckets. Test: pass a dataframe with only 5 rows in bucket 1 and assert the output contains those 5 rows.
 5. **round name mismatch at join** — `parse.py` stores round as "J"/"DJ"/"Final"; `build_parquet.py` converts to "Jeopardy"/"Double Jeopardy"/"Final"; `scrape_correctness.py` must output the full names to match `clues.parquet`. Test: assert the round values in correctness output are in {"Jeopardy", "Double Jeopardy", "Final"}.
 
@@ -299,8 +301,9 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[3]
 CLUES = ROOT / "posts" / "jeopardy_ds" / "clues.parquet"
+CORRECTNESS = Path(__file__).parent.parent / "correctness.parquet"
 OUT = Path(__file__).parent.parent / "spike_sample.jsonl"
-SPIKE_IDS = Path(__file__).parent.parent / "spike_ids.txt"
+SPIKE_GAME_IDS = Path(__file__).parent.parent / "spike_game_ids.txt"
 
 PROMPTS = {
     "v1": (
@@ -324,18 +327,22 @@ PROMPTS = {
 }
 
 
-def sample_clues(n=2000):
+def sample_clues(n=2000, exclude_game_ids: set = None):
+    """Sample n clues stratified by round and row, excluding test games."""
     df = pd.read_parquet(CLUES)
     df = df[
         (df["media"] == False) &
-        (df["game_type"] == "regular") &
-        (df["round"].isin(["Jeopardy", "Double Jeopardy"]))
-    ].dropna(subset=["clue", "answer", "category", "clue_value"])
-    # Stratify by clue_value bucket
-    df["value_bucket"] = pd.cut(df["clue_value"], bins=5, labels=False)
+        (df["round"].isin(["Jeopardy", "Double Jeopardy"])) &
+        df["row"].notna()
+    ].dropna(subset=["clue", "answer", "category"])
+    if exclude_game_ids:
+        df = df[~df["game_id"].isin(exclude_game_ids)]
+    # Stratify by round × row (10 buckets: 2 rounds × 5 rows)
+    df["stratum"] = df["round"] + "_" + df["row"].astype(int).astype(str)
+    n_strata = df["stratum"].nunique()
     sampled = (
-        df.groupby("value_bucket", group_keys=False)
-        .apply(lambda g: g.sample(min(len(g), n // 5), random_state=42))
+        df.groupby("stratum", group_keys=False)
+        .apply(lambda g: g.sample(min(len(g), n // n_strata), random_state=42))
     )
     return sampled.head(n)
 
@@ -356,25 +363,54 @@ def score_with_jev(prompt_text: str, api_key: str) -> dict:
 
 if __name__ == "__main__":
     api_key = os.environ["JEVAI_API_KEY"]
-    sample = sample_clues(2000)
-    # Save spike IDs for later exclusion from test set
-    sample[["game_id", "round", "row", "column"]].to_csv(SPIKE_IDS, index=False, header=False)
-    print(f"Saved {len(sample)} spike IDs to {SPIKE_IDS}")
+    # Pre-select 20% of games as the held-out test set; sample spike from the rest
+    all_game_ids = pd.read_parquet(CLUES, columns=["game_id"])["game_id"].unique()
+    rng = __import__("numpy").random.default_rng(42)
+    test_game_ids = set(rng.choice(all_game_ids, size=int(len(all_game_ids) * 0.2), replace=False))
+    sample = sample_clues(2000, exclude_game_ids=test_game_ids)
 
+    # Save spike game IDs (for merge.py to tag in_spike_game)
+    spike_game_ids = set(sample["game_id"].unique())
+    SPIKE_GAME_IDS.write_text("\n".join(str(g) for g in sorted(spike_game_ids)))
+    # Also save test game IDs so merge.py can tag in_test_game
+    (Path(__file__).parent.parent / "test_game_ids.txt").write_text(
+        "\n".join(str(g) for g in sorted(test_game_ids))
+    )
+    print(f"Spike: {len(sample)} clues from {len(spike_game_ids)} games; "
+          f"test set: {len(test_game_ids)} games")
+
+    # Score all 2k clues with each prompt variant for manual comparison
     results = []
     for prompt_name, prompt_template in PROMPTS.items():
-        for _, row in sample.head(50).iterrows():  # test on 50 first
+        print(f"Scoring with {prompt_name}...")
+        for _, row in sample.iterrows():
             prompt_text = prompt_template.format(
                 category=row["category"], clue=row["clue"], answer=row["answer"]
             )
             try:
                 result = score_with_jev(prompt_text, api_key)
-                results.append({"prompt": prompt_name, "game_id": row["game_id"],
+                results.append({"prompt": prompt_name, "game_id": int(row["game_id"]),
+                                 "round": row["round"], "row": row["row"], "column": row["column"],
                                  "clue": row["clue"], "result": result})
             except Exception as e:
-                print(f"Error: {e}")
+                print(f"Error on clue {row['game_id']}: {e}")
     OUT.write_text("\n".join(json.dumps(r) for r in results))
     print(f"Wrote {len(results)} spike results to {OUT}")
+
+    # Validate signal: join scored spike against correctness and print correlation
+    if CORRECTNESS.exists():
+        import numpy as np
+        corr = pd.read_parquet(CORRECTNESS)
+        scored_df = pd.DataFrame([
+            {**r, "difficulty": r["result"].get("difficulty")}
+            for r in results if r["prompt"] == list(PROMPTS.keys())[0]
+        ])
+        merged = scored_df.merge(corr, on=["game_id", "round", "row", "column"], how="inner")
+        merged = merged[(merged["n_right"] + merged["n_wrong"]) > 0]
+        merged["any_correct"] = (merged["n_right"] > 0).astype(float)
+        corr_val = np.corrcoef(merged["difficulty"], merged["any_correct"])[0, 1]
+        print(f"\nSpike signal check (prompt v1): difficulty vs any_correct corr = {corr_val:.3f}")
+        print("Expected: negative (harder clues → fewer correct). If |corr| < 0.05, the prompt is not capturing difficulty.")
 ```
 
 - [ ] **Step 2: Confirm Jev API access and update `score_with_jev`**
@@ -392,15 +428,16 @@ Review `spike_sample.jsonl` manually. Compare the three prompts across several c
 - Confidence calibration (does high confidence track accurate ratings?)
 - Disagreements on edge cases (Daily Double clues, wordplay clues)
 
-- [ ] **Step 4: Write winning prompt to `prompt.txt` and commit spike IDs**
+- [ ] **Step 4: Write winning prompt to `prompt.txt` and commit game ID files**
 
 Write the full winning prompt text (with `{category}`, `{clue}`, `{answer}` placeholders) to:
 `posts/jeopardy_difficulty/pipeline/prompt.txt`
 
 ```bash
 git add posts/jeopardy_difficulty/pipeline/prompt.txt \
-        posts/jeopardy_difficulty/spike_ids.txt
-git commit -m "feat(jeopardy-difficulty): add prompt spike results and winning prompt"
+        posts/jeopardy_difficulty/spike_game_ids.txt \
+        posts/jeopardy_difficulty/test_game_ids.txt
+git commit -m "feat(jeopardy-difficulty): add prompt spike results and game splits"
 ```
 
 ---
@@ -485,14 +522,10 @@ CLUES_PATH = ROOT / "posts" / "jeopardy_ds" / "clues.parquet"
 PROMPT_PATH = Path(__file__).parent / "prompt.txt"
 OUT_PATH = Path(__file__).parent.parent / "jev_scores.parquet"
 
-SCOREABLE_ROUNDS = {"Jeopardy", "Double Jeopardy", "Final"}
-
-
 def filter_scoreable(df: pd.DataFrame) -> pd.DataFrame:
-    """Text-only, regular-game clues (all rounds)."""
+    """Text-only clues across all game types and rounds."""
     return df[
         (df["media"] == False) &
-        (df["game_type"] == "regular") &
         df["clue"].notna() &
         df["answer"].notna() &
         df["category"].notna()
@@ -526,31 +559,53 @@ def make_jev_client(api_key: str):
     return call
 
 
-def run_scoring(api_key: str, batch_size: int = 50) -> None:
+def _clue_key(row) -> tuple:
+    return (int(row["game_id"]), str(row["round"]), row["row"], row["column"])
+
+
+def run_scoring(api_key: str) -> None:
     template = PROMPT_PATH.read_text().strip()
     df = filter_scoreable(pd.read_parquet(CLUES_PATH))
     print(f"Scoring {len(df):,} clues...")
 
-    client = make_jev_client(api_key)
+    # Resume: skip clues already in checkpoint
+    checkpoint = OUT_PATH.with_suffix(".checkpoint.parquet")
+    done_keys: set = set()
     rows = []
+    if checkpoint.exists():
+        prev = pd.read_parquet(checkpoint)
+        for _, r in prev.iterrows():
+            done_keys.add(_clue_key(r))
+        rows = prev.to_dict(orient="records")
+        print(f"Resuming: {len(done_keys):,} already scored")
+
+    client = make_jev_client(api_key)
     for i, (_, row) in enumerate(df.iterrows()):
+        key = _clue_key(row)
+        if key in done_keys:
+            continue
         prompt = build_prompt(template, row["category"], row["clue"], row["answer"])
-        scored = score_clue(client, prompt)
-        rows.append({
-            "game_id": row["game_id"],
-            "round": row["round"],
-            "row": row["row"],
-            "column": row["column"],
-            **scored,
-        })
-        if (i + 1) % 1000 == 0:
-            print(f"  {i+1:,}/{len(df):,}")
-            # Checkpoint every 1k rows
-            pd.DataFrame(rows).to_parquet(OUT_PATH.with_suffix(".checkpoint.parquet"),
-                                          compression="zstd", index=False)
+        # Bounded retry: 3 attempts with exponential backoff
+        for attempt in range(3):
+            try:
+                scored = score_clue(client, prompt)
+                break
+            except Exception as e:
+                if attempt == 2:
+                    print(f"Giving up on clue {key}: {e}")
+                    scored = {"difficulty": None, "jev_confidence": None}
+                else:
+                    time.sleep(2 ** attempt)
+        rows.append({"game_id": row["game_id"], "round": row["round"],
+                     "row": row["row"], "column": row["column"], **scored})
+        done_keys.add(key)
+        if len(rows) % 1000 == 0:
+            print(f"  {len(rows):,}/{len(df):,}")
+            pd.DataFrame(rows).to_parquet(checkpoint, compression="zstd", index=False)
 
     out = pd.DataFrame(rows)
     out.to_parquet(OUT_PATH, compression="zstd", index=False)
+    checkpoint.unlink(missing_ok=True)
     print(f"Wrote {len(out):,} rows to {OUT_PATH}")
 
 
@@ -659,13 +714,19 @@ def test_round_specific_join_no_collision():
     assert dj_row["n_wrong"] == 1
 
 
-def test_spike_flag():
-    spike_ids = {(1, "Jeopardy", 1.0, 1.0)}
-    result = merge_datasets(_make_clues(), _make_correctness(), _make_scores(), spike_ids=spike_ids)
+def test_spike_game_flag():
+    # game_id=1 is the spike game; all its clues should be flagged
+    result = merge_datasets(_make_clues(), _make_correctness(), _make_scores(),
+                            spike_game_ids={1}, test_game_ids={2})
     j_row = result[result["round"] == "Jeopardy"].iloc[0]
-    dj_row = result[result["round"] == "Double Jeopardy"].iloc[0]
-    assert j_row["in_spike"] is True
-    assert dj_row["in_spike"] is False
+    assert j_row["in_spike_game"]   # numpy bool — truthy assert, not `is True`
+    assert j_row["in_test_game"] is False
+
+def test_test_game_flag():
+    result = merge_datasets(_make_clues(), _make_correctness(), _make_scores(),
+                            spike_game_ids=set(), test_game_ids={1})
+    j_row = result[result["round"] == "Jeopardy"].iloc[0]
+    assert j_row["in_test_game"]
 
 
 def test_one_to_one_violation_raises():
@@ -716,23 +777,18 @@ def _assert_one_to_one(left: pd.DataFrame, right: pd.DataFrame, key: list[str]) 
         raise AssertionError(f"one-to-one join violated: {right[dupes][key].head()}")
 
 
-def _load_spike_ids(spike_path: Path) -> set:
-    if not spike_path.exists():
+def _load_game_ids(path: Path) -> set:
+    if not path.exists():
         return set()
-    ids = set()
-    for line in spike_path.read_text().splitlines():
-        parts = line.strip().split(",")
-        if len(parts) == 4:
-            game_id, round_, row, col = parts
-            ids.add((int(game_id), round_, float(row), float(col)))
-    return ids
+    return {int(line.strip()) for line in path.read_text().splitlines() if line.strip()}
 
 
 def merge_datasets(
     clues: pd.DataFrame,
     correctness: pd.DataFrame,
     scores: pd.DataFrame,
-    spike_ids: set,
+    spike_game_ids: set,
+    test_game_ids: set,
 ) -> pd.DataFrame:
     _assert_one_to_one(clues, correctness, _JOIN_COLS)
     _assert_one_to_one(clues, scores, _JOIN_COLS)
@@ -745,10 +801,8 @@ def merge_datasets(
     merged = merged.merge(scores_f, on=_JOIN_COLS, how="left")
     merged = _restore_nan_keys(merged)
 
-    def _is_spike(row):
-        return (row["game_id"], row["round"], row["row"], row["column"]) in spike_ids
-
-    merged["in_spike"] = merged.apply(_is_spike, axis=1)
+    merged["in_spike_game"] = merged["game_id"].isin(spike_game_ids)
+    merged["in_test_game"] = merged["game_id"].isin(test_game_ids)
     return merged
 
 
@@ -756,9 +810,10 @@ def run_merge() -> None:
     clues = pd.read_parquet(ROOT / "posts" / "jeopardy_ds" / "clues.parquet")
     correctness = pd.read_parquet(_POST / "correctness.parquet")
     scores = pd.read_parquet(_POST / "jev_scores.parquet")
-    spike_ids = _load_spike_ids(_POST / "spike_ids.txt")
+    spike_game_ids = _load_game_ids(_POST / "spike_game_ids.txt")
+    test_game_ids = _load_game_ids(_POST / "test_game_ids.txt")
 
-    result = merge_datasets(clues, correctness, scores, spike_ids)
+    result = merge_datasets(clues, correctness, scores, spike_game_ids, test_game_ids)
     out = _POST / "clues_scored.parquet"
     result.to_parquet(out, compression="zstd", index=False)
     print(f"Wrote {len(result):,} rows to {out}")
@@ -920,10 +975,9 @@ def build_app_data(
     per_bucket: int = 2000,
 ) -> list[dict]:
     df = filter_app_clues(scored)
-    # category_clusters has one row per category-occurrence; deduplicate to unique mapping
-    cat_cluster = (clusters.groupby("category")["cluster_id"]
-                   .agg(lambda x: x.mode()[0]).reset_index())
-    df = df.merge(cat_cluster, on="category", how="left")
+    # (game_id, round, category) is unique in category_clusters — join directly
+    df = df.merge(clusters[["game_id", "round", "category", "cluster_id"]],
+                  on=["game_id", "round", "category"], how="left")
     df["cluster_name"] = df["cluster_id"].map(labels).fillna("Uncategorized")
 
     rows = []
@@ -1166,7 +1220,17 @@ git commit -m "feat(jeopardy-difficulty): add app data export and interactive sa
 
 **Note:** This task is the analysis narrative. The exact chart values depend on the scored data, so specific numbers are illustrative — fill them in from the actual output. The post structure mirrors the spec exactly.
 
-- [ ] **Step 1: Write `index.qmd` setup block**
+- [ ] **Step 1: Add `numpy` to the main dependency group in `pyproject.toml`**
+
+The post uses `numpy` directly. Check if it's already a transitive dependency — if not, add it:
+
+```bash
+uv add numpy
+```
+
+The post does NOT use `sklearn` or `statsmodels` — Brier score is computed with numpy, and scatter trendlines use `np.polyfit`. Do not add either.
+
+- [ ] **Step 2: Write `index.qmd` setup block**
 
 ```python
 # {python} setup block (include: false)
@@ -1191,57 +1255,91 @@ board = scored[
     ((scored["n_right"] > 0) | (scored["n_wrong"] > 0) | scored["is_triple_stumper"])
 ].copy()
 
-board["correctness_rate"] = board["n_right"] / (board["n_right"] + board["n_wrong"]).clip(lower=1)
+board["any_correct"] = (board["n_right"] > 0).astype(float)   # single outcome used everywhere
 board["year"] = board["air_date"].dt.year
-# Era-adjusted row: same 1-5 scale regardless of dollar value era
-board["adj_row"] = board["row"]  # already 1-5
+board["adj_row"] = board["row"]   # 1-5, era-consistent (dollar value doubled in 2001 but row didn't)
+board["round_num"] = board["round"].map({"Jeopardy": 0, "Double Jeopardy": 1})
 
-# Validation split: held-out test set excludes spike clues, splits by game
-test_games = board[~board["in_spike"]]["game_id"].drop_duplicates().sample(frac=0.2, random_state=42)
-test = board[board["game_id"].isin(test_games) & ~board["in_spike"]]
+# Validation split: test set = in_test_game games; training = non-test, non-spike-game
+train = board[~board["in_test_game"] & ~board["in_spike_game"]]
+test = board[board["in_test_game"]]
 ```
 
-- [ ] **Step 2: Write the six analysis chart blocks and validation section**
+- [ ] **Step 3: Write the six analysis chart blocks and validation section**
 
 Include the following charts in order — each as a named `{python}` chunk with a `fig-cap`:
 
 **Chart 1: Dollar value (row) vs mean correctness rate** — baseline comparison
 ```python
-baseline = board.groupby("adj_row")["correctness_rate"].mean().reset_index()
-fig = px.bar(baseline, x="adj_row", y="correctness_rate",
-             labels={"adj_row": "Row (1=cheapest, 5=most expensive)", "correctness_rate": "Mean correctness rate"},
+baseline = board.groupby("adj_row")["any_correct"].mean().reset_index()
+fig = px.bar(baseline, x="adj_row", y="any_correct",
+             labels={"adj_row": "Row (1=cheapest, 5=most expensive)", "any_correct": "Fraction correct"},
              title="Dollar value predicts correctness — but imperfectly")
 fig.show()
 ```
 
-**Chart 2: Jev difficulty vs mean correctness rate** — the headline scatter
+**Chart 2: Jev difficulty vs fraction correct** — the headline scatter
 ```python
-bucket_corr = board.groupby("difficulty")["correctness_rate"].mean().reset_index()
-fig = px.scatter(bucket_corr, x="difficulty", y="correctness_rate", trendline="ols",
-                 labels={"difficulty": "Jev difficulty (1–10)", "correctness_rate": "Mean correctness rate"},
-                 title="Jev difficulty vs actual correctness rate")
+import numpy as np
+bucket_corr = board.groupby("difficulty")["any_correct"].mean().reset_index()
+# Manual linear trendline (no statsmodels)
+m, b = np.polyfit(bucket_corr["difficulty"], bucket_corr["any_correct"], 1)
+bucket_corr["trend"] = m * bucket_corr["difficulty"] + b
+fig = go.Figure()
+fig.add_trace(go.Scatter(x=bucket_corr["difficulty"], y=bucket_corr["any_correct"],
+                         mode="markers", name="Mean fraction correct"))
+fig.add_trace(go.Scatter(x=bucket_corr["difficulty"], y=bucket_corr["trend"],
+                         mode="lines", name="Trend"))
+fig.update_layout(title="Jev difficulty vs fraction of clues answered correctly",
+                  xaxis_title="Jev difficulty (1–10)", yaxis_title="Fraction correct")
 fig.show()
 ```
 
 **Chart 3: Validation — Brier score comparison** (text + bar chart)
-```python
-from sklearn.metrics import brier_score_loss
-# Baseline: predict correctness rate from adj_row only (mean by row in train set)
-train = board[~board["game_id"].isin(test_games) & ~board["in_spike"]]
-row_means = train.groupby("adj_row")["correctness_rate"].mean()
-test_baseline_pred = test["adj_row"].map(row_means).fillna(row_means.mean())
-# Jev model: predict from difficulty
-diff_means = train.groupby("difficulty")["correctness_rate"].mean()
-test_jev_pred = test["difficulty"].map(diff_means).fillna(diff_means.mean())
 
-y_true = (test["n_right"] > 0).astype(float)
-brier_baseline = brier_score_loss(y_true, test_baseline_pred)
-brier_jev = brier_score_loss(y_true, test_jev_pred)
+Both models use `any_correct` as the outcome. Baseline uses `adj_row + round_num`; full model adds `difficulty`. Uncertainty via bootstrap resampling by game.
+
+```python
+import numpy as np
+
+# Baseline: predict P(any_correct) from adj_row + round in train set
+train_means = train.groupby(["adj_row", "round_num"])["any_correct"].mean()
+def predict_baseline(df):
+    return df.set_index(["adj_row", "round_num"]).index.map(
+        lambda k: train_means.get(k, train_means.mean())
+    )
+# Full model: also include difficulty
+train_means_full = train.groupby(["adj_row", "round_num", "difficulty"])["any_correct"].mean()
+def predict_full(df):
+    return df.set_index(["adj_row", "round_num", "difficulty"]).index.map(
+        lambda k: train_means_full.get(k, train_means.get(k[:2], train_means.mean()))
+    )
+
+y_true = test["any_correct"].values
+baseline_pred = np.array(predict_baseline(test[["adj_row", "round_num"]]))
+full_pred = np.array(predict_full(test[["adj_row", "round_num", "difficulty"]]))
+
+def brier(y, yhat): return np.mean((yhat - y) ** 2)
+
+# Bootstrap by game for uncertainty
+rng = np.random.default_rng(0)
+game_ids = test["game_id"].unique()
+boot_diff = []
+for _ in range(500):
+    sample_games = rng.choice(game_ids, size=len(game_ids), replace=True)
+    mask = test["game_id"].isin(sample_games)
+    boot_diff.append(brier(y_true[mask], baseline_pred[mask]) -
+                     brier(y_true[mask], full_pred[mask]))
+improvement = brier(y_true, baseline_pred) - brier(y_true, full_pred)
+ci_lo, ci_hi = np.percentile(boot_diff, [2.5, 97.5])
+print(f"Brier improvement (baseline → +Jev): {improvement:.4f} "
+      f"[95% CI: {ci_lo:.4f}, {ci_hi:.4f}]")
+
 fig = px.bar(
-    x=["Dollar value (baseline)", "Jev difficulty"],
-    y=[brier_baseline, brier_jev],
+    x=["Baseline (row + round)", "Baseline + Jev difficulty"],
+    y=[brier(y_true, baseline_pred), brier(y_true, full_pred)],
     labels={"x": "", "y": "Brier score (lower = better)"},
-    title=f"Jev difficulty {'beats' if brier_jev < brier_baseline else 'matches'} dollar value"
+    title="Adding Jev difficulty on top of board position"
 )
 fig.show()
 ```
@@ -1263,9 +1361,11 @@ fig.show()
 **Chart 6: Difficulty by category cluster** (top 20 clusters by clue count)
 ```python
 clusters_raw = pd.read_parquet(ROOT.parent / "jeopardy_ds" / "category_clusters.parquet")
-cat_cluster = (clusters_raw.groupby("category")["cluster_id"]
-               .agg(lambda x: x.mode()[0]).reset_index())
-board_with_cluster = board.merge(cat_cluster, on="category", how="left")
+# Join on (game_id, round, category) — unique key, no deduplication needed
+board_with_cluster = board.merge(
+    clusters_raw[["game_id", "round", "category", "cluster_id"]],
+    on=["game_id", "round", "category"], how="left"
+)
 board_with_cluster["cluster_name"] = board_with_cluster["cluster_id"].map(labels).fillna("Misc")
 cluster_diff = (board_with_cluster.groupby("cluster_name")["difficulty"]
                 .agg(["mean", "count"]).reset_index()
@@ -1276,7 +1376,7 @@ fig = px.bar(cluster_diff, x="mean", y="cluster_name", orientation="h",
 fig.show()
 ```
 
-- [ ] **Step 3: Write the interactive tool embed**
+- [ ] **Step 4: Write the interactive tool embed**
 
 Add to the bottom of `index.qmd`:
 
@@ -1287,7 +1387,7 @@ Add to the bottom of `index.qmd`:
         style="border-radius:8px;"></iframe>
 ```
 
-- [ ] **Step 4: Write the full post narrative**
+- [ ] **Step 5: Write the full post narrative**
 
 The post structure (intro → analysis → prompt dev) follows the spec. Write prose for each section. Lead the intro with three specific examples pulled from the actual data:
 
@@ -1298,7 +1398,7 @@ easy_expensive = board[(board["clue_value"] >= 1600) & (board["n_right"] > 0)].n
 jev_wrong = board[(board["difficulty"] <= 3) & board["is_triple_stumper"]].head(3)
 ```
 
-- [ ] **Step 5: Render and check**
+- [ ] **Step 6: Render and check**
 
 ```bash
 cd /Users/nick/Work/nicholastacik.github.io
@@ -1308,7 +1408,7 @@ open _site/posts/jeopardy_difficulty/index.html
 
 Fix any rendering errors. Verify the iframe loads and the filters work.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git add posts/jeopardy_difficulty/index.qmd posts/jeopardy_difficulty/thumbnail.png
