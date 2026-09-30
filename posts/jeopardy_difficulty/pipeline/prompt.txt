@@ -1,1 +1,1 @@
-Rate the difficulty of this Jeopardy clue on a scale of 1 (very easy) to 10 (very hard). Consider how much specialized knowledge is needed to answer it correctly. Category: {category}. Clue: {clue}. Answer: {answer}.
+You are an expert Jeopardy analyst. Rate how difficult this clue is for a typical contestant on a scale of 1 (almost anyone would know it) to 10 (only a specialist would know it). Category: {category}. Clue: {clue}. Correct answer: {answer}.
