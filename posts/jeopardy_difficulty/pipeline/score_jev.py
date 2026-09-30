@@ -1,4 +1,5 @@
 """Batch Jev scoring for text-only clues across all game types and rounds."""
+import asyncio
 import time
 from pathlib import Path
 
@@ -26,6 +27,9 @@ DIFFICULTY_CRITERIA = [
     "~2% of contestants answer correctly",
 ]
 
+# Max concurrent requests to the Jev API.
+CONCURRENCY = 20
+
 
 def filter_scoreable(df: pd.DataFrame) -> pd.DataFrame:
     return df[
@@ -47,6 +51,7 @@ def score_clue(jev_client, clue_state: str) -> dict:
 
 
 def make_jev_client(instructions: str):
+    """Sync client — used by tests via mock. Production uses the async path."""
     from typesafe_sdk import TypeSafeClient, Score
 
     client = TypeSafeClient()
@@ -66,6 +71,32 @@ def make_jev_client(instructions: str):
         difficulty = max(1, min(10, int(round(raw_score)) + 1))
         return {"difficulty": difficulty, "confidence": ans.confidence}
     return call
+
+
+async def _score_one_async(client, semaphore, instructions: str, clue_state: str) -> dict | None:
+    from typesafe_sdk import Score
+
+    async with semaphore:
+        for attempt in range(3):
+            try:
+                resp = await client.system_one(
+                    state=clue_state,
+                    questions={
+                        "difficulty": Score(
+                            instructions=instructions,
+                            criteria=DIFFICULTY_CRITERIA,
+                        ),
+                    },
+                )
+                ans = resp.scores["difficulty"]
+                raw_score = ans.score  # float 0–9
+                difficulty = max(1, min(10, int(round(raw_score)) + 1))
+                return {"difficulty": difficulty, "jev_confidence": ans.confidence}
+            except Exception as e:
+                if attempt == 2:
+                    return None
+                await asyncio.sleep(2 ** attempt)
+    return None
 
 
 def _clue_key(row) -> tuple:
@@ -104,48 +135,66 @@ def _cleanup_checkpoint(checkpoint: Path, n_failed: int) -> None:
         print(f"  {n_failed:,} clues exhausted retries — checkpoint kept for next run")
 
 
-def run_scoring() -> None:
+async def _run_async() -> None:
     import hashlib
+    from typesafe_sdk import AsyncTypeSafeClient
+
     instructions = PROMPT_PATH.read_text().strip()
     prompt_hash = hashlib.sha256(instructions.encode()).hexdigest()[:16]
 
     df = filter_scoreable(pd.read_parquet(CLUES_PATH))
-    print(f"Scoring {len(df):,} clues...")
+    print(f"Scoring {len(df):,} clues with concurrency={CONCURRENCY}...")
 
     checkpoint = OUT_PATH.with_suffix(".checkpoint.parquet")
     hash_file = OUT_PATH.with_suffix(".prompt_hash")
     rows, done_keys, _ = _load_checkpoint(checkpoint, hash_file, prompt_hash)
 
-    client = make_jev_client(instructions)
+    remaining = [
+        (row["game_id"], row["round"], row["row"], row["column"],
+         build_prompt(row["category"], row["clue"], row["answer"]))
+        for _, row in df.iterrows()
+        if _clue_key(row) not in done_keys
+    ]
+    print(f"  {len(done_keys):,} already scored, {len(remaining):,} remaining")
+
+    semaphore = asyncio.Semaphore(CONCURRENCY)
     n_failed = 0
-    for i, (_, row) in enumerate(df.iterrows()):
-        key = _clue_key(row)
-        if key in done_keys:
-            continue
-        clue_state = build_prompt(row["category"], row["clue"], row["answer"])
-        for attempt in range(3):
-            try:
-                scored = score_clue(client, clue_state)
-                break
-            except Exception as e:
-                if attempt == 2:
-                    print(f"Giving up on clue {key}: {e}")
-                    scored = {"difficulty": None, "jev_confidence": None}
+    CHUNK = 1000
+
+    async with AsyncTypeSafeClient() as client:
+        for chunk_start in range(0, len(remaining), CHUNK):
+            chunk = remaining[chunk_start:chunk_start + CHUNK]
+            tasks = [
+                _score_one_async(client, semaphore, instructions, clue_state)
+                for *_, clue_state in chunk
+            ]
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+
+            for (game_id, rnd, row_n, col_n, _), result in zip(chunk, results):
+                if isinstance(result, Exception) or result is None:
+                    rows.append({"game_id": game_id, "round": rnd,
+                                 "row": row_n, "column": col_n,
+                                 "difficulty": None, "jev_confidence": None})
                     n_failed += 1
                 else:
-                    time.sleep(2 ** attempt)
-        rows.append({"game_id": row["game_id"], "round": row["round"],
-                     "row": row["row"], "column": row["column"], **scored})
-        if pd.notna(scored["difficulty"]):
-            done_keys.add(key)
-        if len(rows) % 1000 == 0:
-            print(f"  {len(rows):,}/{len(df):,}")
+                    rows.append({"game_id": game_id, "round": rnd,
+                                 "row": row_n, "column": col_n, **result})
+                    done_keys.add((int(game_id), str(rnd),
+                                   -1.0 if pd.isna(row_n) else float(row_n),
+                                   -1.0 if pd.isna(col_n) else float(col_n)))
+
             pd.DataFrame(rows).to_parquet(checkpoint, compression="zstd", index=False)
+            print(f"  {len(done_keys):,}/{len(df):,} "
+                  f"(chunk {chunk_start // CHUNK + 1}, {n_failed} failed so far)")
 
     out = pd.DataFrame(rows)
     out.to_parquet(OUT_PATH, compression="zstd", index=False)
     _cleanup_checkpoint(checkpoint, n_failed)
     print(f"Wrote {len(out):,} rows to {OUT_PATH}")
+
+
+def run_scoring() -> None:
+    asyncio.run(_run_async())
 
 
 if __name__ == "__main__":
