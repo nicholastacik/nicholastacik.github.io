@@ -1,0 +1,231 @@
+---
+title: "Can an AI Tell Which Jeopardy Clues Will Stump You?"
+description: "Scoring 500k clues with a structured-output LLM, then measuring whether it beats dollar value at predicting who gets it right"
+date: "2026-09-30"
+categories: [data-science, NLP, AI, jeopardy, projects]
+image: thumbnail.png
+draft: true
+---
+
+```{python}
+#| label: setup
+#| include: false
+import pandas as pd
+import numpy as np
+import plotly.express as px
+import plotly.graph_objects as go
+from collections import defaultdict
+from pathlib import Path
+
+ROOT = Path(".").resolve()
+scored = pd.read_parquet(ROOT / "clues_scored.parquet")
+labels = (pd.read_csv(ROOT.parent / "jeopardy_ds" / "cluster_labels.csv")
+            .set_index("cluster_id")["name"].to_dict())
+
+board = scored[
+    (scored["media"] == False) &
+    (scored["game_type"] == "regular") &
+    (scored["round"].isin(["Jeopardy", "Double Jeopardy"])) &
+    (scored["is_daily_double"] == False) &
+    scored["difficulty"].notna() &
+    ((scored["n_right"] > 0) | (scored["n_wrong"] > 0) | scored["is_triple_stumper"])
+].copy()
+
+board["any_correct"] = (board["n_right"] > 0).astype(float)
+board["year"] = board["air_date"].dt.year
+board["adj_row"] = board["row"]
+board["round_num"] = board["round"].map({"Jeopardy": 0, "Double Jeopardy": 1})
+
+train = board[~board["in_test_game"] & ~board["in_spike_game"]]
+test  = board[board["in_test_game"]]
+```
+
+## Introduction
+
+The Jeopardy board looks like a difficulty ladder: cheapest clue in the top-left corner, most expensive in the bottom-right. But anyone who watches regularly knows that's a lie. The $200 clue about Baroque composers can stump three strong players while the $2,000 clue about a pop star that everyone knows gets buzzed in before Alex finishes reading it.
+
+So what actually makes a Jeopardy clue hard?
+
+I scored every text clue in the J-Archive dataset — around 500,000 of them — using [Jev](https://typesafe.ai/blog/introducing-system-one-models-and-jev), a structured-output model from TypeSafe AI that returns a difficulty integer (1–10) and a calibrated confidence score. Then I compared its ratings against real player outcomes: which clues got answered, which ones stumped everyone, and which ones nobody even attempted (Triple Stumpers).
+
+The headline question: **does the AI's difficulty score predict who gets it right better than dollar value alone?**
+
+To find out, I split the dataset by game, trained a simple lookup-table model on most games, and compared its Brier score on held-out test games with and without the Jev difficulty score added in. The Brier score measures calibration — how far off your probability estimates are from the true 0/1 outcomes.
+
+Here are three clues that make the problem vivid:
+
+```{python}
+#| label: intro-examples
+#| echo: false
+cheap_stumpers = board[(board["clue_value"] <= 400) & board["is_triple_stumper"]].nlargest(3, "difficulty")
+easy_expensive = board[(board["clue_value"] >= 1600) & (board["n_right"] > 0)].nsmallest(3, "difficulty")
+jev_wrong = board[(board["difficulty"] <= 3) & board["is_triple_stumper"]].head(3)
+
+print("Cheap clues that stumped everyone (high AI difficulty, low dollar value):")
+print(cheap_stumpers[["category", "clue", "answer", "clue_value", "difficulty"]].to_string(index=False))
+print("\nExpensive clues everyone answered (low AI difficulty, high dollar value):")
+print(easy_expensive[["category", "clue", "answer", "clue_value", "difficulty"]].to_string(index=False))
+print("\nClues the AI rated easy that still stumped everyone:")
+print(jev_wrong[["category", "clue", "answer", "difficulty"]].to_string(index=False))
+```
+
+## Analysis
+
+### Dollar value vs correctness
+
+First, let's confirm the baseline: does board position actually predict player success?
+
+```{python}
+#| label: fig-baseline
+#| fig-cap: "Mean fraction of correct responses by row position (1=cheapest, 5=most expensive). Aggregated across Jeopardy and Double Jeopardy board clues."
+baseline = board.groupby("adj_row")["any_correct"].mean().reset_index()
+fig = px.bar(baseline, x="adj_row", y="any_correct",
+             labels={"adj_row": "Row (1=cheapest, 5=most expensive)",
+                     "any_correct": "Fraction answered correctly"},
+             title="Dollar value predicts correctness — but imperfectly")
+fig.update_layout(margin={"t": 50})
+fig.show()
+```
+
+### Jev difficulty vs correctness
+
+Now the key question: does the AI's difficulty rating track with actual player performance?
+
+```{python}
+#| label: fig-jev-vs-correct
+#| fig-cap: "Mean fraction correct by Jev difficulty bucket (1–10), with a linear trend. Each point is ~50k clues."
+bucket_corr = board.groupby("difficulty")["any_correct"].mean().reset_index()
+m, b = np.polyfit(bucket_corr["difficulty"], bucket_corr["any_correct"], 1)
+bucket_corr["trend"] = m * bucket_corr["difficulty"] + b
+fig = go.Figure()
+fig.add_trace(go.Scatter(x=bucket_corr["difficulty"], y=bucket_corr["any_correct"],
+                         mode="markers+text", name="Mean fraction correct",
+                         text=bucket_corr["difficulty"].astype(str),
+                         textposition="top center"))
+fig.add_trace(go.Scatter(x=bucket_corr["difficulty"], y=bucket_corr["trend"],
+                         mode="lines", name="Linear trend", line={"dash": "dot"}))
+fig.update_layout(title="Jev difficulty vs fraction of clues answered correctly",
+                  xaxis_title="Jev difficulty (1–10)",
+                  yaxis_title="Fraction answered correctly",
+                  margin={"t": 50})
+fig.show()
+```
+
+### Validation: does Jev beat dollar value?
+
+The real test. I split the games into training and test sets (20% held out, pre-selected before any prompt development). Two models:
+
+- **Baseline:** lookup `P(any_correct | row, round)` from training data
+- **Full model:** lookup `P(any_correct | row, round, difficulty)` from training data
+
+Brier score on the held-out test games, with 95% bootstrap confidence intervals (bootstrap by game to preserve the natural clustering of clues within games).
+
+```{python}
+#| label: fig-brier
+#| fig-cap: "Brier score (lower = better) for the baseline model (row + round) and the full model (row + round + Jev difficulty). The improvement and 95% CI are reported above the chart."
+train_means = train.groupby(["adj_row", "round_num"])["any_correct"].mean()
+def predict_baseline(df):
+    return df.set_index(["adj_row", "round_num"]).index.map(
+        lambda k: train_means.get(k, train_means.mean()))
+
+train_means_full = train.groupby(["adj_row", "round_num", "difficulty"])["any_correct"].mean()
+def predict_full(df):
+    return df.set_index(["adj_row", "round_num", "difficulty"]).index.map(
+        lambda k: train_means_full.get(k, train_means.get(k[:2], train_means.mean())))
+
+y_true = test["any_correct"].values
+baseline_pred = np.array(predict_baseline(test[["adj_row", "round_num"]]))
+full_pred = np.array(predict_full(test[["adj_row", "round_num", "difficulty"]]))
+
+def brier(y, yhat): return np.mean((yhat - y) ** 2)
+
+rng = np.random.default_rng(0)
+game_ids = test["game_id"].unique()
+game_to_idx = defaultdict(list)
+for pos, gid in enumerate(test["game_id"]):
+    game_to_idx[gid].append(pos)
+boot_diff = []
+for _ in range(500):
+    sampled_games = rng.choice(game_ids, size=len(game_ids), replace=True)
+    boot_idx = np.concatenate([game_to_idx[gid] for gid in sampled_games])
+    boot_diff.append(brier(y_true[boot_idx], baseline_pred[boot_idx]) -
+                     brier(y_true[boot_idx], full_pred[boot_idx]))
+improvement = brier(y_true, baseline_pred) - brier(y_true, full_pred)
+ci_lo, ci_hi = np.percentile(boot_diff, [2.5, 97.5])
+print(f"Brier improvement (baseline → +Jev): {improvement:.4f} [95% CI: {ci_lo:.4f}, {ci_hi:.4f}]")
+
+fig = px.bar(
+    x=["Baseline (row + round)", "Baseline + Jev difficulty"],
+    y=[brier(y_true, baseline_pred), brier(y_true, full_pred)],
+    labels={"x": "", "y": "Brier score (lower = better)"},
+    title="Adding Jev difficulty reduces prediction error",
+    color_discrete_sequence=["#636efa", "#00cc96"],
+)
+fig.update_layout(showlegend=False, margin={"t": 50})
+fig.show()
+```
+
+### Has the show gotten harder over time?
+
+```{python}
+#| label: fig-yearly
+#| fig-cap: "Mean Jev difficulty score by year. Post-2001 values use the doubled dollar values introduced that year."
+yearly = board.groupby("year")["difficulty"].mean().reset_index()
+fig = px.line(yearly, x="year", y="difficulty",
+              title="Mean Jev difficulty over time",
+              labels={"year": "Year", "difficulty": "Mean difficulty (1–10)"})
+fig.update_layout(margin={"t": 50})
+fig.show()
+```
+
+### Difficulty by game type
+
+```{python}
+#| label: fig-game-type
+#| fig-cap: "Distribution of Jev difficulty scores across regular, Tournament of Champions, Celebrity, and other game types."
+fig = px.violin(scored[scored["difficulty"].notna()].rename(columns={"game_type": "Game type"}),
+                x="Game type", y="difficulty", box=True,
+                title="Difficulty distribution by game type",
+                labels={"difficulty": "Jev difficulty (1–10)"})
+fig.update_layout(margin={"t": 50})
+fig.show()
+```
+
+### Difficulty by category type
+
+Categories cluster into recognizable types — for details on the clustering methodology, see the [companion post](../jeopardy_ds/). Here are the 20 most common category types ranked by mean difficulty.
+
+```{python}
+#| label: fig-clusters
+#| fig-cap: "Mean Jev difficulty for the 20 most common category types. Pop culture and wordplay categories skew easier; science and literature categories skew harder."
+clusters_raw = pd.read_parquet(ROOT.parent / "jeopardy_ds" / "category_clusters.parquet")
+board_with_cluster = board.merge(
+    clusters_raw[["game_id", "round", "category", "cluster_id"]],
+    on=["game_id", "round", "category"], how="left"
+)
+board_with_cluster["cluster_name"] = board_with_cluster["cluster_id"].map(labels).fillna("Misc")
+cluster_diff = (board_with_cluster.groupby("cluster_name")["difficulty"]
+                .agg(["mean", "count"]).reset_index()
+                .sort_values("count", ascending=False).head(20)
+                .sort_values("mean"))
+fig = px.bar(cluster_diff, x="mean", y="cluster_name", orientation="h",
+             title="Mean difficulty by category cluster (top 20 by volume)",
+             labels={"mean": "Mean Jev difficulty", "cluster_name": ""})
+fig.update_layout(height=550, margin={"t": 50, "l": 200})
+fig.show()
+```
+
+## How the prompt was developed
+
+Finding a prompt that reliably produces calibrated 1–10 ratings took some trial and error. I sampled 2,000 clues stratified by board position and ran three candidate prompts through Jev, then measured each variant's correlation with the actual player outcome (`any_correct`) on those clues.
+
+The prompts varied on two dimensions: framing (general knowledge vs. Jeopardy-contestant perspective) and format (inline JSON vs. separated). The winning prompt used the contestant-perspective framing with inline JSON — it produced the strongest negative correlation between difficulty and correctness (harder = fewer correct), and its confidence scores were reasonably calibrated against disagreement between the variants.
+
+The spike sample was carved out *before* any prompt development, and those clues are excluded from the training set used in the validation above — so the prompt selection process can't leak into the test result.
+
+## Try it yourself
+
+Explore clues by difficulty, round, and category type. The sampler draws from ~20,000 clues across the full difficulty range.
+
+<iframe src="app/index.html" width="100%" height="640px" frameborder="0"
+        style="border-radius:8px; border: none;"></iframe>
