@@ -1,4 +1,5 @@
 import os
+import re
 import traceback
 from dataclasses import dataclass, field
 from datetime import date, datetime
@@ -64,8 +65,14 @@ def ran_today(meta: list[dict], today: date) -> bool:
 
 
 def _failed(what: str, error: Exception) -> None:
-    status = getattr(getattr(error, "response", None), "status_code", None)
-    print(f"FAILED {what}: {type(error).__name__}{f' {status}' if status else ''}")
+    status = getattr(error, "status_code", None) or getattr(
+        getattr(error, "response", None), "status_code", None
+    )
+    code = getattr(error, "code", None)
+    details = [str(status)] if status else []
+    if isinstance(code, str) and re.fullmatch(r"[a-z0-9_]+", code):
+        details.append(code)
+    print(f"FAILED {what}: {' '.join([type(error).__name__, *details])}")
     if os.environ.get("TV_TRACKER_DEBUG") == "1":
         traceback.print_exc()
 
