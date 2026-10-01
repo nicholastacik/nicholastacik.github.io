@@ -1,4 +1,5 @@
 from datetime import datetime
+from types import SimpleNamespace as NS
 
 from fakes import FakeLlm, FakeTmdb, FakeTvmaze, get_cell, make_spreadsheet, set_cell
 from job.config import TZ
@@ -372,3 +373,22 @@ def test_ran_today_only_counts_a_successful_run_on_the_same_toronto_day():
     )
     assert not ran_today([], today)
     assert not ran_today(meta(last_run_at="garbage", last_run_ok="True"), today)
+
+
+def test_failure_log_includes_the_api_error_code(capsys):
+    class RateLimitError(Exception):
+        code = "credit_balance_exhausted"
+        status_code = 429
+
+    class Broke:
+        def __init__(self):
+            self.responses = NS(create=self.create)
+
+        def create(self, **kwargs):
+            raise RateLimitError("You have no credits remaining.")
+
+    _sp, sheet, tmdb, tvmaze, _ = world()
+    run_daily(sheet, tmdb, tvmaze, Broke(), lambda url: None, NOW)
+    logged = capsys.readouterr().out
+    assert "FAILED suggestions: RateLimitError 429 credit_balance_exhausted" in logged
+    assert "no credits remaining" not in logged
