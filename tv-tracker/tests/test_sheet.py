@@ -146,3 +146,17 @@ def test_failed_replace_leaves_previous_rows():
     assert [
         (r["tmdb_id"], r["airstamp"]) for r in Sheet(sp).read_all()["Schedule"]
     ] == [("1", "a")]
+
+
+def test_appends_use_the_sheets_append_operation_so_concurrent_rows_survive():
+    sp = make_spreadsheet(Cards=[{"card_id": "a", "status": "new"}])
+    sheet = Sheet(sp)
+    sheet.read_all()
+    sp.grid["Cards"].append(
+        ["chatgpt-row", "news"]
+    )  # another writer appends after our read
+    sheet.write([], {"Cards": [{"card_id": "job-row", "status": "new"}]})
+    assert [r[0] for r in sp.grid["Cards"][1:]] == ["a", "chatgpt-row", "job-row"]
+    assert sp.appends == [
+        ("Cards!A1", {"valueInputOption": "RAW", "insertDataOption": "INSERT_ROWS"})
+    ]

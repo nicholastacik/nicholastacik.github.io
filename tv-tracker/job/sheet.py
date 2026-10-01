@@ -107,38 +107,37 @@ class Sheet:
         }
 
     def write(self, updates: list[Update], appends: dict[str, list[dict]]) -> None:
-        tabs = sorted(
-            {u.tab for u in updates} | {tab for tab, rows in appends.items() if rows}
-        )
-        if not tabs:
-            return
-        response = self.spreadsheet.values_batch_get(
-            [f"{tab}!A:A" for tab in tabs], params=UNFORMATTED
-        )
-        keys = {
-            tab: [str(row[0]) if row else "" for row in vr.get("values", [])]
-            for tab, vr in zip(tabs, response["valueRanges"])
-        }
-        data = []
-        for update in updates:
-            header = HEADERS[update.tab]
-            for number, key in enumerate(keys[update.tab], start=1):
-                if number > 1 and key == str(update.key):
-                    for column, value in update.fields.items():
-                        cell = f"{update.tab}!{column_letter(header.index(column))}{number}"
-                        data.append({"range": cell, "values": [[value]]})
+        tabs = sorted({u.tab for u in updates})
+        if tabs:
+            response = self.spreadsheet.values_batch_get(
+                [f"{tab}!A:A" for tab in tabs], params=UNFORMATTED
+            )
+            keys = {
+                tab: [str(row[0]) if row else "" for row in vr.get("values", [])]
+                for tab, vr in zip(tabs, response["valueRanges"])
+            }
+            data = []
+            for update in updates:
+                header = HEADERS[update.tab]
+                for number, key in enumerate(keys[update.tab], start=1):
+                    if number > 1 and key == str(update.key):
+                        for column, value in update.fields.items():
+                            cell = f"{update.tab}!{column_letter(header.index(column))}{number}"
+                            data.append({"range": cell, "values": [[value]]})
+            if data:
+                self.spreadsheet.values_batch_update(
+                    {"valueInputOption": "RAW", "data": data}
+                )
         for tab, rows in appends.items():
             if rows:
-                data.append(
-                    {
-                        "range": f"{tab}!A{len(keys[tab]) + 1}",
-                        "values": _values(tab, rows),
-                    }
+                self.spreadsheet.values_append(
+                    f"{tab}!A1",
+                    params={
+                        "valueInputOption": "RAW",
+                        "insertDataOption": "INSERT_ROWS",
+                    },
+                    body={"values": _values(tab, rows)},
                 )
-        if data:
-            self.spreadsheet.values_batch_update(
-                {"valueInputOption": "RAW", "data": data}
-            )
 
     def replace(self, tab: str, rows: list[dict]) -> None:
         response = self.spreadsheet.values_batch_get([f"{tab}!A:A"], params=UNFORMATTED)

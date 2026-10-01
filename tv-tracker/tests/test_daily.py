@@ -392,3 +392,14 @@ def test_failure_log_includes_the_api_error_code(capsys):
     logged = capsys.readouterr().out
     assert "FAILED suggestions: RateLimitError 429 credit_balance_exhausted" in logged
     assert "no credits remaining" not in logged
+
+
+def test_research_off_without_an_llm_client_is_not_a_failure():
+    sp, sheet, tmdb, tvmaze, _ = world()
+    report = run_daily(sheet, tmdb, tvmaze, None, lambda url: None, NOW)
+    assert report.ok and report.failed_steps == []
+    assert {r["card_id"] for r in sheet.read_all()["Cards"]} == {
+        "ep:1:S01E02",
+        "season:1:2:2026-12-01",
+    }
+    assert meta(sp)["last_run_ok"] == "TRUE"

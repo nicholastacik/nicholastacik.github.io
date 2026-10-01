@@ -78,6 +78,15 @@ class FakeSpreadsheet:
                         row.append("")
                     row[c1 + j] = fmt(value)
 
+    def values_append(self, range, params=None, body=None):
+        self.appends = getattr(self, "appends", []) + [(range, params)]
+        tab = range.split("!")[0]
+        grid = self.grid[tab]
+        last = max((i for i, row in enumerate(grid) if any(row)), default=-1)
+        for i, values in enumerate(body["values"]):
+            row = self._row(tab, last + 2 + i)
+            row[:] = [fmt(v) for v in values]
+
     def values_clear(self, a1):
         tab, r1, c1, c2 = self._parse(a1)
         for row in self.grid[tab][r1 - 1 :]:

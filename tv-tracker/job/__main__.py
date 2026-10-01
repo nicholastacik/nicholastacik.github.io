@@ -84,12 +84,16 @@ def run(skip_if_ran_today: bool = False) -> None:
         sheet,
         Tmdb(config.tmdb_token()),
         Tvmaze(),
-        OpenAI(),
+        OpenAI() if config.openai_key() else None,
         validate.fetch_page,
         now,
         omdb=omdb,
     )
     print(f"appended {report.appended} card(s), updated {report.updated} cell group(s)")
+    if not config.openai_key():
+        print(
+            "research off: no OPENAI_API_KEY (suggestions and news come from the ChatGPT task)"
+        )
     if not report.ok:
         print(
             f"failed shows: {len(report.failed_shows)} (names in the Meta tab); failed steps: {report.failed_steps}"

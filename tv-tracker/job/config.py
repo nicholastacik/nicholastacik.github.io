@@ -30,3 +30,7 @@ def service_account_info() -> dict:
 
 def omdb_key() -> str | None:
     return os.environ.get("OMDB_API_KEY") or None
+
+
+def openai_key() -> str | None:
+    return os.environ.get("OPENAI_API_KEY") or None

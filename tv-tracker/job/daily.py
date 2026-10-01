@@ -200,16 +200,17 @@ def run_daily(
             report.failed_shows.append(show.name)
             failed.add(show.tmdb_id)
 
+    research = llm_client is not None
     inputs = llm_inputs(shows, state["Tracked"], cards, today, config.NEWS_MEMORY_DAYS)
     try:
-        outcome = run_suggestions(inputs, llm_client, tmdb.search)
+        outcome = research and run_suggestions(inputs, llm_client, tmdb.search)
         for suggestion in outcome[1] if outcome else []:
             add(suggestion_card(suggestion, stamp))
     except Exception as error:  # noqa: BLE001 — spec: a failed step never blocks fact cards
         _failed("suggestions", error)
         report.failed_steps.append("suggestions")
     try:
-        outcome = run_news(inputs, llm_client, fetch, today)
+        outcome = research and run_news(inputs, llm_client, fetch, today)
         names = {show.tmdb_id: show.name for show in shows}
         for item in outcome[1] if outcome else []:
             add(
