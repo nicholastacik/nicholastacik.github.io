@@ -4,7 +4,7 @@ description: "Scoring 500k clues with a structured-output LLM, then measuring wh
 date: "2026-09-30"
 categories: [data-science, NLP, AI, jeopardy, projects]
 image: thumbnail.png
-draft: true
+draft: false
 ---
 
 ```{python}
@@ -221,11 +221,19 @@ fig.show()
 
 ## How the prompt was developed
 
-Finding a prompt that reliably produces calibrated 1–10 ratings took some trial and error. I sampled 2,000 clues stratified by board position and ran three candidate prompts through Jev, then measured each variant's correlation with the actual player outcome (`any_correct`) on those clues.
+Finding a rubric that reliably produces well-calibrated 1–10 ratings required some experimentation. Jev doesn't take a freeform prompt — it takes structured questions, with a rubric of descriptions for each score level. The framing of those descriptions turned out to matter a lot.
 
-The prompts varied on two dimensions: framing (general knowledge vs. Jeopardy-contestant perspective) and format (inline JSON vs. separated). *(Spike results and winning prompt to be filled in after scoring runs.)*
+I sampled 500 clues stratified by board position and scored them with three different rubric formulations, all using the same instruction ("You are an expert Jeopardy analyst. Rate how difficult this clue is for a typical contestant.") but varying the per-level descriptions. I selected the winner on two criteria: strongest negative correlation with actual player correctness, and median difficulty close to 5 (a well-centered scale is more interpretable and suggests the model isn't systematically over- or under-estimating).
 
-The spike sample was carved out *before* any prompt development, and those clues are excluded from the training set used in the validation above — so the prompt selection process can't leak into the test result.
+| Variant | Description style | Corr | Median |
+|---|---|---|---|
+| Descriptive | Narrative anchors ("almost anyone would know this…") | -0.182 | 5.0 |
+| **Percentile** | **Player correctness rates ("~45% of contestants answer correctly")** | **-0.227** | **5.0** |
+| Concise | Short labels ("median — typical for a Jeopardy contestant") | -0.191 | 4.0 |
+
+The percentile variant won on both axes. Grounding each level in a concrete expected correctness rate gives Jev a clear, measurable signal to anchor its judgment — rather than asking it to interpret vague qualitative labels like "somewhat easy."
+
+The spike sample was carved out *before* any rubric development, and those games are excluded from the training set used in the validation above — so rubric selection can't leak into the test result.
 
 ## Try it yourself
 

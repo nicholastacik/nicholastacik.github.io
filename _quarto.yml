@@ -19,7 +19,6 @@ project:
     - "!posts/jeopardy_ds/notes/"
     - "!posts/montreal_events/notes/"
     - "!posts/ptcg/notes/"
-    - "!posts/jeopardy_difficulty/index.qmd"
 
 website:
   title: "Nicholas Tacik"
