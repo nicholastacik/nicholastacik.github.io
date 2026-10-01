@@ -6,6 +6,7 @@ export function mapResults(results) {
   return results.map((result) => ({
     tmdb_id: result.id,
     name: result.name,
+    original_name: result.original_name && result.original_name !== result.name ? result.original_name : "",
     first_air_year: Number(String(result.first_air_date ?? "").slice(0, 4)) || "",
     poster_url: result.poster_path ? `https://image.tmdb.org/t/p/w342${result.poster_path}` : "",
     country: (result.origin_country ?? [])[0] ?? "",

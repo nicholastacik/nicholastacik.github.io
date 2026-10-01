@@ -214,3 +214,47 @@ export function planUntrack({ tracked, tmdbId, nowIso, sheetIds }) {
     .filter((row) => Number(row.tmdb_id) === tmdbId)
     .map((row) => updateRow(sheetIds, "Tracked", row._row, "active", [false, nowIso]));
 }
+
+function normTitle(title) {
+  return String(title ?? "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[\u201c\u201d]/g, '"')
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)
+    .join(" ");
+}
+
+function nearYear(candidate, year) {
+  const found = Number(candidate);
+  return !year || !found || Math.abs(found - year) <= 1;
+}
+
+export function resolveSuggestion(results, title, year, hintId) {
+  const wanted = normTitle(title);
+  const candidates = results.filter(
+    (show) => (normTitle(show.name) === wanted || normTitle(show.original_name) === wanted) && nearYear(show.first_air_year, year),
+  );
+  const hinted = candidates.find((show) => hintId && show.tmdb_id === hintId);
+  if (hinted) return { status: "match", show: hinted };
+  const exact = year ? candidates.filter((show) => Number(show.first_air_year) === year) : [];
+  if (exact.length === 1) return { status: "match", show: exact[0] };
+  if (exact.length > 1) return { status: "ambiguous", candidates: exact };
+  if (candidates.length === 1) return { status: "match", show: candidates[0] };
+  if (candidates.length > 1) return { status: "ambiguous", candidates };
+  return { status: "none" };
+}
+
+export function findPendingSuggestion(cards, show) {
+  return (
+    cards.find(
+      (card) =>
+        card.type === "suggestion" &&
+        card.status === "new" &&
+        (Number(card.tmdb_id) === show.tmdb_id ||
+          (normTitle(card.show_name) === normTitle(show.name) && nearYear(card.date, Number(show.first_air_year) || null))),
+    ) ?? null
+  );
+}

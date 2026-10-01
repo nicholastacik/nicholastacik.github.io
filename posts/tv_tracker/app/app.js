@@ -3,7 +3,19 @@ import { Auth } from "./auth.js";
 import { AuthError, ForbiddenError, SheetsClient } from "./sheets.js";
 import { StaleError, enqueue, markCard, resume, trackShow, untrackShow } from "./actions.js";
 import { resultLabel, searchShows } from "./tmdb.js";
-import { activeShows, dayLabel, domain, safeUrl, scheduleDays, scheduleHeader, showLink, torontoDate, visibleCards } from "./state.js";
+import {
+  activeShows,
+  dayLabel,
+  domain,
+  findPendingSuggestion,
+  resolveSuggestion,
+  safeUrl,
+  scheduleDays,
+  scheduleHeader,
+  showLink,
+  torontoDate,
+  visibleCards,
+} from "./state.js";
 
 const SCOPE = "https://www.googleapis.com/auth/spreadsheets";
 const TYPE_LABEL = { episode: "New episode", season: "Season date", news: "News", suggestion: "You might like" };
@@ -124,8 +136,31 @@ function setStatus(card, status) {
   );
 }
 
-function pendingSuggestion(tmdbId) {
-  return data.Cards.find((c) => c.type === "suggestion" && c.status === "new" && Number(c.tmdb_id) === tmdbId) ?? null;
+function pendingSuggestion(show) {
+  return findPendingSuggestion(data.Cards, show);
+}
+
+async function trackSuggestion(card) {
+  const title = String(card.show_name);
+  let found;
+  try {
+    found = await searchShows(title, CONFIG.TMDB_API_KEY);
+  } catch {
+    toast("Couldn't reach TMDB to confirm the show");
+    return;
+  }
+  const outcome = resolveSuggestion(found, title, Number(card.date) || null, Number(card.tmdb_id) || null);
+  if (outcome.status === "match") {
+    track(outcome.show, "suggestion", card);
+  } else if (outcome.status === "ambiguous") {
+    results = outcome.candidates;
+    $("search").value = title;
+    showView("shows");
+    renderResults();
+    toast("More than one show matches. Pick the right one.");
+  } else {
+    toast(`Couldn't find "${title}" on TMDB, so it wasn't tracked`);
+  }
 }
 
 function track(show, source, card = null) {
@@ -165,7 +200,7 @@ function cardView(card) {
   const linkText = card.type === "news" ? domain(card.link) : String(card.link).includes("imdb.com") ? "IMDb" : "TMDB";
   const buttons = suggestion
     ? [
-        el("button", { class: "primary", onclick: () => track({ tmdb_id: Number(card.tmdb_id), name: String(card.show_name), first_air_year: Number(card.date) || "", poster_url: card.image_url }, "suggestion", card) }, "Track"),
+        el("button", { class: "primary", onclick: () => trackSuggestion(card) }, "Track"),
         el("button", { onclick: () => setStatus(card, "ignored") }, "Ignore"),
       ]
     : [el("button", { class: "primary", onclick: () => setStatus(card, "noted") }, "Noted")];
@@ -250,7 +285,7 @@ function renderResults() {
         el("span", {}, link(showLink(show), resultLabel(show))),
         tracking.has(show.tmdb_id)
           ? el("span", { class: "tag" }, "Tracking")
-          : el("button", { class: "primary", onclick: () => track(show, "search", pendingSuggestion(show.tmdb_id)) }, "Track"),
+          : el("button", { class: "primary", onclick: () => track(show, "search", pendingSuggestion(show)) }, "Track"),
       ),
     ),
   );
@@ -291,11 +326,13 @@ $("search").addEventListener("input", (event) => {
   }, 300);
 });
 
+function showView(name) {
+  for (const button of document.querySelectorAll(".tabs button")) button.classList.toggle("active", button.dataset.view === name);
+  for (const view of document.querySelectorAll(".view")) view.hidden = view.id !== `view-${name}`;
+}
+
 for (const button of document.querySelectorAll(".tabs button")) {
-  button.addEventListener("click", () => {
-    for (const other of document.querySelectorAll(".tabs button")) other.classList.toggle("active", other === button);
-    for (const view of document.querySelectorAll(".view")) view.hidden = view.id !== `view-${button.dataset.view}`;
-  });
+  button.addEventListener("click", () => showView(button.dataset.view));
 }
 
 $("connect").addEventListener("click", async () => {

@@ -73,8 +73,8 @@ test("TMDB search url, mapping and limit", async () => {
   assert.equal(url.searchParams.get("query"), "Slow Horses");
   assert.equal(url.searchParams.get("api_key"), "KEY");
   assert.deepEqual(mapResults([{ id: 1, name: "A", first_air_date: "2022-04-01", poster_path: "/p.jpg", origin_country: ["GB"] }, { id: 2, name: "B", first_air_date: "", poster_path: null }]), [
-    { tmdb_id: 1, name: "A", first_air_year: 2022, poster_url: "https://image.tmdb.org/t/p/w342/p.jpg", country: "GB" },
-    { tmdb_id: 2, name: "B", first_air_year: "", poster_url: "", country: "" },
+    { tmdb_id: 1, name: "A", original_name: "", first_air_year: 2022, poster_url: "https://image.tmdb.org/t/p/w342/p.jpg", country: "GB" },
+    { tmdb_id: 2, name: "B", original_name: "", first_air_year: "", poster_url: "", country: "" },
   ]);
   const many = Array.from({ length: 15 }, (_, i) => ({ id: i, name: `S${i}`, first_air_date: "2020-01-01", poster_path: null }));
   const fake = fakeFetch([{ body: { results: many } }]);
