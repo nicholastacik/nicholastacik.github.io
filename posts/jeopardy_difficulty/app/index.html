@@ -47,13 +47,13 @@
   <div class="controls">
     <div class="control-row">
       <label>Min difficulty</label>
-      <input type="range" id="min-diff" min="1" max="10" value="1">
+      <input type="range" id="min-diff" min="1" max="9" value="1">
       <span class="range-display" id="min-val">1</span>
     </div>
     <div class="control-row">
       <label>Max difficulty</label>
-      <input type="range" id="max-diff" min="1" max="10" value="10">
-      <span class="range-display" id="max-val">10</span>
+      <input type="range" id="max-diff" min="1" max="9" value="9">
+      <span class="range-display" id="max-val">9</span>
     </div>
     <div class="control-row">
       <label>Round</label>
@@ -134,7 +134,7 @@
       document.getElementById("card-answer").textContent =
         "What is: " + current.answer + "?";
       document.getElementById("card-meta").textContent =
-        `Difficulty: ${current.difficulty}/10 · ${current.round} · ${current.air_date}`;
+        `Difficulty: ${current.difficulty}/9 · ${current.round} · ${current.air_date}`;
       document.getElementById("answer-box").style.display = "block";
       document.getElementById("reveal-btn").style.display = "none";
     }
