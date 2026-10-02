@@ -394,6 +394,7 @@ def test_failure_log_includes_the_api_error_code(capsys):
     assert "no credits remaining" not in logged
 
 
+
 def test_research_off_without_an_llm_client_is_not_a_failure():
     sp, sheet, tmdb, tvmaze, _ = world()
     report = run_daily(sheet, tmdb, tvmaze, None, lambda url: None, NOW)

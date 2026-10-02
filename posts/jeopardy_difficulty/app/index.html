@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jeopardy Difficulty Sampler</title>
+  <style>
+    :root {
+      --bg: #0a0a2e;
+      --card-bg: #1a1a5e;
+      --accent: #f5c518;
+      --text: #ffffff;
+      --muted: #aaaacc;
+      --radius: 8px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: system-ui, sans-serif;
+           min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+           padding: 24px 16px; }
+    h1 { color: var(--accent); font-size: 1.4rem; margin-bottom: 20px; }
+    .controls { width: 100%; max-width: 640px; display: flex; flex-direction: column; gap: 12px; }
+    .control-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    label { color: var(--muted); font-size: 0.85rem; min-width: 90px; }
+    input[type=range] { flex: 1; accent-color: var(--accent); }
+    select { background: var(--card-bg); color: var(--text); border: 1px solid var(--accent);
+             border-radius: var(--radius); padding: 4px 8px; }
+    .range-display { color: var(--accent); font-weight: bold; min-width: 40px; }
+    .card { background: var(--card-bg); border-radius: var(--radius); padding: 24px;
+            width: 100%; max-width: 640px; margin-top: 24px; }
+    .category { color: var(--accent); font-size: 1rem; font-weight: bold;
+                text-transform: uppercase; letter-spacing: 2px; margin-bottom: 16px; }
+    .clue-text { font-size: 1.1rem; line-height: 1.6; margin-bottom: 20px; }
+    .answer-box { background: #0a0a2e; border-radius: var(--radius); padding: 16px;
+                  margin-bottom: 16px; display: none; }
+    .answer-box .answer { color: var(--accent); font-size: 1.2rem; font-weight: bold; }
+    .meta { color: var(--muted); font-size: 0.8rem; margin-top: 8px; }
+    .btn { background: var(--accent); color: #000; border: none; border-radius: var(--radius);
+           padding: 10px 20px; font-weight: bold; cursor: pointer; font-size: 0.95rem; }
+    .btn:hover { opacity: 0.85; }
+    .btn-outline { background: transparent; color: var(--accent);
+                   border: 2px solid var(--accent); margin-left: 8px; }
+    #status { color: var(--muted); margin-top: 16px; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <h1>Jeopardy Difficulty Sampler</h1>
+  <div class="controls">
+    <div class="control-row">
+      <label>Min difficulty</label>
+      <input type="range" id="min-diff" min="1" max="9" value="1">
+      <span class="range-display" id="min-val">1</span>
+    </div>
+    <div class="control-row">
+      <label>Max difficulty</label>
+      <input type="range" id="max-diff" min="1" max="9" value="9">
+      <span class="range-display" id="max-val">9</span>
+    </div>
+    <div class="control-row">
+      <label>Round</label>
+      <select id="round-filter">
+        <option value="">Any</option>
+        <option value="Jeopardy">Jeopardy</option>
+        <option value="Double Jeopardy">Double Jeopardy</option>
+      </select>
+    </div>
+    <div class="control-row">
+      <label>Category</label>
+      <select id="cluster-filter"><option value="">Any</option></select>
+    </div>
+  </div>
+  <div class="card" id="card" style="display:none">
+    <div class="category" id="card-category"></div>
+    <div class="clue-text" id="card-clue"></div>
+    <div class="answer-box" id="answer-box">
+      <div class="answer" id="card-answer"></div>
+      <div class="meta" id="card-meta"></div>
+    </div>
+    <button class="btn" id="reveal-btn" onclick="reveal()">Reveal Answer</button>
+    <button class="btn btn-outline" onclick="nextClue()">Next Clue</button>
+  </div>
+  <div id="status">Loading clues...</div>
+
+  <script>
+    let allClues = [], filtered = [], current = null;
+
+    fetch("data/clues.json")
+      .then(r => r.json())
+      .then(data => {
+        allClues = data;
+        populateClusters();
+        applyFilters();
+        document.getElementById("status").textContent = "";
+      });
+
+    function populateClusters() {
+      const clusters = [...new Set(allClues.map(c => c.cluster_name))].sort();
+      const sel = document.getElementById("cluster-filter");
+      clusters.forEach(name => {
+        const opt = document.createElement("option");
+        opt.value = name; opt.textContent = name;
+        sel.appendChild(opt);
+      });
+    }
+
+    function applyFilters() {
+      const minD = +document.getElementById("min-diff").value;
+      const maxD = +document.getElementById("max-diff").value;
+      const round = document.getElementById("round-filter").value;
+      const cluster = document.getElementById("cluster-filter").value;
+      filtered = allClues.filter(c =>
+        c.difficulty >= minD && c.difficulty <= maxD &&
+        (!round || c.round === round) &&
+        (!cluster || c.cluster_name === cluster)
+      );
+      document.getElementById("status").textContent =
+        filtered.length === 0 ? "No clues match these filters." : "";
+      nextClue();
+    }
+
+    function nextClue() {
+      if (filtered.length === 0) {
+        document.getElementById("card").style.display = "none";
+        return;
+      }
+      current = filtered[Math.floor(Math.random() * filtered.length)];
+      document.getElementById("card-category").textContent = current.category;
+      document.getElementById("card-clue").textContent = current.clue;
+      document.getElementById("answer-box").style.display = "none";
+      document.getElementById("reveal-btn").style.display = "inline-block";
+      document.getElementById("card").style.display = "block";
+    }
+
+    function reveal() {
+      document.getElementById("card-answer").textContent =
+        "What is: " + current.answer + "?";
+      document.getElementById("card-meta").textContent =
+        `Difficulty: ${current.difficulty}/9 · ${current.round} · ${current.air_date}`;
+      document.getElementById("answer-box").style.display = "block";
+      document.getElementById("reveal-btn").style.display = "none";
+    }
+
+    document.getElementById("min-diff").addEventListener("input", function() {
+      document.getElementById("min-val").textContent = this.value;
+      if (+this.value > +document.getElementById("max-diff").value)
+        document.getElementById("max-diff").value = this.value;
+      document.getElementById("max-val").textContent =
+        document.getElementById("max-diff").value;
+      applyFilters();
+    });
+    document.getElementById("max-diff").addEventListener("input", function() {
+      document.getElementById("max-val").textContent = this.value;
+      if (+this.value < +document.getElementById("min-diff").value)
+        document.getElementById("min-diff").value = this.value;
+      document.getElementById("min-val").textContent =
+        document.getElementById("min-diff").value;
+      applyFilters();
+    });
+    document.getElementById("round-filter").addEventListener("change", applyFilters);
+    document.getElementById("cluster-filter").addEventListener("change", applyFilters);
+  </script>
+</body>
+</html>

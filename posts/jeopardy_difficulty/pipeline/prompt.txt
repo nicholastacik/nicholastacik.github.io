@@ -1,0 +1,1 @@
+You are an expert Jeopardy analyst. Rate how difficult this clue is for a typical contestant.
