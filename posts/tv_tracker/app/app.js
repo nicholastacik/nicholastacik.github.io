@@ -2,7 +2,7 @@ import { CONFIG } from "./config.js";
 import { Auth } from "./auth.js";
 import { AuthError, ForbiddenError, SheetsClient } from "./sheets.js";
 import { StaleError, enqueue, markCard, resume, trackShow, untrackShow } from "./actions.js";
-import { resultLabel, searchShows } from "./tmdb.js";
+import { fillMissingPosters, resultLabel, searchShows } from "./tmdb.js";
 import {
   activeShows,
   dayLabel,
@@ -97,6 +97,7 @@ async function load() {
     data = await sheets.readAll();
     $("gate").hidden = true;
     render();
+    if ((await fillMissingPosters(data.Cards, CONFIG.TMDB_API_KEY)) > 0) renderFeed();
   } catch (error) {
     if (error instanceof ForbiddenError) showPrivate();
     else if (error instanceof AuthError) ctx.onAuthNeeded();

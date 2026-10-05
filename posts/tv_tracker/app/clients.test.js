@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { HEADERS } from "./headers.js";
 import { AuthError, ForbiddenError, SheetsClient, SheetsError, tabRange } from "./sheets.js";
-import { mapResults, resultLabel, searchShows, searchUrl } from "./tmdb.js";
+import { fillMissingPosters, mapResults, resultLabel, searchShows, searchUrl } from "./tmdb.js";
 
 function fakeFetch(responses) {
   const calls = [];
@@ -87,4 +87,21 @@ test("resultLabel shows year and country when known", () => {
   assert.equal(resultLabel({ name: "Top Chef", first_air_year: 2013, country: "PL" }), "Top Chef (2013, PL)");
   assert.equal(resultLabel({ name: "New Show", first_air_year: "", country: "CA" }), "New Show (CA)");
   assert.equal(resultLabel({ name: "Mystery", first_air_year: "", country: "" }), "Mystery");
+});
+
+test("fillMissingPosters fills blank suggestion images from TMDB and leaves the rest", async () => {
+  const cards = [
+    { type: "suggestion", tmdb_id: 7, image_url: "" },
+    { type: "suggestion", tmdb_id: 8, image_url: "keep" },
+    { type: "suggestion", tmdb_id: "", image_url: "" },
+    { type: "news", tmdb_id: 9, image_url: "" },
+  ];
+  const fake = fakeFetch([{ body: { poster_path: "/x.jpg" } }]);
+  assert.equal(await fillMissingPosters(cards, "KEY", fake.fn), 1);
+  assert.equal(new URL(fake.calls[0].url).pathname, "/3/tv/7");
+  assert.equal(cards[0].image_url, "https://image.tmdb.org/t/p/w342/x.jpg");
+  assert.deepEqual(cards.slice(1).map((c) => c.image_url), ["keep", "", ""]);
+  const bad = [{ type: "suggestion", tmdb_id: 7, image_url: "" }];
+  await fillMissingPosters(bad, "KEY", fakeFetch([{ status: 404 }]).fn);
+  assert.equal(bad[0].image_url, "");
 });
