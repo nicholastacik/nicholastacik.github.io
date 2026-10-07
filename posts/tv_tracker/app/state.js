@@ -76,6 +76,13 @@ export function domain(url) {
   }
 }
 
+export function linkLabel(card) {
+  if (card.type === "news") return domain(card.link);
+  const link = String(card.link);
+  if (link.includes("imdb.com")) return "IMDb";
+  return link.includes("tvmaze.com") ? "TVmaze" : "TMDB";
+}
+
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 

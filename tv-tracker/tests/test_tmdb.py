@@ -52,3 +52,16 @@ def test_episode_imdb():
 def test_episode_imdb_missing_episode_is_none():
     transport = httpx.MockTransport(lambda request: httpx.Response(404))
     assert Tmdb("tok", transport=transport).episode_imdb(1, 9, 99) is None
+
+
+def test_season_and_movie_requests():
+    seen = []
+
+    def handler(request):
+        seen.append(request.url.path)
+        return httpx.Response(200, json={"ok": True})
+
+    tmdb = Tmdb("tok", transport=httpx.MockTransport(handler))
+    tmdb.season(1434, 0)
+    tmdb.movie(55)
+    assert seen == ["/3/tv/1434/season/0", "/3/movie/55"]

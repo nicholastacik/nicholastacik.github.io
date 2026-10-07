@@ -27,6 +27,12 @@ class Tmdb:
             self.client, f"/tv/{tmdb_id}", {"append_to_response": ",".join(parts)}
         )
 
+    def season(self, tmdb_id: int, number: int) -> dict:
+        return get_json(self.client, f"/tv/{tmdb_id}/season/{number}")
+
+    def movie(self, tmdb_id: int) -> dict:
+        return get_json(self.client, f"/movie/{tmdb_id}")
+
     def search(self, title: str) -> list[dict]:
         return get_json(self.client, "/search/tv", {"query": title})["results"]
 

@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { HEADERS } from "./headers.js";
-import { activeIds, activeShows, domain, rowsFromValues, safeUrl, showLink, truthy, visibleCards } from "./state.js";
+import { activeIds, activeShows, domain, linkLabel, rowsFromValues, safeUrl, showLink, truthy, visibleCards } from "./state.js";
 
 test("truthy accepts booleans and any-case TRUE only", () => {
   assert.ok(truthy(true) && truthy("TRUE") && truthy("True") && truthy(" true "));
@@ -66,4 +66,17 @@ test("activeShows carries imdb_id and showLink prefers IMDb then TMDB", () => {
   assert.equal(showLink(show), "https://www.imdb.com/title/tt0096697/");
   assert.equal(showLink({ tmdb_id: 60625, imdb_id: "" }), "https://www.themoviedb.org/tv/60625");
   assert.equal(showLink({ tmdb_id: 1, imdb_id: "not-an-id" }), "https://www.themoviedb.org/tv/1");
+});
+
+test("linkLabel names the source of a card's link", () => {
+  assert.equal(linkLabel({ type: "news", link: "https://www.example.com/a" }), "example.com");
+  assert.equal(linkLabel({ type: "episode", link: "https://www.imdb.com/title/tt1/" }), "IMDb");
+  assert.equal(linkLabel({ type: "special", link: "https://www.tvmaze.com/episodes/1/x" }), "TVmaze");
+  assert.equal(linkLabel({ type: "special", link: "https://www.themoviedb.org/movie/5" }), "TMDB");
+});
+
+test("visibleCards shows a special card under its tracked parent show", () => {
+  const card = { card_id: "special:1:2026-10-05:x", type: "special", tmdb_id: "1", status: "new", current: "TRUE", created_at: "2026-10-07T06:00:00-04:00", date: "2026-10-05" };
+  assert.deepEqual(visibleCards([card], [tracked(1, true)]), [card]);
+  assert.deepEqual(visibleCards([card], [tracked(1, false)]), []);
 });

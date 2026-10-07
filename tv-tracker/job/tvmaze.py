@@ -25,6 +25,12 @@ class Tvmaze:
     def episodes(self, tvmaze_id: int) -> list[dict]:
         return get_json(self.client, f"/shows/{tvmaze_id}/episodes")
 
+    def show(self, tvmaze_id: int) -> dict:
+        return get_json(self.client, f"/shows/{tvmaze_id}")
+
+    def specials(self, tvmaze_id: int) -> list[dict]:
+        return get_json(self.client, f"/shows/{tvmaze_id}/episodes", {"specials": 1})
+
     def show_with_episodes(self, tvmaze_id: int) -> dict:
         return get_json(self.client, f"/shows/{tvmaze_id}", {"embed": "episodes"})
 

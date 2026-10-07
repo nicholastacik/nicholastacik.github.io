@@ -15,6 +15,7 @@ from job.llm_cards import llm_inputs, news_card, suggestion_card
 from job.reconcile import episode_updates, reconcile_seasons
 from job.schedule import merge_schedule, schedule_rows, window_start
 from job.sheet import Update
+from job.specials import discover_specials, special_cards, special_rows
 from job.state import active_shows, truthy
 from job.steps import run_news, run_suggestions
 from job.tmdb import image_url
@@ -78,7 +79,14 @@ def _failed(what: str, error: Exception) -> None:
 
 
 def run_daily(
-    sheet, tmdb, tvmaze, llm_client, fetch, now: datetime, omdb=None
+    sheet,
+    tmdb,
+    tvmaze,
+    llm_client,
+    fetch,
+    now: datetime,
+    omdb=None,
+    special_links: dict[int, dict] | None = None,
 ) -> RunReport:
     today, stamp = now.date(), now.isoformat(timespec="seconds")
     state = sheet.read_all()
@@ -90,6 +98,7 @@ def run_daily(
     updates: list[Update] = []
     fresh: dict[int, list[dict]] = {}
     failed: set[int] = set()
+    specials_failed: set[int] = set()
     posters: dict[int, str] = {}
 
     def add(card: dict) -> None:
@@ -133,6 +142,23 @@ def run_daily(
                             **{key: fact[key] for key in CARD_FIELDS},
                         )
                     )
+            specials, special_failures = discover_specials(
+                show, data, tmdb, tvmaze, (special_links or {}).get(show.tmdb_id, {})
+            )
+            for source, error in special_failures:
+                _failed(f"specials {source} of show {number}", error)
+                report.failed_steps.append(f"specials:{show.tmdb_id}:{source}")
+                specials_failed.add(show.tmdb_id)
+            for card in special_cards(
+                show,
+                data.get("name") or show.name,
+                specials,
+                cards,
+                today,
+                poster,
+                stamp,
+            ):
+                add(card)
             season_appends, season_updates = reconcile_seasons(
                 show.tmdb_id,
                 data.get("name") or show.name,
@@ -192,8 +218,9 @@ def run_daily(
 
                 return episode_link(lookup, tmdb_id, show_imdb, season, number)
 
-            fresh[show.tmdb_id] = schedule_rows(
-                show, tvmaze_show, data, today, stamp, link_for
+            rows = schedule_rows(show, tvmaze_show, data, today, stamp, link_for)
+            fresh[show.tmdb_id] = rows + special_rows(
+                show, specials, rows, today, stamp, poster
             )
         except Exception as error:  # noqa: BLE001 — spec: log and skip the show
             _failed(f"show {number} of {len(shows)} (name in the Meta tab)", error)
@@ -224,6 +251,9 @@ def run_daily(
 
     report.appended, report.updated = len(appends), len(updates)
     sheet.write(updates, {"Cards": appends})
-    sheet.replace("Schedule", merge_schedule(fresh, failed, state["Schedule"], today))
+    sheet.replace(
+        "Schedule",
+        merge_schedule(fresh, failed, state["Schedule"], today, specials_failed),
+    )
     sheet.replace("Meta", meta_rows(report, stamp, today))
     return report

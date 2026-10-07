@@ -138,6 +138,14 @@ class FakeTmdb:
             data[f"season/{n}"] = self.seasons.get((tmdb_id, n), {"episodes": []})
         return data
 
+    def season(self, tmdb_id, number):
+        if (tmdb_id, number, "season") in self.broken:
+            raise RuntimeError("tmdb season down")
+        return self.seasons.get((tmdb_id, number), {"episodes": []})
+
+    def movie(self, movie_id):
+        return self.shows[("movie", movie_id)]
+
     def episode_imdb(self, tmdb_id, season, episode):
         return None
 
@@ -146,8 +154,27 @@ class FakeTmdb:
 
 
 class FakeTvmaze:
-    def __init__(self, lookups: dict[str, int], shows: dict[int, dict], broken=()):
+    def __init__(
+        self,
+        lookups: dict[str, int],
+        shows: dict[int, dict],
+        broken=(),
+        specials: dict[int, list[dict]] | None = None,
+    ):
         self.lookups, self.shows, self.broken = lookups, shows, set(broken)
+        self.special_episodes = specials or {}
+
+    def show(self, tvmaze_id):
+        return {
+            key: value
+            for key, value in self.shows[tvmaze_id].items()
+            if key != "_embedded"
+        }
+
+    def specials(self, tvmaze_id):
+        if ("specials", tvmaze_id) in self.broken:
+            raise RuntimeError("tvmaze specials down")
+        return self.special_episodes.get(tvmaze_id, [])
 
     def lookup_imdb(self, imdb_id):
         return self.lookups.get(imdb_id)

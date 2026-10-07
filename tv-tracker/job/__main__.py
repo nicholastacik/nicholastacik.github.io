@@ -88,6 +88,7 @@ def run(skip_if_ran_today: bool = False) -> None:
         validate.fetch_page,
         now,
         omdb=omdb,
+        special_links=config.special_links(),
     )
     print(f"appended {report.appended} card(s), updated {report.updated} cell group(s)")
     if not config.openai_key():

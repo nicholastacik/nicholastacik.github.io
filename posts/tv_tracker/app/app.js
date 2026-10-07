@@ -6,8 +6,8 @@ import { fillMissingPosters, resultLabel, searchShows } from "./tmdb.js";
 import {
   activeShows,
   dayLabel,
-  domain,
   findPendingSuggestion,
+  linkLabel,
   resolveSuggestion,
   safeUrl,
   scheduleDays,
@@ -18,7 +18,7 @@ import {
 } from "./state.js";
 
 const SCOPE = "https://www.googleapis.com/auth/spreadsheets";
-const TYPE_LABEL = { episode: "New episode", season: "Season date", news: "News", suggestion: "You might like" };
+const TYPE_LABEL = { episode: "New episode", season: "Season date", special: "New special", news: "News", suggestion: "You might like" };
 
 function storage() {
   try {
@@ -198,7 +198,7 @@ function formatDay(value) {
 
 function cardView(card) {
   const suggestion = card.type === "suggestion";
-  const linkText = card.type === "news" ? domain(card.link) : String(card.link).includes("imdb.com") ? "IMDb" : "TMDB";
+  const linkText = linkLabel(card);
   const buttons = suggestion
     ? [
         el("button", { class: "primary", onclick: () => trackSuggestion(card) }, "Track"),

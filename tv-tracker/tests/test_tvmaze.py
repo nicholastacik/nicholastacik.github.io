@@ -68,3 +68,16 @@ def test_show_with_episodes_embeds_episodes():
     )
     assert seen[0].url.path == "/shows/5"
     assert seen[0].url.params["embed"] == "episodes"
+
+
+def test_specials_and_show_requests():
+    seen = []
+
+    def handler(request):
+        seen.append((request.url.path, dict(request.url.params)))
+        return httpx.Response(200, json=[{"id": 1}])
+
+    tvmaze = Tvmaze(transport=httpx.MockTransport(handler))
+    assert tvmaze.specials(84) == [{"id": 1}]
+    tvmaze.show(84)
+    assert seen == [("/shows/84/episodes", {"specials": "1"}), ("/shows/84", {})]

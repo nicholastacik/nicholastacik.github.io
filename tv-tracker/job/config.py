@@ -34,3 +34,12 @@ def omdb_key() -> str | None:
 
 def openai_key() -> str | None:
     return os.environ.get("OPENAI_API_KEY") or None
+
+
+def special_links() -> dict[int, dict]:
+    path = Path(__file__).parent.parent / "special_links.json"
+    if not path.exists():
+        return {}
+    return {
+        int(tmdb_id): links for tmdb_id, links in json.loads(path.read_text()).items()
+    }

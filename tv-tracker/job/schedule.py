@@ -96,13 +96,23 @@ def schedule_rows(
 
 
 def merge_schedule(
-    fresh: dict[int, list[dict]], failed: set[int], previous: list[dict], today: date
+    fresh: dict[int, list[dict]],
+    failed: set[int],
+    previous: list[dict],
+    today: date,
+    specials_failed: set[int] = frozenset(),
 ) -> list[dict]:
     carried = [
         {key: value for key, value in row.items() if key != "_row"}
         for row in previous
         if row["tmdb_id"].isdigit()
-        and int(row["tmdb_id"]) in failed
+        and (
+            int(row["tmdb_id"]) in failed
+            or (
+                int(row["tmdb_id"]) in specials_failed
+                and row["episode_label"].startswith("Special")
+            )
+        )
         and row["airstamp"]
         and in_window(row["airstamp"], today)
     ]
