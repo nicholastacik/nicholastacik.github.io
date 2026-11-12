@@ -1,0 +1,1061 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Exoplanet Neighbourhood</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  /* Layout: a full-bleed plan view of the Galaxy from the north Galactic pole, with a
+     title block floating top-left and an instrument panel docked right (bottom sheet on phones).
+     Deliberately single-theme: the map is a night sky in either host theme. */
+  :root {
+    color-scheme: dark;
+    --void: #07090d;
+    --panel: rgba(11, 14, 20, 0.9);
+    --ink: #ebe7dc;
+    --ink-2: #aaa69a;
+    --ink-3: #74716a;
+    --hair: rgba(235, 231, 220, 0.12);
+    --hair-2: rgba(235, 231, 220, 0.22);
+    --focus: #ffffff;
+    --font-display: "Cormorant Garamond", "Iowan Old Style", Georgia, serif;
+    --font-ui: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-data: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    --panel-w: 340px;
+  }
+  html, body { height: 100%; }
+  body {
+    background: var(--void);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    font-size: 13px;
+    line-height: 1.45;
+    overflow: hidden;
+  }
+  #app { position: relative; height: 100%; overflow: hidden; }
+  canvas#map { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+  canvas#map.dragging { cursor: grabbing; }
+  canvas#map.pointing { cursor: pointer; }
+
+  a { color: var(--ink); text-decoration-color: var(--hair-2); text-underline-offset: 3px; }
+  a:hover { text-decoration-color: var(--ink); }
+  button, input { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .num { font-family: var(--font-data); font-variant-numeric: tabular-nums; font-size: 12px; }
+
+  /* Title block */
+  .masthead {
+    position: absolute;
+    top: max(16px, env(safe-area-inset-top, 0px));
+    left: max(16px, env(safe-area-inset-left, 0px));
+    max-width: min(440px, calc(100% - var(--panel-w) - 48px));
+    pointer-events: none;
+    text-shadow: 0 0 6px var(--void), 0 0 14px var(--void), 0 0 2px var(--void);
+  }
+  .masthead h1 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 34px;
+    line-height: 1.05;
+    letter-spacing: 0.005em;
+    text-wrap: balance;
+  }
+  .masthead p { margin: 6px 0 0; color: var(--ink-2); max-width: 46ch; }
+  .masthead .lede { color: var(--ink); font-size: 14px; }
+  .masthead .lede b { font-weight: 600; }
+
+  /* Zoom presets + scale bar, bottom-left */
+  .dock {
+    position: absolute;
+    left: max(16px, env(safe-area-inset-left, 0px));
+    bottom: max(16px, env(safe-area-inset-bottom, 0px));
+    display: flex; flex-direction: column; gap: 10px; align-items: flex-start;
+  }
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    border: 1px solid var(--hair-2);
+    background: var(--panel);
+    border-radius: 999px;
+    padding: 4px 11px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--ink-2);
+  }
+  .chip:hover { color: var(--ink); border-color: var(--ink-3); }
+  .chip[aria-pressed="true"] { color: var(--void); background: var(--ink); border-color: var(--ink); }
+  .scalebar { display: flex; flex-direction: column; gap: 3px; color: var(--ink-2); }
+  .scalebar .bar { height: 6px; border: 1px solid var(--ink-2); border-top: 0; }
+
+  /* Panel */
+  .panel {
+    position: absolute;
+    top: 0; right: 0; bottom: 0;
+    width: var(--panel-w);
+    background: var(--panel);
+    border-left: 1px solid var(--hair);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex; flex-direction: column;
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+  .panel-scroll { overflow-y: auto; padding: 16px 18px 24px; display: flex; flex-direction: column; gap: 22px; }
+  .panel-handle { display: none; }
+  .section-label {
+    margin: 0 0 8px;
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 0.09em; text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .search { display: flex; gap: 6px; }
+  .search input {
+    flex: 1; min-width: 0;
+    background: transparent;
+    border: 1px solid var(--hair-2);
+    border-radius: 6px;
+    padding: 7px 10px;
+  }
+  .search input::placeholder { color: var(--ink-3); }
+  .search-msg { margin: 6px 0 0; color: var(--ink-3); font-size: 12px; min-height: 1em; }
+
+  .legend { display: flex; flex-direction: column; gap: 1px; margin: 0; padding: 0; list-style: none; }
+  .legend button {
+    width: 100%;
+    display: grid; grid-template-columns: 14px 1fr auto auto; gap: 10px; align-items: center;
+    background: none; border: 0; border-radius: 6px;
+    padding: 5px 6px; text-align: left; cursor: pointer;
+  }
+  .legend button:hover { background: rgba(235, 231, 220, 0.06); }
+  .legend .swatch { width: 10px; height: 10px; border-radius: 50%; justify-self: center; }
+  .legend .swatch.hollow { background: transparent !important; border: 2px solid; width: 10px; height: 10px; box-sizing: border-box; }
+  .legend .count { color: var(--ink-2); text-align: right; min-width: 4ch; }
+  .legend .med { color: var(--ink-3); text-align: right; min-width: 7ch; }
+  .legend button[aria-pressed="false"] .name, .legend button[aria-pressed="false"] .count, .legend button[aria-pressed="false"] .med { color: var(--ink-3); text-decoration: line-through; text-decoration-color: var(--ink-3); }
+  .legend button[aria-pressed="false"] .swatch { opacity: 0.25; }
+  .legend-head { display: grid; grid-template-columns: 14px 1fr auto auto; gap: 10px; padding: 0 6px 4px; color: var(--ink-3); font-size: 11px; }
+  .legend-head span:nth-child(3), .legend-head span:nth-child(4) { text-align: right; }
+  .legend-head span:nth-child(3) { min-width: 4ch; }
+  .legend-head span:nth-child(4) { min-width: 7ch; }
+  .hint { margin: 8px 0 0; color: var(--ink-3); font-size: 12px; }
+  .link-btn { background: none; border: 0; padding: 0; color: var(--ink-2); text-decoration: underline; text-decoration-color: var(--hair-2); text-underline-offset: 3px; cursor: pointer; }
+
+  .toggles { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; }
+  .toggles label { display: flex; gap: 8px; align-items: center; color: var(--ink-2); cursor: pointer; }
+  .toggles input { accent-color: var(--ink); margin: 0; }
+
+  /* Detail card */
+  .card { border: 1px solid var(--hair-2); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .card-top { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+  .card h2 { margin: 0; font-family: var(--font-display); font-weight: 600; font-size: 24px; line-height: 1.1; overflow-wrap: anywhere; }
+  .card .sub { color: var(--ink-2); margin-top: 2px; }
+  .close { background: none; border: 0; color: var(--ink-3); font-size: 18px; line-height: 1; cursor: pointer; padding: 2px 4px; }
+  .close:hover { color: var(--ink); }
+  .tag { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink); }
+  .tag i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  dl.facts { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; }
+  dl.facts dt { color: var(--ink-3); }
+  dl.facts dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+  .links { display: flex; flex-direction: column; gap: 4px; }
+  .links a::after { content: " ↗"; color: var(--ink-3); }
+  .system { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+  .system button { background: none; border: 0; padding: 0; color: var(--ink-2); cursor: pointer; text-decoration: underline; text-decoration-color: var(--hair-2); text-underline-offset: 3px; }
+  .system button[aria-current="true"] { color: var(--ink); text-decoration: none; font-weight: 600; }
+  .empty-card { color: var(--ink-3); border: 1px dashed var(--hair-2); border-radius: 10px; padding: 12px 14px; }
+
+  .notes { color: var(--ink-2); display: flex; flex-direction: column; gap: 8px; font-size: 12px; }
+  .notes p { margin: 0; }
+  details summary { cursor: pointer; color: var(--ink-2); }
+  details ul { margin: 8px 0 0; padding-left: 16px; color: var(--ink-2); font-size: 12px; }
+  .sources { margin: 0; padding-left: 16px; display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--ink-2); }
+
+  /* Hover tooltip */
+  .tip {
+    position: absolute; pointer-events: none;
+    background: rgba(5, 7, 10, 0.94);
+    border: 1px solid var(--hair-2);
+    border-radius: 6px;
+    padding: 6px 9px;
+    font-size: 12px;
+    max-width: 260px;
+    transform: translate(12px, 12px);
+  }
+  .tip strong { font-weight: 600; }
+  .tip span { color: var(--ink-2); }
+
+  .zoom-btns { position: absolute; right: calc(var(--panel-w) + 16px); bottom: max(16px, env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 6px; }
+  .zoom-btns button { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--hair-2); background: var(--panel); cursor: pointer; font-size: 16px; color: var(--ink-2); }
+  .zoom-btns button:hover { color: var(--ink); }
+
+  @media (max-width: 760px) {
+    :root { --panel-w: 0px; }
+    .masthead { max-width: none; right: max(16px, env(safe-area-inset-right, 0px)); }
+    .dock { right: 64px; }
+    .masthead h1 { font-size: 26px; }
+    .masthead p:not(.lede) { display: none; }
+    .panel {
+      top: auto; left: 0; width: auto;
+      max-height: 52%;
+      border-left: 0; border-top: 1px solid var(--hair-2);
+      border-radius: 14px 14px 0 0;
+      padding-left: env(safe-area-inset-left, 0px);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    .panel.collapsed .panel-scroll { display: none; }
+    .panel-handle {
+      display: flex; justify-content: space-between; align-items: center;
+      background: none; border: 0; padding: 12px 18px; cursor: pointer; width: 100%;
+      font-weight: 600; text-align: left;
+    }
+    .panel-handle span:last-child { color: var(--ink-3); font-weight: 400; }
+    .dock { bottom: calc(var(--sheet-h, 48px) + 12px); }
+    .zoom-btns { right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(var(--sheet-h, 48px) + 12px); }
+  }
+  @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <canvas id="map" aria-label="Plan view of the Milky Way with confirmed exoplanets plotted around the Sun"></canvas>
+
+  <header class="masthead">
+    <h1>Exoplanet Neighbourhood</h1>
+    <p class="lede" id="lede"></p>
+    <p id="subhead">Every confirmed exoplanet with a measured distance, projected onto the Galactic plane and seen from the north Galactic pole. Galactic rotation is clockwise.</p>
+  </header>
+
+  <div class="dock">
+    <div class="presets" role="group" aria-label="Zoom presets">
+      <button class="chip" data-preset="galaxy" aria-pressed="false">Whole Galaxy</button>
+      <button class="chip" data-preset="centre" aria-pressed="false">Sun to centre</button>
+      <button class="chip" data-preset="neighbourhood" aria-pressed="false">Neighbourhood</button>
+      <button class="chip" data-preset="local" aria-pressed="false">Within 150 pc</button>
+    </div>
+    <div class="scalebar" aria-hidden="true"><div class="bar" id="scalebar"></div><div class="num" id="scalelabel"></div></div>
+  </div>
+
+  <div class="zoom-btns">
+    <button id="zin" aria-label="Zoom in">+</button>
+    <button id="zout" aria-label="Zoom out">−</button>
+  </div>
+
+  <aside class="panel" id="panel">
+    <button class="panel-handle" id="handle" aria-expanded="true" aria-controls="panelbody"><span>Planets, stars and sources</span><span id="handle-state">Hide</span></button>
+    <div class="panel-scroll" id="panelbody">
+      <section>
+        <h3 class="section-label"><label for="q">Find a planet, host or star</label></h3>
+        <form class="search" id="search">
+          <input id="q" list="names" placeholder="TRAPPIST-1, 51 Peg b, Betelgeuse…" autocomplete="off">
+          <button class="chip" type="submit">Go</button>
+        </form>
+        <datalist id="names"></datalist>
+        <p class="search-msg" id="search-msg" aria-live="polite"></p>
+      </section>
+
+      <section id="detail"></section>
+
+      <section>
+        <h3 class="section-label">Discovered by</h3>
+        <div class="legend-head"><span></span><span></span><span>count</span><span>median d</span></div>
+        <ul class="legend" id="legend"></ul>
+        <p class="hint">Click to hide or show a group. Double-click to show only that group. <button class="link-btn" id="show-all">Show all</button></p>
+        <p class="hint">Kepler, K2 and TESS are grouped by facility; everything else by discovery method. Median d is the in-plane distance from the Sun.</p>
+      </section>
+
+      <section>
+        <h3 class="section-label">Layers</h3>
+        <div class="toggles">
+          <label><input type="checkbox" id="t-arms" checked> Spiral arms</label>
+          <label><input type="checkbox" id="t-rings" checked> Distance rings</label>
+          <label><input type="checkbox" id="t-stars" checked> Reference stars</label>
+          <label><input type="checkbox" id="t-figs" checked> Constellation figures</label>
+          <label><input type="checkbox" id="t-pct" checked> Percentile rings</label>
+          <label><input type="checkbox" id="t-lon" checked> Longitude lines</label>
+        </div>
+      </section>
+
+      <section class="notes">
+        <h3 class="section-label">Reading the map</h3>
+        <p>Positions use the archive's host-star distance and Galactic coordinates, projected as d&nbsp;cos&nbsp;b. Error bars are not drawn; each planet's card gives the distance uncertainty and its source.</p>
+        <p>Planet radius, mass and period come from the archive's composite table. It fills gaps with estimates (for example, radii inferred from mass), so check the archive overview before relying on one.</p>
+        <p>Dashed white rings enclose 50% and 90% of the planets currently shown, measured in the plane. They update when you hide or show groups.</p>
+        <p>Spiral arms are the log-periodic fits of Reid et al. (2019), with R₀&nbsp;=&nbsp;8.15&nbsp;kpc. Bands are ±1σ arm width. Solid where maser parallaxes constrain the arm, dashed where extrapolated. The bar and the disc glow are schematic.</p>
+        <p>Constellation figures join their stars at their true distances, so you can see how far apart in depth each familiar shape really is.</p>
+        <details id="missing"><summary></summary><ul></ul></details>
+      </section>
+
+      <section>
+        <h3 class="section-label">Sources</h3>
+        <ol class="sources">
+          <li><a href="https://doi.org/10.26133/NEA13" target="_blank" rel="noopener">NASA Exoplanet Archive, Planetary Systems Composite Parameters</a>, retrieved <span id="retrieved"></span>. Confirmed planets only.</li>
+          <li><a href="https://doi.org/10.1051/0004-6361:20078357" target="_blank" rel="noopener">van Leeuwen 2007</a>, Hipparcos new reduction: parallaxes of the reference stars.</li>
+          <li><a href="https://doi.org/10.3847/1538-4357/ab4a11" target="_blank" rel="noopener">Reid et al. 2019</a>, ApJ 885, 131: spiral-arm fits and R₀.</li>
+          <li><a href="https://doi.org/10.1093/mnras/stv745" target="_blank" rel="noopener">Wegg, Gerhard &amp; Portail 2015</a>: long-bar length and angle (drawn schematically).</li>
+          <li>Literature distances for Betelgeuse, Deneb, Eta Carinae, VY CMa and the Orion Nebula, each linked on its card.</li>
+        </ol>
+      </section>
+    </div>
+  </aside>
+
+  <div class="tip" id="tip" hidden></div>
+</div>
+
+<script src="data.js"></script>
+<script>
+(() => {
+  const D = window.GALAXY_DATA;
+  const R0 = 8150;            // pc, Reid et al. 2019
+  const LY = 3.26156;
+  const CATS = [
+    { id: "kepler",  label: "Kepler & K2",           color: "#5a9cff" },
+    { id: "tess",    label: "TESS",                  color: "#ff7a3d" },
+    { id: "transit", label: "Other transit surveys", color: "#c5c8d0" },
+    { id: "rv",      label: "Radial velocity",       color: "#2ec4a0" },
+    { id: "micro",   label: "Microlensing",          color: "#ffd166" },
+    { id: "imaging", label: "Direct imaging",        color: "#d65cc8" },
+    { id: "other",   label: "Other methods",         color: "#9a9ea8", hollow: true },
+  ];
+  const CAT_INDEX = Object.fromEntries(CATS.map((c, i) => [c.id, i]));
+  // Draw the rarer groups last so they sit on top of the Kepler/TESS crowd.
+  const DRAW_ORDER = ["kepler", "transit", "tess", "rv", "other", "micro", "imaging"].map(id => CAT_INDEX[id]);
+
+  // Reid et al. 2019, Table 2: [name, beta range, beta_kink, R_kink, psi<, psi>, width] (deg, kpc)
+  const ARMS = [
+    ["3-kpc arm",   [15, 18],  15, 3.52, -4.2, -4.2, 0.18],
+    ["Norma–Outer", [5, 54],   18, 4.46, -1.0, 19.5, 0.14],
+    ["Scutum–Centaurus", [0, 104], 23, 4.91, 14.1, 12.1, 0.23],
+    ["Sagittarius–Carina", [2, 97], 24, 6.04, 17.1, 1.0, 0.27],
+    ["Local arm",   [-8, 34],  9, 8.26, 11.4, 11.4, 0.31],
+    ["Perseus arm", [-23, 115], 40, 8.87, 10.3, 8.7, 0.35],
+    ["Outer arm",   [-16, 71], 18, 12.24, 3.0, 9.4, 0.65],
+  ];
+  const ARM_EXTEND = 90; // degrees of extrapolation beyond the parallax-constrained range
+
+  // ---- data ----
+  const P = D.planets.cols;
+  const N = P.name.length;
+  const px = Float32Array.from(P.x), py = Float32Array.from(P.y);
+  const pcat = Uint8Array.from(P.cat, c => CAT_INDEX[c]);
+  const prad = Float32Array.from({ length: N }, (_, i) => Math.hypot(px[i], py[i]));
+  const refs = D.planets.refs;
+  const byHost = new Map();
+  for (let i = 0; i < N; i++) {
+    const h = P.host[i];
+    if (!byHost.has(h)) byHost.set(h, []);
+    byHost.get(h).push(i);
+  }
+  for (const list of byHost.values()) list.sort((a, b) => P.name[a].localeCompare(P.name[b], "en", { numeric: true }));
+  const stars = D.stars;
+  const starByName = new Map(stars.map(s => [s.name, s]));
+
+  const visible = CATS.map(() => true);
+  const layers = { arms: true, rings: true, stars: true, figs: true, pct: true, lon: true };
+
+  function armPolyline([, range, bk, rk, psiLo, psiHi, w]) {
+    const pts = [];
+    for (let b = range[0] - ARM_EXTEND; b <= range[1] + ARM_EXTEND; b += 0.5) {
+      const psi = (b <= bk ? psiLo : psiHi) * Math.PI / 180;
+      const R = rk * 1000 * Math.exp(-((b - bk) * Math.PI / 180) * Math.tan(psi));
+      if (R < 2500 || R > 17000) continue;
+      const br = b * Math.PI / 180;
+      pts.push({ x: R * Math.sin(br), y: R0 - R * Math.cos(br), fitted: b >= range[0] && b <= range[1] });
+    }
+    return { pts, width: w * 1000 };
+  }
+  const armLines = ARMS.map(a => ({ name: a[0], ...armPolyline(a) }));
+
+  // ---- formatting ----
+  const nf = new Intl.NumberFormat("en");
+  function fmtPc(pc) {
+    if (pc == null) return "—";
+    if (pc < 10) return pc.toFixed(2);
+    if (pc < 100) return pc.toFixed(1);
+    return nf.format(Math.round(pc));
+  }
+  const fmtDist = pc => `${fmtPc(pc)} pc · ${fmtPc(pc * LY)} ly`;
+  function fmtShort(pc) {
+    if (pc >= 1000) return `${+(pc / 1000).toFixed(pc >= 10000 ? 0 : 1)} kpc`;
+    return `${Math.round(pc)} pc`;
+  }
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  // ---- canvas & view ----
+  const canvas = document.getElementById("map");
+  const ctx = canvas.getContext("2d");
+  let W = 0, H = 0, DPR = 1;
+  const view = { cx: 0, cy: R0 / 2, s: 0.05 };   // s = px per pc
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function panelInset() {
+    const panel = document.getElementById("panel");
+    const top = document.querySelector(".masthead").getBoundingClientRect().bottom + 12;
+    if (innerWidth <= 760) return { top, right: 0, bottom: panel.getBoundingClientRect().height };
+    return { top, right: panel.getBoundingClientRect().width, bottom: 0 };
+  }
+  let booted = false;
+  function resize() {
+    DPR = Math.min(devicePixelRatio || 1, 2);
+    const r = canvas.getBoundingClientRect();
+    W = r.width; H = r.height;
+    if (!W || !H) return;   // hidden pane or tab: wait for a real size
+    canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
+    document.documentElement.style.setProperty("--sheet-h", panelInset().bottom + "px");
+    if (!booted) {
+      booted = true;
+      const start = PRESETS[location.hash.slice(1)] ? location.hash.slice(1) : "centre";
+      Object.assign(view, PRESETS[start]());
+      setPresetPressed(start);
+    }
+    draw();
+  }
+  const sx = x => W / 2 + (x - view.cx) * view.s;
+  const sy = y => H / 2 + (y - view.cy) * view.s;
+  const wx = X => view.cx + (X - W / 2) / view.s;
+  const wy = Y => view.cy + (Y - H / 2) / view.s;
+  const S_MIN = () => Math.min(W, H) / 60000, S_MAX = () => Math.min(W, H) / 4;
+  const clampS = s => Math.max(S_MIN(), Math.min(S_MAX(), s));
+
+  function fitView(cx, cy, spanW, spanH) {
+    const ins = panelInset();
+    const availW = Math.max(80, W - ins.right - 32), availH = Math.max(80, H - ins.top - ins.bottom - 70);
+    const s = clampS(Math.min(availW / spanW, availH / spanH));
+    // centre the target in the free area: below the title, left of the panel, above the dock
+    const fx = (W - ins.right) / 2, fy = ins.top + availH / 2;
+    return { cx: cx - (fx - W / 2) / s, cy: cy - (fy - H / 2) / s, s };
+  }
+  const PRESETS = {
+    galaxy: () => fitView(0, R0, 34000, 34000),
+    centre: () => fitView(0, R0 / 2 + 300, 7000, R0 + 2400),
+    neighbourhood: () => fitView(0, 0, 4200, 4200),
+    local: () => fitView(0, 0, 320, 320),
+  };
+
+  let anim = null;
+  function flyTo(target, ms = 700) {
+    cancelAnimationFrame(anim);
+    if (reduceMotion) { Object.assign(view, target); draw(); return; }
+    const from = { ...view }, t0 = performance.now();
+    const ls0 = Math.log(from.s), ls1 = Math.log(target.s);
+    const step = now => {
+      const t = Math.min(1, (now - t0) / ms), e = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      view.s = Math.exp(ls0 + (ls1 - ls0) * e);
+      view.cx = from.cx + (target.cx - from.cx) * e;
+      view.cy = from.cy + (target.cy - from.cy) * e;
+      draw();
+      if (t < 1) anim = requestAnimationFrame(step);
+    };
+    anim = requestAnimationFrame(step);
+  }
+  function setPresetPressed(name) {
+    document.querySelectorAll("[data-preset]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.preset === name)));
+  }
+  function zoomAt(X, Y, factor) {
+    const s1 = clampS(view.s * factor);
+    const gx = wx(X), gy = wy(Y);
+    view.s = s1;
+    view.cx = gx - (X - W / 2) / s1;
+    view.cy = gy - (Y - H / 2) / s1;
+    setPresetPressed(null);
+    draw();
+  }
+
+  // ---- percentiles over visible planets ----
+  let pct = { p50: 0, p90: 0, n: 0 };
+  function computePercentiles() {
+    const d = [];
+    for (let i = 0; i < N; i++) if (visible[pcat[i]]) d.push(prad[i]);
+    d.sort((a, b) => a - b);
+    pct = d.length ? { p50: d[Math.floor(d.length * 0.5)], p90: d[Math.floor(d.length * 0.9)], n: d.length } : { p50: 0, p90: 0, n: 0 };
+  }
+
+  // ---- drawing ----
+  const C = {
+    ink: "#ebe7dc", ink2: "#aaa69a", ink3: "#74716a",
+    arm: "143, 166, 201", ring: "235, 231, 220",
+  };
+  let hover = null, selected = null;
+
+  function draw() {
+    if (!booted) return;
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.fillStyle = "#07090d";
+    ctx.fillRect(0, 0, W, H);
+    drawGalaxy();
+    if (layers.arms) drawArms();
+    if (layers.lon) drawLongitudes();
+    if (layers.rings) drawRings();
+    if (layers.pct) drawPercentiles();
+    drawPlanets();
+    if (layers.figs) drawFigures();
+    if (layers.stars) drawStars();
+    drawMarkers();
+    drawHighlight();
+    updateScalebar();
+  }
+
+  function drawGalaxy() {
+    const gx = sx(0), gy = sy(R0);
+    const disc = ctx.createRadialGradient(gx, gy, 0, gx, gy, 16000 * view.s);
+    disc.addColorStop(0, "rgba(255, 232, 196, 0.16)");
+    disc.addColorStop(0.12, "rgba(230, 214, 190, 0.08)");
+    disc.addColorStop(0.55, "rgba(150, 170, 210, 0.035)");
+    disc.addColorStop(1, "rgba(150, 170, 210, 0)");
+    ctx.fillStyle = disc;
+    ctx.fillRect(0, 0, W, H);
+    // Long bar: half-length ~5 kpc, ~28° from the Sun–centre line, near end at positive longitude.
+    const ang = Math.atan2(-Math.cos(28 * Math.PI / 180), Math.sin(28 * Math.PI / 180));
+    ctx.save();
+    ctx.translate(gx, gy); ctx.rotate(ang);
+    const bar = ctx.createRadialGradient(0, 0, 0, 0, 0, 5000 * view.s);
+    bar.addColorStop(0, "rgba(255, 228, 190, 0.14)");
+    bar.addColorStop(1, "rgba(255, 228, 190, 0)");
+    ctx.fillStyle = bar;
+    ctx.beginPath(); ctx.ellipse(0, 0, 5000 * view.s, 1300 * view.s, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
+  function strokePath(pts, fitted) {
+    ctx.beginPath();
+    let pen = false;
+    for (const p of pts) {
+      if (p.fitted !== fitted) { pen = false; continue; }
+      const X = sx(p.x), Y = sy(p.y);
+      if (!pen) { ctx.moveTo(X, Y); pen = true; } else ctx.lineTo(X, Y);
+    }
+    ctx.stroke();
+  }
+  function drawArms() {
+    ctx.lineCap = "round"; ctx.lineJoin = "round";
+    for (const arm of armLines) {
+      const band = Math.max(2, 2 * arm.width * view.s);
+      ctx.setLineDash([]);
+      ctx.lineWidth = band;
+      ctx.strokeStyle = `rgba(${C.arm}, 0.10)`; strokePath(arm.pts, true);
+      ctx.strokeStyle = `rgba(${C.arm}, 0.045)`; strokePath(arm.pts, false);
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = `rgba(${C.arm}, 0.45)`; strokePath(arm.pts, true);
+      ctx.setLineDash([4, 5]);
+      ctx.strokeStyle = `rgba(${C.arm}, 0.28)`; strokePath(arm.pts, false);
+    }
+    ctx.setLineDash([]);
+    // Label each arm at its fitted point nearest the middle of the view.
+    ctx.font = `italic 500 15px ${getComputedStyle(document.documentElement).getPropertyValue("--font-display")}`;
+    ctx.fillStyle = `rgba(${C.arm}, 0.85)`;
+    const ins = panelInset(), midX = (W - ins.right) / 2, midY = (H - ins.bottom) / 2;
+    for (const arm of armLines) {
+      let best = null, bd = Infinity;
+      arm.pts.forEach((p, i) => {
+        if (!p.fitted || i === 0 || i === arm.pts.length - 1) return;
+        const X = sx(p.x), Y = sy(p.y);
+        if (X < 60 || X > W - ins.right - 60 || Y < ins.top || Y > H - ins.bottom - 90) return;
+        const d = (X - midX) ** 2 + (Y - midY) ** 2;
+        if (d < bd) { bd = d; best = i; }
+      });
+      if (best == null) continue;
+      const a = arm.pts[best - 1], b = arm.pts[best + 1];
+      let ang = Math.atan2(sy(b.y) - sy(a.y), sx(b.x) - sx(a.x));
+      if (ang > Math.PI / 2) ang -= Math.PI; if (ang < -Math.PI / 2) ang += Math.PI;
+      ctx.save();
+      ctx.translate(sx(arm.pts[best].x), sy(arm.pts[best].y)); ctx.rotate(ang);
+      ctx.textAlign = "center";
+      ctx.fillText(arm.name, 0, -Math.max(6, arm.width * view.s) - 4);
+      ctx.restore();
+    }
+  }
+
+  function drawLongitudes() {
+    const X0 = sx(0), Y0 = sy(0), far = Math.hypot(W, H) * 2;
+    ctx.lineWidth = 1;
+    ctx.font = `500 11px ${getComputedStyle(document.documentElement).getPropertyValue("--font-data")}`;
+    for (let l = 0; l < 360; l += 30) {
+      const major = l % 90 === 0;
+      const r = l * Math.PI / 180, dx = Math.sin(r), dy = Math.cos(r);
+      ctx.strokeStyle = `rgba(${C.ring}, ${major ? 0.11 : 0.05})`;
+      ctx.setLineDash(major ? [] : [2, 6]);
+      ctx.beginPath(); ctx.moveTo(X0, Y0); ctx.lineTo(X0 + dx * far, Y0 + dy * far); ctx.stroke();
+      if (!major) continue;
+      // label where the spoke leaves the free area
+      const ins = panelInset();
+      const t = rayExit(X0, Y0, dx, dy, 18, ins.top, W - ins.right - 18, H - ins.bottom - 18);
+      if (t == null || t < 60) continue;
+      ctx.fillStyle = C.ink3;
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(`ℓ ${l}°`, X0 + dx * (t - 6), Y0 + dy * (t - 6));
+    }
+    ctx.setLineDash([]); ctx.textBaseline = "alphabetic";
+  }
+  function rayExit(x, y, dx, dy, x0, y0, x1, y1) {
+    if (x < x0 || x > x1 || y < y0 || y > y1) return null;
+    let t = Infinity;
+    if (dx > 1e-9) t = Math.min(t, (x1 - x) / dx); else if (dx < -1e-9) t = Math.min(t, (x0 - x) / dx);
+    if (dy > 1e-9) t = Math.min(t, (y1 - y) / dy); else if (dy < -1e-9) t = Math.min(t, (y0 - y) / dy);
+    return t;
+  }
+
+  // Label boxes must stay inside the open map: not under the title, panel or bottom-left dock.
+  function labelFits(box) {
+    const ins = panelInset();
+    if (box[0] < 8 || box[1] < 8 || box[2] > W - ins.right - 8 || box[3] > H - ins.bottom - 8) return false;
+    const r = canvas.getBoundingClientRect();
+    for (const el of [document.querySelector(".masthead"), document.querySelector(".dock"), document.querySelector(".zoom-btns")]) {
+      const b = el.getBoundingClientRect();
+      if (box[0] < b.right - r.left && box[2] > b.left - r.left && box[1] < b.bottom - r.top && box[3] > b.top - r.top) return false;
+    }
+    return true;
+  }
+  // Place text just outside a ring at the first angle where it fits; returns the box or null.
+  function ringLabel(X0, Y0, R, text, angles) {
+    const w = ctx.measureText(text).width;
+    for (const a of angles) {
+      const ax = X0 + Math.cos(a) * R, ay = Y0 + Math.sin(a) * R;
+      const tx = Math.cos(a) >= 0 ? ax + 5 : ax - w - 5, ty = Math.sin(a) <= 0 ? ay - 5 : ay + 15;
+      const box = [tx - 3, ty - 12, tx + w + 3, ty + 4];
+      if (labelFits(box)) return { tx, ty, box, w };
+    }
+    return null;
+  }
+  const RING_STEPS = [10, 30, 100, 300, 1000, 3000, 10000, 20000];
+  function drawRings() {
+    const X0 = sx(0), Y0 = sy(0), diag = Math.hypot(W, H);
+    ctx.lineWidth = 1;
+    ctx.font = `400 11px ${getComputedStyle(document.documentElement).getPropertyValue("--font-data")}`;
+    ctx.textAlign = "left";
+    const q = Math.PI / 4;
+    for (const r of RING_STEPS) {
+      const R = r * view.s;
+      if (R < 34 || R > diag * 1.5) continue;
+      ctx.strokeStyle = `rgba(${C.ring}, 0.13)`;
+      ctx.beginPath(); ctx.arc(X0, Y0, R, 0, Math.PI * 2); ctx.stroke();
+      const L = ringLabel(X0, Y0, R, `${fmtShort(r)} · ${fmtShort(r * LY).replace("pc", "ly")}`, [-3 * q, 3 * q, -q, q]);
+      if (!L) continue;
+      ctx.fillStyle = C.ink3;
+      ctx.fillText(`${fmtShort(r)} · ${fmtShort(r * LY).replace("pc", "ly")}`, L.tx, L.ty);
+    }
+  }
+  function drawPercentiles() {
+    if (!pct.n) return;
+    const X0 = sx(0), Y0 = sy(0), q = Math.PI / 4;
+    ctx.font = `500 12px ${getComputedStyle(document.documentElement).getPropertyValue("--font-ui")}`;
+    ctx.textAlign = "left";
+    for (const [r, label] of [[pct.p50, "50%"], [pct.p90, "90%"]]) {
+      const R = r * view.s;
+      if (R < 6) continue;
+      ctx.setLineDash([5, 4]);
+      ctx.lineWidth = 1.25;
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.55)";
+      ctx.beginPath(); ctx.arc(X0, Y0, R, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
+      if (R < 22) continue;
+      const text = `${label} of shown planets · ${fmtShort(r)}`;
+      const L = ringLabel(X0, Y0, R, text, [-q, q, -3 * q, 3 * q, -1.6 * q, 1.6 * q]);
+      if (!L) continue;
+      ctx.fillStyle = "rgba(7, 9, 13, 0.75)";
+      ctx.fillRect(L.box[0], L.box[1], L.box[2] - L.box[0], L.box[3] - L.box[1]);
+      ctx.fillStyle = C.ink;
+      ctx.fillText(text, L.tx, L.ty);
+    }
+  }
+
+  function planetRadius() { return Math.max(1.3, Math.min(4, 0.9 * Math.pow(view.s * 100, 0.25))); }
+  function drawPlanets() {
+    const r = planetRadius();
+    const pad = 6, minX = wx(-pad), maxX = wx(W + pad), minY = wy(-pad), maxY = wy(H + pad);
+    ctx.globalAlpha = 0.82;
+    for (const ci of DRAW_ORDER) {
+      if (!visible[ci]) continue;
+      const cat = CATS[ci];
+      ctx.beginPath();
+      for (let i = 0; i < N; i++) {
+        if (pcat[i] !== ci) continue;
+        const x = px[i], y = py[i];
+        if (x < minX || x > maxX || y < minY || y > maxY) continue;
+        const X = sx(x), Y = sy(y);
+        ctx.moveTo(X + r, Y); ctx.arc(X, Y, r, 0, Math.PI * 2);
+      }
+      if (cat.hollow) { ctx.lineWidth = 1.2; ctx.strokeStyle = cat.color; ctx.stroke(); }
+      else { ctx.fillStyle = cat.color; ctx.fill(); }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawFigures() {
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = "rgba(235, 231, 220, 0.32)";
+    ctx.setLineDash([1, 3]);
+    for (const segs of Object.values(D.figures)) {
+      ctx.beginPath();
+      for (const [a, b] of segs) {
+        const A = starByName.get(a), B = starByName.get(b);
+        if (!A || !B) continue;
+        ctx.moveTo(sx(A.x), sy(A.y)); ctx.lineTo(sx(B.x), sy(B.y));
+      }
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+  }
+
+  function sparkle(X, Y, r) {
+    ctx.beginPath();
+    ctx.moveTo(X, Y - r); ctx.quadraticCurveTo(X, Y, X + r, Y);
+    ctx.quadraticCurveTo(X, Y, X, Y + r); ctx.quadraticCurveTo(X, Y, X - r, Y);
+    ctx.quadraticCurveTo(X, Y, X, Y - r); ctx.fill();
+  }
+  function drawStars() {
+    const sunX = sx(0), sunY = sy(0);
+    const placed = [[sunX - 8, sunY - 8, sunX + 42, sunY + 8]];   // keep clear of the Sun and its label
+    ctx.font = `italic 500 14px ${getComputedStyle(document.documentElement).getPropertyValue("--font-display")}`;
+    ctx.textAlign = "left";
+    for (const s of stars) {
+      const X = sx(s.x), Y = sy(s.y);
+      if (X < -20 || X > W + 20 || Y < -20 || Y > H + 20) continue;
+      ctx.fillStyle = C.ink;
+      sparkle(X, Y, 5);
+      const w = ctx.measureText(s.name).width, box = [X + 7, Y - 10, X + 9 + w, Y + 4];
+      if (placed.some(b => box[0] < b[2] && box[2] > b[0] && box[1] < b[3] && box[3] > b[1]) || !labelFits(box)) continue;
+      placed.push(box);
+      ctx.fillStyle = "rgba(7, 9, 13, 0.55)";
+      ctx.fillRect(box[0] - 1, box[1], w + 4, 15);
+      ctx.fillStyle = C.ink;
+      ctx.fillText(s.name, X + 8, Y + 2);
+    }
+  }
+
+  function drawMarkers() {
+    // Sun: ☉
+    const X = sx(0), Y = sy(0);
+    ctx.strokeStyle = C.ink; ctx.fillStyle = C.ink; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(X, Y, 6, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(X, Y, 1.6, 0, Math.PI * 2); ctx.fill();
+    ctx.font = `600 13px ${getComputedStyle(document.documentElement).getPropertyValue("--font-ui")}`;
+    ctx.textAlign = "left";
+    ctx.fillStyle = "rgba(7, 9, 13, 0.7)";
+    ctx.fillRect(X + 8, Y - 7, ctx.measureText("Sun").width + 4, 15);
+    ctx.fillStyle = C.ink;
+    ctx.fillText("Sun", X + 10, Y + 4);
+    // Galactic centre
+    const gx = sx(0), gy = sy(R0);
+    ctx.strokeStyle = C.ink2; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(gx - 7, gy); ctx.lineTo(gx + 7, gy); ctx.moveTo(gx, gy - 7); ctx.lineTo(gx, gy + 7); ctx.stroke();
+    ctx.fillStyle = C.ink2;
+    ctx.font = `500 12px ${getComputedStyle(document.documentElement).getPropertyValue("--font-ui")}`;
+    ctx.fillText("Galactic centre (Sgr A*)", gx + 10, gy + 4);
+  }
+
+  function drawHighlight() {
+    for (const [item, alpha] of [[hover, 0.7], [selected, 1]]) {
+      if (!item) continue;
+      const o = item.kind === "planet" ? { x: px[item.i], y: py[item.i] } : item.star;
+      const X = sx(o.x), Y = sy(o.y);
+      ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(X, Y, planetRadius() + 5, 0, Math.PI * 2); ctx.stroke();
+    }
+  }
+
+  const NICE = [1, 2, 5];
+  function updateScalebar() {
+    const target = 120 / view.s;
+    const p = Math.pow(10, Math.floor(Math.log10(target)));
+    let len = p;
+    for (const n of NICE) if (n * p <= target) len = n * p;
+    document.getElementById("scalebar").style.width = (len * view.s) + "px";
+    document.getElementById("scalelabel").textContent = `${fmtShort(len)} = ${fmtPc(len * LY)} ly`;
+  }
+
+  // ---- hit testing ----
+  function pick(X, Y) {
+    const R = 9;
+    if (layers.stars) {
+      for (const s of stars) if (Math.hypot(sx(s.x) - X, sy(s.y) - Y) < R) return { kind: "star", star: s };
+    }
+    let best = -1, bd = R * R;
+    for (let i = 0; i < N; i++) {
+      if (!visible[pcat[i]]) continue;
+      const dx = sx(px[i]) - X, dy = sy(py[i]) - Y, d = dx * dx + dy * dy;
+      if (d < bd) { bd = d; best = i; }
+    }
+    return best >= 0 ? { kind: "planet", i: best } : null;
+  }
+
+  const tip = document.getElementById("tip");
+  function showTip(item, X, Y) {
+    if (!item) { tip.hidden = true; return; }
+    if (item.kind === "planet") {
+      const i = item.i;
+      tip.innerHTML = `<strong>${esc(P.name[i])}</strong><br><span>${esc(D.planets.methods[P.method[i]])} · ${esc(D.planets.facilities[P.facility[i]])} · ${P.year[i]}</span><br><span class="num">${fmtDist(P.d[i])}</span>`;
+    } else {
+      const s = item.star;
+      tip.innerHTML = `<strong>${esc(s.name)}</strong> <span>${esc(s.con)}</span><br><span class="num">${fmtDist(s.d)}</span>`;
+    }
+    tip.hidden = false;
+    const tw = tip.offsetWidth, th = tip.offsetHeight;
+    tip.style.left = Math.min(X, W - tw - 24) + "px";
+    tip.style.top = Math.min(Y, H - th - 24) + "px";
+  }
+
+  // ---- detail card ----
+  const detail = document.getElementById("detail");
+  function refLink(id, fallback) {
+    if (id < 0 || id == null) return fallback ? `<span class="muted">${fallback}</span>` : "";
+    const [label, url] = refs[id];
+    return `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(label)}</a>`;
+  }
+  function errText(ep, em) {
+    if (ep == null && em == null) return "";
+    const a = Math.abs(ep ?? em), b = Math.abs(em ?? ep);
+    return Math.abs(a - b) < 0.005 * Math.max(a, 1) ? ` ± ${fmtPc(a)}` : ` +${fmtPc(a)} / −${fmtPc(b)}`;
+  }
+  function renderDetail() {
+    if (!selected) {
+      detail.innerHTML = `<div class="empty-card">Click a planet or star to see where its numbers come from.</div>`;
+      return;
+    }
+    if (selected.kind === "planet") {
+      const i = selected.i, cat = CATS[pcat[i]], host = P.host[i];
+      const sys = byHost.get(host) || [];
+      const archive = `https://exoplanetarchive.ipac.caltech.edu/overview/${encodeURIComponent(host)}`;
+      const phys = [
+        P.rade[i] != null ? `${(+P.rade[i]).toPrecision(3)} R⊕` : null,
+        P.masse[i] != null ? `${(+P.masse[i]).toPrecision(3)} M⊕` : null,
+        P.per[i] != null ? `P = ${(+P.per[i]).toPrecision(4)} d` : null,
+      ].filter(Boolean).join(" · ");
+      detail.innerHTML = `
+        <div class="card">
+          <div class="card-top">
+            <div><h2>${esc(P.name[i])}</h2><div class="sub">Host: ${esc(host)}</div></div>
+            <button class="close" id="close" aria-label="Close details">×</button>
+          </div>
+          <span class="tag"><i style="background:${cat.color}"></i>${esc(cat.label)}</span>
+          <dl class="facts">
+            <dt>Method</dt><dd>${esc(D.planets.methods[P.method[i]])}</dd>
+            <dt>Facility</dt><dd>${esc(D.planets.facilities[P.facility[i]])}</dd>
+            <dt>Year</dt><dd class="num">${P.year[i]}</dd>
+            <dt>Distance</dt><dd class="num">${fmtPc(P.d[i])}${errText(P.dep[i], P.dem[i])} pc<br>${fmtPc(P.d[i] * LY)} ly</dd>
+            <dt>ℓ, b</dt><dd class="num">${P.l[i].toFixed(2)}°, ${P.b[i].toFixed(2)}°</dd>
+            ${phys ? `<dt>Planet</dt><dd class="num">${phys}</dd>` : ""}
+          </dl>
+          <div class="links">
+            ${P.disc[i] >= 0 ? `<div>Discovery: ${refLink(P.disc[i])}</div>` : ""}
+            ${P.dref[i] >= 0 ? `<div>Distance: ${refLink(P.dref[i])}</div>` : ""}
+            <div><a href="${archive}" target="_blank" rel="noopener">Archive overview for ${esc(host)}</a></div>
+          </div>
+          ${sys.length > 1 ? `<div><div class="section-label" style="margin:4px 0 6px">System · ${sys.length} planets</div>
+            <div class="system">${sys.map(j => `<button data-i="${j}" aria-current="${j === i}">${esc(P.name[j])}</button>`).join("")}</div></div>` : ""}
+        </div>`;
+      detail.querySelectorAll(".system button").forEach(b => b.addEventListener("click", () => select({ kind: "planet", i: +b.dataset.i }, false)));
+    } else {
+      const s = selected.star;
+      detail.innerHTML = `
+        <div class="card">
+          <div class="card-top">
+            <div><h2>${esc(s.name)}</h2><div class="sub">${esc(s.con)}${s.note ? " · " + esc(s.note) : ""}</div></div>
+            <button class="close" id="close" aria-label="Close details">×</button>
+          </div>
+          <span class="tag"><i style="background:var(--ink)"></i>Reference object</span>
+          <dl class="facts">
+            <dt>Distance</dt><dd class="num">${fmtPc(s.d)}${errText(s.dep, s.dem)} pc<br>${fmtPc(s.d * LY)} ly</dd>
+            ${s.plx != null ? `<dt>Parallax</dt><dd class="num">${s.plx} ± ${s.eplx} mas</dd>` : ""}
+            <dt>ℓ, b</dt><dd class="num">${s.l.toFixed(2)}°, ${s.b.toFixed(2)}°</dd>
+          </dl>
+          <div class="links">
+            <div>Distance: <a href="${esc(s.ref.url)}" target="_blank" rel="noopener">${esc(s.ref.label)}</a></div>
+            <div><a href="${esc(s.simbad)}" target="_blank" rel="noopener">SIMBAD entry</a></div>
+          </div>
+        </div>`;
+    }
+    document.getElementById("close").addEventListener("click", () => select(null));
+  }
+  function select(item, fly = false) {
+    selected = item;
+    renderDetail();
+    if (item && fly) {
+      const o = item.kind === "planet" ? { x: px[item.i], y: py[item.i] } : item.star;
+      const span = Math.max(150, Math.min(1500, Math.hypot(o.x, o.y) * 1.4));
+      flyTo(fitView(o.x / 2, o.y / 2, span, span));
+      setPresetPressed(null);
+    } else draw();
+    if (item && innerWidth <= 760) setSheet(true);
+  }
+
+  // ---- legend ----
+  const legend = document.getElementById("legend");
+  function median(arr) { if (!arr.length) return 0; arr.sort((a, b) => a - b); return arr[Math.floor(arr.length / 2)]; }
+  CATS.forEach((c, ci) => {
+    const ds = []; for (let i = 0; i < N; i++) if (pcat[i] === ci) ds.push(prad[i]);
+    const li = document.createElement("li");
+    li.innerHTML = `<button aria-pressed="true" data-ci="${ci}">
+      <span class="swatch${c.hollow ? " hollow" : ""}" style="background:${c.color};border-color:${c.color}"></span>
+      <span class="name">${c.label}</span><span class="count num">${nf.format(ds.length)}</span><span class="med num">${fmtShort(median(ds))}</span></button>`;
+    legend.appendChild(li);
+  });
+  let clickTimer = null;
+  legend.addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    const ci = +b.dataset.ci;
+    clearTimeout(clickTimer);
+    if (e.detail === 2) { solo(ci); return; }
+    clickTimer = setTimeout(() => { visible[ci] = !visible[ci]; syncLegend(); }, 220);
+  });
+  function solo(ci) {
+    const alreadySolo = visible.every((v, j) => v === (j === ci));
+    visible.forEach((_, j) => visible[j] = alreadySolo || j === ci);
+    syncLegend();
+  }
+  document.getElementById("show-all").addEventListener("click", () => { visible.fill(true); syncLegend(); });
+  function syncLegend() {
+    legend.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(visible[+b.dataset.ci])));
+    if (selected && selected.kind === "planet" && !visible[pcat[selected.i]]) { selected = null; renderDetail(); }
+    computePercentiles();
+    updateLede();
+    draw();
+  }
+
+  function updateLede() {
+    const all = pct.n === N;
+    document.getElementById("lede").innerHTML =
+      `Half of ${all ? "the" : "the shown"} <b>${nf.format(pct.n)}</b> plotted planets lie within <b>${fmtPc(pct.p50 * LY)} light-years</b> of the Sun; 90% within <b>${nf.format(Math.round(pct.p90 * LY / 10) * 10)} ly</b>. The Galaxy is about 100,000 ly across.`;
+  }
+
+  // ---- layers ----
+  for (const [id, key] of [["t-arms", "arms"], ["t-rings", "rings"], ["t-stars", "stars"], ["t-figs", "figs"], ["t-pct", "pct"], ["t-lon", "lon"]]) {
+    document.getElementById(id).addEventListener("change", e => { layers[key] = e.target.checked; draw(); });
+  }
+
+  // ---- presets & zoom buttons ----
+  document.querySelectorAll("[data-preset]").forEach(b => b.addEventListener("click", () => {
+    setPresetPressed(b.dataset.preset);
+    flyTo(PRESETS[b.dataset.preset]());
+  }));
+  const zoomCentre = () => { const ins = panelInset(); return [(W - ins.right) / 2, (H - ins.bottom) / 2]; };
+  document.getElementById("zin").addEventListener("click", () => zoomAt(...zoomCentre(), 1.6));
+  document.getElementById("zout").addEventListener("click", () => zoomAt(...zoomCentre(), 1 / 1.6));
+
+  // ---- search ----
+  const names = new Set([...byHost.keys(), ...stars.map(s => s.name)]);
+  document.getElementById("names").innerHTML = [...names].sort().map(n => `<option value="${esc(n)}">`).join("");
+  const nameIndex = new Map();
+  for (let i = 0; i < N; i++) { nameIndex.set(P.name[i].toLowerCase(), i); if (!nameIndex.has(P.host[i].toLowerCase())) nameIndex.set(P.host[i].toLowerCase(), i); }
+  const missingNames = new Set(D.planets.missing.map(m => m[0].toLowerCase()));
+  document.getElementById("search").addEventListener("submit", e => {
+    e.preventDefault();
+    const q = document.getElementById("q").value.trim().toLowerCase();
+    const msg = document.getElementById("search-msg");
+    if (!q) return;
+    const star = stars.find(s => s.name.toLowerCase() === q);
+    if (star) { msg.textContent = ""; select({ kind: "star", star }, true); return; }
+    let i = nameIndex.get(q);
+    if (i == null) {
+      for (const [k, v] of nameIndex) if (k.startsWith(q)) { i = v; break; }
+    }
+    if (i != null) {
+      if (!visible[pcat[i]]) { visible[pcat[i]] = true; syncLegend(); }
+      msg.textContent = "";
+      select({ kind: "planet", i }, true);
+    } else if (missingNames.has(q)) {
+      msg.textContent = "That planet has no distance in the archive, so it isn't plotted.";
+    } else {
+      msg.textContent = "No match. Try a host name such as Kepler-452 or HD 209458.";
+    }
+  });
+
+  // ---- missing-distance list ----
+  const miss = D.planets.missing;
+  const md = document.getElementById("missing");
+  md.querySelector("summary").textContent = `${miss.length} of ${nf.format(D.planets.total)} confirmed planets have no distance and are not plotted`;
+  md.querySelector("ul").innerHTML = miss.map(([name, method, fac, ref]) =>
+    `<li>${esc(name)} · ${esc(method)}${ref >= 0 ? ` · ${refLink(ref)}` : ""}</li>`).join("");
+  document.getElementById("retrieved").textContent = D.retrieved;
+
+  // ---- pointer interaction ----
+  const pointers = new Map();
+  let drag = null, pinch = null, moved = false;
+  canvas.addEventListener("pointerdown", e => {
+    canvas.setPointerCapture(e.pointerId);
+    pointers.set(e.pointerId, { x: e.offsetX, y: e.offsetY });
+    moved = false;
+    if (pointers.size === 1) drag = { x: e.offsetX, y: e.offsetY, cx: view.cx, cy: view.cy };
+    if (pointers.size === 2) {
+      const [a, b] = [...pointers.values()];
+      pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), s: view.s };
+      drag = null;
+    }
+    cancelAnimationFrame(anim);
+  });
+  canvas.addEventListener("pointermove", e => {
+    if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.offsetX, y: e.offsetY });
+    if (pinch && pointers.size === 2) {
+      const [a, b] = [...pointers.values()];
+      const d = Math.hypot(a.x - b.x, a.y - b.y);
+      zoomAt((a.x + b.x) / 2, (a.y + b.y) / 2, (pinch.s * d / pinch.d) / view.s);
+      moved = true;
+      return;
+    }
+    if (drag) {
+      const dx = e.offsetX - drag.x, dy = e.offsetY - drag.y;
+      if (Math.abs(dx) + Math.abs(dy) > 3) moved = true;
+      if (moved) {
+        view.cx = drag.cx - dx / view.s; view.cy = drag.cy - dy / view.s;
+        canvas.classList.add("dragging"); setPresetPressed(null);
+        tip.hidden = true; draw();
+      }
+      return;
+    }
+    if (e.pointerType === "mouse") {
+      const item = pick(e.offsetX, e.offsetY);
+      const same = item && hover && item.kind === hover.kind && (item.i === hover.i && item.star === hover.star);
+      canvas.classList.toggle("pointing", !!item);
+      showTip(item, e.offsetX, e.offsetY);
+      if (!same) { hover = item; draw(); }
+    }
+  });
+  function endPointer(e) {
+    pointers.delete(e.pointerId);
+    if (pointers.size < 2) pinch = null;
+    if (pointers.size === 0) {
+      if (drag && !moved) select(pick(e.offsetX, e.offsetY));
+      drag = null;
+      canvas.classList.remove("dragging");
+    }
+  }
+  canvas.addEventListener("pointerup", endPointer);
+  canvas.addEventListener("pointercancel", endPointer);
+  canvas.addEventListener("pointerleave", () => { if (hover) { hover = null; draw(); } tip.hidden = true; });
+  canvas.addEventListener("wheel", e => {
+    e.preventDefault();
+    cancelAnimationFrame(anim);
+    zoomAt(e.offsetX, e.offsetY, Math.exp(-e.deltaY * (e.deltaMode === 1 ? 0.05 : 0.0015)));
+  }, { passive: false });
+  addEventListener("keydown", e => {
+    if (e.target.closest("input")) return;
+    if (e.key === "Escape") select(null);
+    if (e.key === "+" || e.key === "=") zoomAt(...zoomCentre(), 1.4);
+    if (e.key === "-") zoomAt(...zoomCentre(), 1 / 1.4);
+  });
+
+  // ---- mobile sheet ----
+  const panel = document.getElementById("panel"), handle = document.getElementById("handle");
+  function setSheet(open) {
+    panel.classList.toggle("collapsed", !open);
+    handle.setAttribute("aria-expanded", String(open));
+    document.getElementById("handle-state").textContent = open ? "Hide" : "Show";
+    document.documentElement.style.setProperty("--sheet-h", panelInset().bottom + "px");
+    draw();
+  }
+  handle.addEventListener("click", () => setSheet(panel.classList.contains("collapsed")));
+
+  // ---- boot ----
+  computePercentiles();
+  updateLede();
+  renderDetail();
+  if (innerWidth <= 760) panel.classList.add("collapsed"), handle.setAttribute("aria-expanded", "false"), document.getElementById("handle-state").textContent = "Show";
+  new ResizeObserver(resize).observe(canvas);
+  resize();
+  document.fonts && document.fonts.ready.then(() => booted && draw());
+})();
+</script>
+</body>
+</html>

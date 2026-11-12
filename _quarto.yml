@@ -8,6 +8,9 @@ project:
     - "posts/montreal_events/events/**"
     - "posts/codenames/app/**"
     - "posts/chess/app/**"
+    # Unlisted standalone page (noindex): reachable by URL only.
+    - "exoplanets/index.html"
+    - "exoplanets/data.js"
     - "posts/tv_tracker/app/**"
     - "posts/jeopardy_difficulty/app/**"
   # Render every .qmd page; exclude committed data/notes artifacts that live
