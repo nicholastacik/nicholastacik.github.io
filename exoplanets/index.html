@@ -88,6 +88,14 @@
   }
   .chip:hover { color: var(--ink); border-color: var(--ink-3); }
   .chip[aria-pressed="true"] { color: var(--void); background: var(--ink); border-color: var(--ink); }
+  .orbit {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px;
+    background: var(--panel); border: 1px solid var(--hair-2); border-radius: 10px;
+    padding: 6px 8px 6px 12px; color: var(--ink-2); font-size: 12px;
+  }
+  .orbit label { display: flex; align-items: center; gap: 8px; }
+  .orbit input[type=range] { width: 104px; accent-color: var(--ink); margin: 0; }
+  .orbit .num { min-width: 4ch; color: var(--ink); }
   .scalebar { display: flex; flex-direction: column; gap: 3px; color: var(--ink-2); }
   .scalebar .bar { height: 6px; border: 1px solid var(--ink-2); border-top: 0; }
 
@@ -146,6 +154,10 @@
   .toggles { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; }
   .toggles label { display: flex; gap: 8px; align-items: center; color: var(--ink-2); cursor: pointer; }
   .toggles input { accent-color: var(--ink); margin: 0; }
+  .toggles .wide { grid-column: 1 / -1; }
+  .toggles input[type=range] { flex: 1; max-width: 160px; }
+  .seg { display: flex; gap: 6px; align-items: center; margin: 0 0 14px; color: var(--ink-2); }
+  .seg span { margin-right: 4px; }
 
   /* Detail card */
   .card { border: 1px solid var(--hair-2); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
@@ -235,6 +247,11 @@
       <button class="chip" data-preset="neighbourhood" aria-pressed="false">Neighbourhood</button>
       <button class="chip" data-preset="local" aria-pressed="false">Within 150 pc</button>
     </div>
+    <div class="orbit" role="group" aria-label="Viewing angle">
+      <label>Tilt <input type="range" id="tilt" min="0" max="90" step="1" value="0"><span class="num" id="tilt-val">0°</span></label>
+      <label>Spin <input type="range" id="spin" min="-180" max="180" step="1" value="0"><span class="num" id="spin-val">0°</span></label>
+      <button class="chip" id="flat">Top-down</button>
+    </div>
     <div class="scalebar" aria-hidden="true"><div class="bar" id="scalebar"></div><div class="num" id="scalelabel"></div></div>
   </div>
 
@@ -259,11 +276,21 @@
       <section id="detail"></section>
 
       <section>
+        <div class="seg" role="group" aria-label="Colour planets by"><span>Colour by</span>
+          <button class="chip" data-colour="disc" aria-pressed="true">Discovered by</button>
+          <button class="chip" data-colour="star" aria-pressed="false">Host star</button>
+        </div>
         <h3 class="section-label">Discovered by</h3>
         <div class="legend-head"><span></span><span></span><span>count</span><span>median d</span></div>
-        <ul class="legend" id="legend"></ul>
-        <p class="hint">Click to hide or show a group. Double-click to show only that group. <button class="link-btn" id="show-all">Show all</button></p>
-        <p class="hint">Kepler, K2 and TESS are grouped by facility; everything else by discovery method. Median d is the in-plane distance from the Sun.</p>
+        <ul class="legend" id="legend-disc" data-dim="disc"></ul>
+        <p class="hint">Kepler, K2 and TESS are grouped by facility; everything else by discovery method.</p>
+      </section>
+
+      <section>
+        <h3 class="section-label">Host star</h3>
+        <div class="legend-head"><span></span><span></span><span>count</span><span>median d</span></div>
+        <ul class="legend" id="legend-star" data-dim="star"></ul>
+        <p class="hint">Click to hide or show a group; double-click to show only that group. Both lists filter together, and counts show what passes the other list. Median d is the in-plane distance from the Sun. <button class="link-btn" id="show-all">Show all</button></p>
       </section>
 
       <section>
@@ -275,6 +302,8 @@
           <label><input type="checkbox" id="t-figs" checked> Constellation figures</label>
           <label><input type="checkbox" id="t-pct" checked> Percentile rings</label>
           <label><input type="checkbox" id="t-lon" checked> Longitude lines</label>
+          <label class="wide"><input type="checkbox" id="t-stalks" checked> Height lines (when tilted)</label>
+          <label class="wide">Dot size <input type="range" id="dot" min="0.3" max="2" step="0.05" value="1"></label>
         </div>
       </section>
 
@@ -285,6 +314,8 @@
         <p>Dashed white rings enclose 50% and 90% of the planets currently shown, measured in the plane. They update when you hide or show groups.</p>
         <p>Spiral arms are the log-periodic fits of Reid et al. (2019), with R₀&nbsp;=&nbsp;8.15&nbsp;kpc. Bands are ±1σ arm width. Solid where maser parallaxes constrain the arm, dashed where extrapolated. The bar and the disc glow are schematic.</p>
         <p>Constellation figures join their stars at their true distances, so you can see how far apart in depth each familiar shape really is.</p>
+        <p>Tilt and spin use an orthographic camera. Height above the plane is d&nbsp;sin&nbsp;b, drawn to the same scale as the plane (no vertical exaggeration); height lines drop each object to the plane. The scale bar measures horizontal screen distance. Shift-drag or right-drag the map to orbit.</p>
+        <p>Host-star class uses the archive's spectral type where there is one (so a G8&nbsp;III giant counts as G). Otherwise it uses Teff, with boundaries halfway between adjacent subclasses of Mamajek's dwarf sequence (A/F 7310&nbsp;K, F/G 5960, G/K 5325, K/M 3890, M/L 2310). Failing that, it uses mass and assumes a main-sequence star; this is mostly microlensing hosts. Pulsar hosts are named PSR; white dwarfs are found by spectral type, a WD name, or log&nbsp;g&nbsp;≥&nbsp;6.5. The archive's composite table can give one host different values per planet, so each host takes its most common spectral type and median Teff, mass and log&nbsp;g. Each planet's card says which rule applied.</p>
         <details id="missing"><summary></summary><ul></ul></details>
       </section>
 
@@ -295,6 +326,7 @@
           <li><a href="https://doi.org/10.1051/0004-6361:20078357" target="_blank" rel="noopener">van Leeuwen 2007</a>, Hipparcos new reduction: parallaxes of the reference stars.</li>
           <li><a href="https://doi.org/10.3847/1538-4357/ab4a11" target="_blank" rel="noopener">Reid et al. 2019</a>, ApJ 885, 131: spiral-arm fits and R₀.</li>
           <li><a href="https://doi.org/10.1093/mnras/stv745" target="_blank" rel="noopener">Wegg, Gerhard &amp; Portail 2015</a>: long-bar length and angle (drawn schematically).</li>
+          <li><a href="https://doi.org/10.1088/0067-0049/208/1/9" target="_blank" rel="noopener">Pecaut &amp; Mamajek 2013</a>, ApJS 208, 9, and <a href="https://www.pas.rochester.edu/~emamajek/EEM_dwarf_UBVIJHK_colors_Teff.txt" target="_blank" rel="noopener">Mamajek's dwarf sequence table</a>: Teff and mass boundaries for host-star classes.</li>
           <li>Literature distances for Betelgeuse, Deneb, Eta Carinae, VY CMa and the Orion Nebula, each linked on its card.</li>
         </ol>
       </section>
@@ -320,8 +352,25 @@
     { id: "other",   label: "Other methods",         color: "#9a9ea8", hollow: true },
   ];
   const CAT_INDEX = Object.fromEntries(CATS.map((c, i) => [c.id, i]));
-  // Draw the rarer groups last so they sit on top of the Kepler/TESS crowd.
-  const DRAW_ORDER = ["kepler", "transit", "tess", "rv", "other", "micro", "imaging"].map(id => CAT_INDEX[id]);
+  // Hottest to coolest, then the remnants; colours follow the usual blue-to-red stellar convention.
+  const STAR_CLASSES = [
+    { id: "hot", label: "O, B, A type",           color: "#5a8dff" },
+    { id: "F",   label: "F type",                 color: "#62d6e8" },
+    { id: "G",   label: "G type",                 color: "#f5e04f" },
+    { id: "K",   label: "K type",                 color: "#ffa040" },
+    { id: "M",   label: "M type",                 color: "#f0455a" },
+    { id: "bd",  label: "L, T, Y (brown dwarfs)", color: "#b98aff" },
+    { id: "wd",  label: "White dwarfs",           color: "#e6e6e6" },
+    { id: "ns",  label: "Neutron stars (pulsars)", color: "#ff5fcf" },
+    { id: "unk", label: "No stellar data",        color: "#9a9ea8", hollow: true },
+  ];
+  const STAR_INDEX = Object.fromEntries(STAR_CLASSES.map((c, i) => [c.id, i]));
+  // Draw the rarer groups last so they sit on top of the crowd.
+  const DIMS = {
+    disc: { groups: CATS, order: ["kepler", "transit", "tess", "rv", "other", "micro", "imaging"].map(id => CAT_INDEX[id]) },
+    star: { groups: STAR_CLASSES, order: ["G", "K", "F", "M", "unk", "hot", "bd", "wd", "ns"].map(id => STAR_INDEX[id]) },
+  };
+  let colourBy = "disc";
 
   // Reid et al. 2019, Table 2: [name, beta range, beta_kink, R_kink, psi<, psi>, width] (deg, kpc)
   const ARMS = [
@@ -339,7 +388,11 @@
   const P = D.planets.cols;
   const N = P.name.length;
   const px = Float32Array.from(P.x), py = Float32Array.from(P.y);
+  const pz = Float32Array.from({ length: N }, (_, i) => P.d[i] * Math.sin(P.b[i] * Math.PI / 180));
   const pcat = Uint8Array.from(P.cat, c => CAT_INDEX[c]);
+  const HOSTS = D.planets.hosts;   // [class, source, spectral type, Teff, mass, log g]
+  const pstar = Uint8Array.from(P.hidx, h => STAR_INDEX[HOSTS[h][0]]);
+  DIMS.disc.of = pcat; DIMS.star.of = pstar;
   const prad = Float32Array.from({ length: N }, (_, i) => Math.hypot(px[i], py[i]));
   const refs = D.planets.refs;
   const byHost = new Map();
@@ -350,13 +403,16 @@
   }
   for (const list of byHost.values()) list.sort((a, b) => P.name[a].localeCompare(P.name[b], "en", { numeric: true }));
   const stars = D.stars;
+  for (const s of stars) s.z = s.d * Math.sin(s.b * Math.PI / 180);
   const starByName = new Map(stars.map(s => [s.name, s]));
 
-  const visible = CATS.map(() => true);
-  const layers = { arms: true, rings: true, stars: true, figs: true, pct: true, lon: true };
+  for (const dim of Object.values(DIMS)) dim.visible = dim.groups.map(() => true);
+  const shown = i => DIMS.disc.visible[pcat[i]] && DIMS.star.visible[pstar[i]];
+  const groupOf = i => DIMS[colourBy].groups[DIMS[colourBy].of[i]];
+  const layers = { arms: true, rings: true, stars: true, figs: true, pct: true, lon: true, stalks: true, dot: 1 };
 
   function armPolyline([, range, bk, rk, psiLo, psiHi, w]) {
-    const pts = [];
+    const pts = [], width = w * 1000;
     for (let b = range[0] - ARM_EXTEND; b <= range[1] + ARM_EXTEND; b += 0.5) {
       const psi = (b <= bk ? psiLo : psiHi) * Math.PI / 180;
       const R = rk * 1000 * Math.exp(-((b - bk) * Math.PI / 180) * Math.tan(psi));
@@ -364,7 +420,14 @@
       const br = b * Math.PI / 180;
       pts.push({ x: R * Math.sin(br), y: R0 - R * Math.cos(br), fitted: b >= range[0] && b <= range[1] });
     }
-    return { pts, width: w * 1000 };
+    // ±1σ band edges in the plane, so the band foreshortens correctly when tilted
+    pts.forEach((p, i) => {
+      const a = pts[Math.max(0, i - 1)], c = pts[Math.min(pts.length - 1, i + 1)];
+      const L = Math.hypot(c.x - a.x, c.y - a.y) || 1, nx = -(c.y - a.y) / L, ny = (c.x - a.x) / L;
+      p.lx = p.x + nx * width; p.ly = p.y + ny * width;
+      p.rx = p.x - nx * width; p.ry = p.y - ny * width;
+    });
+    return { pts, width };
   }
   const armLines = ARMS.map(a => ({ name: a[0], ...armPolyline(a) }));
 
@@ -387,7 +450,20 @@
   const canvas = document.getElementById("map");
   const ctx = canvas.getContext("2d");
   let W = 0, H = 0, DPR = 1;
-  const view = { cx: 0, cy: R0 / 2, s: 0.05 };   // s = px per pc
+  // s = px per pc; (cx, cy, cz) is the world point at the canvas centre; tilt and spin in degrees
+  const view = { cx: 0, cy: R0 / 2, cz: 0, s: 0.05, tilt: 0, spin: 0 };
+  // Orthographic camera: screen X = (p - c)·r, screen Y = (p - c)·d, both unit vectors.
+  // Spin turns the plane about the Galactic pole; tilt then swings the view down from the pole.
+  const cam = {};
+  function updateCam() {
+    const t = view.tilt * Math.PI / 180, f = view.spin * Math.PI / 180;
+    Object.assign(cam, {
+      rx: Math.cos(f), ry: -Math.sin(f),
+      dx: Math.sin(f) * Math.cos(t), dy: Math.cos(f) * Math.cos(t), dz: -Math.sin(t),
+      ct: Math.cos(t), f,
+    });
+  }
+  updateCam();
   const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   function panelInset() {
@@ -406,26 +482,56 @@
     document.documentElement.style.setProperty("--sheet-h", panelInset().bottom + "px");
     if (!booted) {
       booted = true;
-      const start = PRESETS[location.hash.slice(1)] ? location.hash.slice(1) : "centre";
+      // #<preset>&tilt=<deg>&spin=<deg>&colour=disc|star, e.g. #neighbourhood&tilt=60&colour=star
+      const [name, ...opts] = location.hash.slice(1).split("&");
+      const o = Object.fromEntries(opts.map(kv => kv.split("=")));
+      if (DIMS[o.colour]) document.querySelector(`[data-colour=${o.colour}]`).click();
+      view.tilt = Math.max(0, Math.min(90, +o.tilt || 0)); view.spin = ((+o.spin || 0) + 540) % 360 - 180;
+      updateCam(); syncAngles();
+      const start = PRESETS[name] ? name : "centre";
       Object.assign(view, PRESETS[start]());
       setPresetPressed(start);
     }
     draw();
   }
-  const sx = x => W / 2 + (x - view.cx) * view.s;
-  const sy = y => H / 2 + (y - view.cy) * view.s;
-  const wx = X => view.cx + (X - W / 2) / view.s;
-  const wy = Y => view.cy + (Y - H / 2) / view.s;
+  const sx = (x, y, z = 0) => W / 2 + ((x - view.cx) * cam.rx + (y - view.cy) * cam.ry) * view.s;
+  const sy = (x, y, z = 0) => H / 2 + ((x - view.cx) * cam.dx + (y - view.cy) * cam.dy + (z - view.cz) * cam.dz) * view.s;
+  // Move the view centre by a screen offset (px): c += (oX·r + oY·d) / s
+  function shiftCentre(base, oX, oY, s) {
+    return {
+      cx: base.cx + (oX * cam.rx + oY * cam.dx) / s,
+      cy: base.cy + (oX * cam.ry + oY * cam.dy) / s,
+      cz: base.cz + (oY * cam.dz) / s,
+    };
+  }
   const S_MIN = () => Math.min(W, H) / 60000, S_MAX = () => Math.min(W, H) / 4;
   const clampS = s => Math.max(S_MIN(), Math.min(S_MAX(), s));
 
-  function fitView(cx, cy, spanW, spanH) {
+  function freeCentre() {
     const ins = panelInset();
     const availW = Math.max(80, W - ins.right - 32), availH = Math.max(80, H - ins.top - ins.bottom - 70);
-    const s = clampS(Math.min(availW / spanW, availH / spanH));
+    return { availW, availH, fx: (W - ins.right) / 2, fy: ins.top + availH / 2 };
+  }
+  function fitView(cx, cy, spanW, spanH) {
+    const { availW, availH, fx, fy } = freeCentre();
+    // screen extent of the in-plane box after spin and tilt (floored so edge-on still frames sensibly)
+    const cf = Math.abs(Math.cos(cam.f)), sf = Math.abs(Math.sin(cam.f));
+    const w = spanW * cf + spanH * sf;
+    const h = Math.max((spanW * sf + spanH * cf) * cam.ct, 0.3 * Math.max(spanW, spanH));
+    const s = clampS(Math.min(availW / w, availH / h));
     // centre the target in the free area: below the title, left of the panel, above the dock
-    const fx = (W - ins.right) / 2, fy = ins.top + availH / 2;
-    return { cx: cx - (fx - W / 2) / s, cy: cy - (fy - H / 2) / s, s };
+    return { ...shiftCentre({ cx, cy, cz: 0 }, -(fx - W / 2), -(fy - H / 2), s), s };
+  }
+  // Change the viewing angle about the world point at the middle of the free area.
+  function setAngles(tilt, spin) {
+    const { fx, fy } = freeCentre(), oX = fx - W / 2, oY = fy - H / 2;
+    const pivot = shiftCentre(view, oX, oY, view.s);
+    view.tilt = Math.max(0, Math.min(90, tilt));
+    view.spin = ((spin + 540) % 360) - 180;
+    updateCam();
+    Object.assign(view, shiftCentre(pivot, -oX, -oY, view.s));
+    syncAngles();
+    draw();
   }
   const PRESETS = {
     galaxy: () => fitView(0, R0, 34000, 34000),
@@ -445,6 +551,7 @@
       view.s = Math.exp(ls0 + (ls1 - ls0) * e);
       view.cx = from.cx + (target.cx - from.cx) * e;
       view.cy = from.cy + (target.cy - from.cy) * e;
+      view.cz = from.cz + (target.cz - from.cz) * e;
       draw();
       if (t < 1) anim = requestAnimationFrame(step);
     };
@@ -455,10 +562,10 @@
   }
   function zoomAt(X, Y, factor) {
     const s1 = clampS(view.s * factor);
-    const gx = wx(X), gy = wy(Y);
+    // keep whatever is under (X, Y) fixed: c += (o·r, o·d)(1/s − 1/s1)
+    const k = 1 / view.s - 1 / s1;
+    Object.assign(view, shiftCentre(view, (X - W / 2) * k * view.s, (Y - H / 2) * k * view.s, view.s));
     view.s = s1;
-    view.cx = gx - (X - W / 2) / s1;
-    view.cy = gy - (Y - H / 2) / s1;
     setPresetPressed(null);
     draw();
   }
@@ -467,7 +574,7 @@
   let pct = { p50: 0, p90: 0, n: 0 };
   function computePercentiles() {
     const d = [];
-    for (let i = 0; i < N; i++) if (visible[pcat[i]]) d.push(prad[i]);
+    for (let i = 0; i < N; i++) if (shown(i)) d.push(prad[i]);
     d.sort((a, b) => a - b);
     pct = d.length ? { p50: d[Math.floor(d.length * 0.5)], p90: d[Math.floor(d.length * 0.9)], n: d.length } : { p50: 0, p90: 0, n: 0 };
   }
@@ -481,6 +588,7 @@
 
   function draw() {
     if (!booted) return;
+    updateCam();
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     ctx.fillStyle = "#07090d";
     ctx.fillRect(0, 0, W, H);
@@ -498,18 +606,20 @@
   }
 
   function drawGalaxy() {
-    const gx = sx(0), gy = sy(R0);
-    const disc = ctx.createRadialGradient(gx, gy, 0, gx, gy, 16000 * view.s);
+    const gx = sx(0, R0), gy = sy(0, R0);
+    // Draw in the plane's own frame: canvas rotate(spin) then squash by cos(tilt) matches sx/sy for z = 0.
+    ctx.save();
+    ctx.translate(gx, gy); ctx.scale(1, Math.max(cam.ct, 0.002)); ctx.rotate(cam.f);
+    const disc = ctx.createRadialGradient(0, 0, 0, 0, 0, 16000 * view.s);
     disc.addColorStop(0, "rgba(255, 232, 196, 0.16)");
     disc.addColorStop(0.12, "rgba(230, 214, 190, 0.08)");
     disc.addColorStop(0.55, "rgba(150, 170, 210, 0.035)");
     disc.addColorStop(1, "rgba(150, 170, 210, 0)");
     ctx.fillStyle = disc;
-    ctx.fillRect(0, 0, W, H);
+    ctx.beginPath(); ctx.arc(0, 0, 16000 * view.s, 0, Math.PI * 2); ctx.fill();
     // Long bar: half-length ~5 kpc, ~28° from the Sun–centre line, near end at positive longitude.
     const ang = Math.atan2(-Math.cos(28 * Math.PI / 180), Math.sin(28 * Math.PI / 180));
-    ctx.save();
-    ctx.translate(gx, gy); ctx.rotate(ang);
+    ctx.rotate(ang);
     const bar = ctx.createRadialGradient(0, 0, 0, 0, 0, 5000 * view.s);
     bar.addColorStop(0, "rgba(255, 228, 190, 0.14)");
     bar.addColorStop(1, "rgba(255, 228, 190, 0)");
@@ -523,19 +633,32 @@
     let pen = false;
     for (const p of pts) {
       if (p.fitted !== fitted) { pen = false; continue; }
-      const X = sx(p.x), Y = sy(p.y);
+      const X = sx(p.x, p.y), Y = sy(p.x, p.y);
       if (!pen) { ctx.moveTo(X, Y); pen = true; } else ctx.lineTo(X, Y);
     }
     ctx.stroke();
   }
+  // Fill the ±1σ band for each run of fitted (or extrapolated) points; runs overlap by one point so they meet.
+  function fillBand(pts, fitted) {
+    ctx.beginPath();
+    let i = 0;
+    while (i < pts.length) {
+      if (pts[i].fitted !== fitted) { i++; continue; }
+      const a = Math.max(0, i - 1);
+      while (i < pts.length && pts[i].fitted === fitted) i++;
+      const run = pts.slice(a, Math.min(pts.length, i + 1));
+      run.forEach((p, k) => ctx[k ? "lineTo" : "moveTo"](sx(p.lx, p.ly), sy(p.lx, p.ly)));
+      for (let k = run.length - 1; k >= 0; k--) ctx.lineTo(sx(run[k].rx, run[k].ry), sy(run[k].rx, run[k].ry));
+      ctx.closePath();
+    }
+    ctx.fill();
+  }
   function drawArms() {
     ctx.lineCap = "round"; ctx.lineJoin = "round";
     for (const arm of armLines) {
-      const band = Math.max(2, 2 * arm.width * view.s);
       ctx.setLineDash([]);
-      ctx.lineWidth = band;
-      ctx.strokeStyle = `rgba(${C.arm}, 0.10)`; strokePath(arm.pts, true);
-      ctx.strokeStyle = `rgba(${C.arm}, 0.045)`; strokePath(arm.pts, false);
+      ctx.fillStyle = `rgba(${C.arm}, 0.10)`; fillBand(arm.pts, true);
+      ctx.fillStyle = `rgba(${C.arm}, 0.045)`; fillBand(arm.pts, false);
       ctx.lineWidth = 1;
       ctx.strokeStyle = `rgba(${C.arm}, 0.45)`; strokePath(arm.pts, true);
       ctx.setLineDash([4, 5]);
@@ -546,21 +669,21 @@
     ctx.font = `italic 500 15px ${getComputedStyle(document.documentElement).getPropertyValue("--font-display")}`;
     ctx.fillStyle = `rgba(${C.arm}, 0.85)`;
     const ins = panelInset(), midX = (W - ins.right) / 2, midY = (H - ins.bottom) / 2;
-    for (const arm of armLines) {
+    for (const arm of cam.ct < 0.3 ? [] : armLines) {
       let best = null, bd = Infinity;
       arm.pts.forEach((p, i) => {
         if (!p.fitted || i === 0 || i === arm.pts.length - 1) return;
-        const X = sx(p.x), Y = sy(p.y);
+        const X = sx(p.x, p.y), Y = sy(p.x, p.y);
         if (X < 60 || X > W - ins.right - 60 || Y < ins.top || Y > H - ins.bottom - 90) return;
         const d = (X - midX) ** 2 + (Y - midY) ** 2;
         if (d < bd) { bd = d; best = i; }
       });
       if (best == null) continue;
       const a = arm.pts[best - 1], b = arm.pts[best + 1];
-      let ang = Math.atan2(sy(b.y) - sy(a.y), sx(b.x) - sx(a.x));
+      let ang = Math.atan2(sy(b.x, b.y) - sy(a.x, a.y), sx(b.x, b.y) - sx(a.x, a.y));
       if (ang > Math.PI / 2) ang -= Math.PI; if (ang < -Math.PI / 2) ang += Math.PI;
       ctx.save();
-      ctx.translate(sx(arm.pts[best].x), sy(arm.pts[best].y)); ctx.rotate(ang);
+      ctx.translate(sx(arm.pts[best].x, arm.pts[best].y), sy(arm.pts[best].x, arm.pts[best].y)); ctx.rotate(ang);
       ctx.textAlign = "center";
       ctx.fillText(arm.name, 0, -Math.max(6, arm.width * view.s) - 4);
       ctx.restore();
@@ -568,12 +691,17 @@
   }
 
   function drawLongitudes() {
-    const X0 = sx(0), Y0 = sy(0), far = Math.hypot(W, H) * 2;
+    const X0 = sx(0, 0), Y0 = sy(0, 0), far = Math.hypot(W, H) * 2;
     ctx.lineWidth = 1;
     ctx.font = `500 11px ${getComputedStyle(document.documentElement).getPropertyValue("--font-data")}`;
     for (let l = 0; l < 360; l += 30) {
       const major = l % 90 === 0;
-      const r = l * Math.PI / 180, dx = Math.sin(r), dy = Math.cos(r);
+      // project the in-plane direction (sin l, cos l) and normalise it on screen
+      const r = l * Math.PI / 180, wx = Math.sin(r), wy = Math.cos(r);
+      let dx = wx * cam.rx + wy * cam.ry, dy = wx * cam.dx + wy * cam.dy;
+      const len = Math.hypot(dx, dy);
+      if (len < 0.02) continue;   // pointing straight at the viewer
+      dx /= len; dy /= len;
       ctx.strokeStyle = `rgba(${C.ring}, ${major ? 0.11 : 0.05})`;
       ctx.setLineDash(major ? [] : [2, 6]);
       ctx.beginPath(); ctx.moveTo(X0, Y0); ctx.lineTo(X0 + dx * far, Y0 + dy * far); ctx.stroke();
@@ -607,11 +735,11 @@
     }
     return true;
   }
-  // Place text just outside a ring at the first angle where it fits; returns the box or null.
+  // Place text just outside a ring (an ellipse when tilted) at the first angle where it fits; returns the box or null.
   function ringLabel(X0, Y0, R, text, angles) {
     const w = ctx.measureText(text).width;
     for (const a of angles) {
-      const ax = X0 + Math.cos(a) * R, ay = Y0 + Math.sin(a) * R;
+      const ax = X0 + Math.cos(a) * R, ay = Y0 + Math.sin(a) * R * cam.ct;
       const tx = Math.cos(a) >= 0 ? ax + 5 : ax - w - 5, ty = Math.sin(a) <= 0 ? ay - 5 : ay + 15;
       const box = [tx - 3, ty - 12, tx + w + 3, ty + 4];
       if (labelFits(box)) return { tx, ty, box, w };
@@ -620,7 +748,7 @@
   }
   const RING_STEPS = [10, 30, 100, 300, 1000, 3000, 10000, 20000];
   function drawRings() {
-    const X0 = sx(0), Y0 = sy(0), diag = Math.hypot(W, H);
+    const X0 = sx(0, 0), Y0 = sy(0, 0), diag = Math.hypot(W, H);
     ctx.lineWidth = 1;
     ctx.font = `400 11px ${getComputedStyle(document.documentElement).getPropertyValue("--font-data")}`;
     ctx.textAlign = "left";
@@ -629,7 +757,8 @@
       const R = r * view.s;
       if (R < 34 || R > diag * 1.5) continue;
       ctx.strokeStyle = `rgba(${C.ring}, 0.13)`;
-      ctx.beginPath(); ctx.arc(X0, Y0, R, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(X0, Y0, R, R * cam.ct, 0, 0, Math.PI * 2); ctx.stroke();
+      if (cam.ct < 0.3) continue;   // near edge-on the labels would pile up on the horizon
       const L = ringLabel(X0, Y0, R, `${fmtShort(r)} · ${fmtShort(r * LY).replace("pc", "ly")}`, [-3 * q, 3 * q, -q, q]);
       if (!L) continue;
       ctx.fillStyle = C.ink3;
@@ -638,7 +767,7 @@
   }
   function drawPercentiles() {
     if (!pct.n) return;
-    const X0 = sx(0), Y0 = sy(0), q = Math.PI / 4;
+    const X0 = sx(0, 0), Y0 = sy(0, 0), q = Math.PI / 4;
     ctx.font = `500 12px ${getComputedStyle(document.documentElement).getPropertyValue("--font-ui")}`;
     ctx.textAlign = "left";
     for (const [r, label] of [[pct.p50, "50%"], [pct.p90, "90%"]]) {
@@ -647,9 +776,9 @@
       ctx.setLineDash([5, 4]);
       ctx.lineWidth = 1.25;
       ctx.strokeStyle = "rgba(255, 255, 255, 0.55)";
-      ctx.beginPath(); ctx.arc(X0, Y0, R, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(X0, Y0, R, R * cam.ct, 0, 0, Math.PI * 2); ctx.stroke();
       ctx.setLineDash([]);
-      if (R < 22) continue;
+      if (R < 22 || cam.ct < 0.3) continue;
       const text = `${label} of shown planets · ${fmtShort(r)}`;
       const L = ringLabel(X0, Y0, R, text, [-q, q, -3 * q, 3 * q, -1.6 * q, 1.6 * q]);
       if (!L) continue;
@@ -660,24 +789,27 @@
     }
   }
 
-  function planetRadius() { return Math.max(1.3, Math.min(4, 0.9 * Math.pow(view.s * 100, 0.25))); }
+  function planetRadius() { return layers.dot * Math.max(1.3, Math.min(4, 0.9 * Math.pow(view.s * 100, 0.25))); }
+  const stalksOn = () => layers.stalks && view.tilt > 0.5;
   function drawPlanets() {
-    const r = planetRadius();
-    const pad = 6, minX = wx(-pad), maxX = wx(W + pad), minY = wy(-pad), maxY = wy(H + pad);
-    ctx.globalAlpha = 0.82;
-    for (const ci of DRAW_ORDER) {
-      if (!visible[ci]) continue;
-      const cat = CATS[ci];
-      ctx.beginPath();
+    const r = planetRadius(), dim = DIMS[colourBy], pad = 6;
+    for (const gi of dim.order) {
+      if (!dim.visible[gi]) continue;
+      const grp = dim.groups[gi];
+      const dots = new Path2D(), stalks = new Path2D();
       for (let i = 0; i < N; i++) {
-        if (pcat[i] !== ci) continue;
-        const x = px[i], y = py[i];
-        if (x < minX || x > maxX || y < minY || y > maxY) continue;
-        const X = sx(x), Y = sy(y);
-        ctx.moveTo(X + r, Y); ctx.arc(X, Y, r, 0, Math.PI * 2);
+        if (dim.of[i] !== gi || !shown(i)) continue;
+        const X = sx(px[i], py[i], pz[i]), Y = sy(px[i], py[i], pz[i]);
+        if (X < -pad || X > W + pad || Y < -pad || Y > H + pad) continue;
+        dots.moveTo(X + r, Y); dots.arc(X, Y, r, 0, Math.PI * 2);
+        // height lines only where the foot is in view too, so far-off planets don't streak across a zoomed view
+        const X0 = sx(px[i], py[i]), Y0 = sy(px[i], py[i]);
+        if (X0 > -pad && X0 < W + pad && Y0 > -pad && Y0 < H + pad) { stalks.moveTo(X0, Y0); stalks.lineTo(X, Y); }
       }
-      if (cat.hollow) { ctx.lineWidth = 1.2; ctx.strokeStyle = cat.color; ctx.stroke(); }
-      else { ctx.fillStyle = cat.color; ctx.fill(); }
+      if (stalksOn()) { ctx.globalAlpha = 0.18; ctx.lineWidth = 1; ctx.strokeStyle = grp.color; ctx.stroke(stalks); }
+      ctx.globalAlpha = 0.82;
+      if (grp.hollow) { ctx.lineWidth = 1.2; ctx.strokeStyle = grp.color; ctx.stroke(dots); }
+      else { ctx.fillStyle = grp.color; ctx.fill(dots); }
     }
     ctx.globalAlpha = 1;
   }
@@ -691,7 +823,7 @@
       for (const [a, b] of segs) {
         const A = starByName.get(a), B = starByName.get(b);
         if (!A || !B) continue;
-        ctx.moveTo(sx(A.x), sy(A.y)); ctx.lineTo(sx(B.x), sy(B.y));
+        ctx.moveTo(sx(A.x, A.y, A.z), sy(A.x, A.y, A.z)); ctx.lineTo(sx(B.x, B.y, B.z), sy(B.x, B.y, B.z));
       }
       ctx.stroke();
     }
@@ -705,12 +837,18 @@
     ctx.quadraticCurveTo(X, Y, X, Y - r); ctx.fill();
   }
   function drawStars() {
-    const sunX = sx(0), sunY = sy(0);
+    const sunX = sx(0, 0), sunY = sy(0, 0);
     const placed = [[sunX - 8, sunY - 8, sunX + 42, sunY + 8]];   // keep clear of the Sun and its label
     ctx.font = `italic 500 14px ${getComputedStyle(document.documentElement).getPropertyValue("--font-display")}`;
     ctx.textAlign = "left";
+    if (stalksOn()) {
+      ctx.strokeStyle = "rgba(235, 231, 220, 0.3)"; ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (const s of stars) { ctx.moveTo(sx(s.x, s.y), sy(s.x, s.y)); ctx.lineTo(sx(s.x, s.y, s.z), sy(s.x, s.y, s.z)); }
+      ctx.stroke();
+    }
     for (const s of stars) {
-      const X = sx(s.x), Y = sy(s.y);
+      const X = sx(s.x, s.y, s.z), Y = sy(s.x, s.y, s.z);
       if (X < -20 || X > W + 20 || Y < -20 || Y > H + 20) continue;
       ctx.fillStyle = C.ink;
       sparkle(X, Y, 5);
@@ -726,7 +864,7 @@
 
   function drawMarkers() {
     // Sun: ☉
-    const X = sx(0), Y = sy(0);
+    const X = sx(0, 0), Y = sy(0, 0);
     ctx.strokeStyle = C.ink; ctx.fillStyle = C.ink; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.arc(X, Y, 6, 0, Math.PI * 2); ctx.stroke();
     ctx.beginPath(); ctx.arc(X, Y, 1.6, 0, Math.PI * 2); ctx.fill();
@@ -737,7 +875,7 @@
     ctx.fillStyle = C.ink;
     ctx.fillText("Sun", X + 10, Y + 4);
     // Galactic centre
-    const gx = sx(0), gy = sy(R0);
+    const gx = sx(0, R0), gy = sy(0, R0);
     ctx.strokeStyle = C.ink2; ctx.lineWidth = 1.2;
     ctx.beginPath(); ctx.moveTo(gx - 7, gy); ctx.lineTo(gx + 7, gy); ctx.moveTo(gx, gy - 7); ctx.lineTo(gx, gy + 7); ctx.stroke();
     ctx.fillStyle = C.ink2;
@@ -748,8 +886,8 @@
   function drawHighlight() {
     for (const [item, alpha] of [[hover, 0.7], [selected, 1]]) {
       if (!item) continue;
-      const o = item.kind === "planet" ? { x: px[item.i], y: py[item.i] } : item.star;
-      const X = sx(o.x), Y = sy(o.y);
+      const o = item.kind === "planet" ? { x: px[item.i], y: py[item.i], z: pz[item.i] } : item.star;
+      const X = sx(o.x, o.y, o.z), Y = sy(o.x, o.y, o.z);
       ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
       ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.arc(X, Y, planetRadius() + 5, 0, Math.PI * 2); ctx.stroke();
@@ -770,12 +908,12 @@
   function pick(X, Y) {
     const R = 9;
     if (layers.stars) {
-      for (const s of stars) if (Math.hypot(sx(s.x) - X, sy(s.y) - Y) < R) return { kind: "star", star: s };
+      for (const s of stars) if (Math.hypot(sx(s.x, s.y, s.z) - X, sy(s.x, s.y, s.z) - Y) < R) return { kind: "star", star: s };
     }
     let best = -1, bd = R * R;
     for (let i = 0; i < N; i++) {
-      if (!visible[pcat[i]]) continue;
-      const dx = sx(px[i]) - X, dy = sy(py[i]) - Y, d = dx * dx + dy * dy;
+      if (!shown(i)) continue;
+      const dx = sx(px[i], py[i], pz[i]) - X, dy = sy(px[i], py[i], pz[i]) - Y, d = dx * dx + dy * dy;
       if (d < bd) { bd = d; best = i; }
     }
     return best >= 0 ? { kind: "planet", i: best } : null;
@@ -786,7 +924,8 @@
     if (!item) { tip.hidden = true; return; }
     if (item.kind === "planet") {
       const i = item.i;
-      tip.innerHTML = `<strong>${esc(P.name[i])}</strong><br><span>${esc(D.planets.methods[P.method[i]])} · ${esc(D.planets.facilities[P.facility[i]])} · ${P.year[i]}</span><br><span class="num">${fmtDist(P.d[i])}</span>`;
+      const h = HOSTS[P.hidx[i]];
+      tip.innerHTML = `<strong>${esc(P.name[i])}</strong><br><span>${esc(D.planets.methods[P.method[i]])} · ${esc(D.planets.facilities[P.facility[i]])} · ${P.year[i]}</span><br><span>Host: ${esc(h[2] || STAR_CLASSES[pstar[i]].label)}</span><br><span class="num">${fmtDist(P.d[i])}</span>`;
     } else {
       const s = item.star;
       tip.innerHTML = `<strong>${esc(s.name)}</strong> <span>${esc(s.con)}</span><br><span class="num">${fmtDist(s.d)}</span>`;
@@ -816,6 +955,14 @@
     }
     if (selected.kind === "planet") {
       const i = selected.i, cat = CATS[pcat[i]], host = P.host[i];
+      const [, src, spt, teff, mass, logg] = HOSTS[P.hidx[i]], sc = STAR_CLASSES[pstar[i]];
+      const hostFacts = [
+        spt ? esc(spt) : null,
+        teff != null ? `${nf.format(teff)} K` : null,
+        mass != null ? `${mass} M☉` : null,
+        logg != null ? `log g ${logg}` : null,
+      ].filter(Boolean).join(" · ");
+      const srcText = src >= 0 ? `class from ${D.planets.class_sources[src]}` : "no spectral type, Teff or mass in the archive";
       const sys = byHost.get(host) || [];
       const archive = `https://exoplanetarchive.ipac.caltech.edu/overview/${encodeURIComponent(host)}`;
       const phys = [
@@ -829,13 +976,18 @@
             <div><h2>${esc(P.name[i])}</h2><div class="sub">Host: ${esc(host)}</div></div>
             <button class="close" id="close" aria-label="Close details">×</button>
           </div>
-          <span class="tag"><i style="background:${cat.color}"></i>${esc(cat.label)}</span>
+          <div style="display:flex;flex-wrap:wrap;gap:4px 14px">
+            <span class="tag"><i style="background:${cat.color}"></i>${esc(cat.label)}</span>
+            <span class="tag"><i style="background:${sc.color}"></i>${esc(sc.label)} host</span>
+          </div>
           <dl class="facts">
+            <dt>Host star</dt><dd><span class="num">${hostFacts || "—"}</span><br><span style="color:var(--ink-3)">${srcText}</span></dd>
             <dt>Method</dt><dd>${esc(D.planets.methods[P.method[i]])}</dd>
             <dt>Facility</dt><dd>${esc(D.planets.facilities[P.facility[i]])}</dd>
             <dt>Year</dt><dd class="num">${P.year[i]}</dd>
             <dt>Distance</dt><dd class="num">${fmtPc(P.d[i])}${errText(P.dep[i], P.dem[i])} pc<br>${fmtPc(P.d[i] * LY)} ly</dd>
             <dt>ℓ, b</dt><dd class="num">${P.l[i].toFixed(2)}°, ${P.b[i].toFixed(2)}°</dd>
+            <dt>Height</dt><dd class="num">${pz[i] >= 0 ? "+" : "−"}${fmtPc(Math.abs(pz[i]))} pc ${pz[i] >= 0 ? "north" : "south"} of the plane</dd>
             ${phys ? `<dt>Planet</dt><dd class="num">${phys}</dd>` : ""}
           </dl>
           <div class="links">
@@ -860,6 +1012,7 @@
             <dt>Distance</dt><dd class="num">${fmtPc(s.d)}${errText(s.dep, s.dem)} pc<br>${fmtPc(s.d * LY)} ly</dd>
             ${s.plx != null ? `<dt>Parallax</dt><dd class="num">${s.plx} ± ${s.eplx} mas</dd>` : ""}
             <dt>ℓ, b</dt><dd class="num">${s.l.toFixed(2)}°, ${s.b.toFixed(2)}°</dd>
+            <dt>Height</dt><dd class="num">${s.z >= 0 ? "+" : "−"}${fmtPc(Math.abs(s.z))} pc ${s.z >= 0 ? "north" : "south"} of the plane</dd>
           </dl>
           <div class="links">
             <div>Distance: <a href="${esc(s.ref.url)}" target="_blank" rel="noopener">${esc(s.ref.label)}</a></div>
@@ -881,34 +1034,56 @@
     if (item && innerWidth <= 760) setSheet(true);
   }
 
-  // ---- legend ----
-  const legend = document.getElementById("legend");
+  // ---- legends: one per dimension; both filter, one colours ----
   function median(arr) { if (!arr.length) return 0; arr.sort((a, b) => a - b); return arr[Math.floor(arr.length / 2)]; }
-  CATS.forEach((c, ci) => {
-    const ds = []; for (let i = 0; i < N; i++) if (pcat[i] === ci) ds.push(prad[i]);
-    const li = document.createElement("li");
-    li.innerHTML = `<button aria-pressed="true" data-ci="${ci}">
-      <span class="swatch${c.hollow ? " hollow" : ""}" style="background:${c.color};border-color:${c.color}"></span>
-      <span class="name">${c.label}</span><span class="count num">${nf.format(ds.length)}</span><span class="med num">${fmtShort(median(ds))}</span></button>`;
-    legend.appendChild(li);
-  });
-  let clickTimer = null;
-  legend.addEventListener("click", e => {
-    const b = e.target.closest("button"); if (!b) return;
-    const ci = +b.dataset.ci;
-    clearTimeout(clickTimer);
-    if (e.detail === 2) { solo(ci); return; }
-    clickTimer = setTimeout(() => { visible[ci] = !visible[ci]; syncLegend(); }, 220);
-  });
-  function solo(ci) {
-    const alreadySolo = visible.every((v, j) => v === (j === ci));
-    visible.forEach((_, j) => visible[j] = alreadySolo || j === ci);
+  for (const [key, dim] of Object.entries(DIMS)) {
+    dim.legend = document.getElementById(`legend-${key}`);
+    dim.groups.forEach((g, gi) => {
+      const li = document.createElement("li");
+      li.innerHTML = `<button aria-pressed="true" data-gi="${gi}">
+        <span class="swatch${g.hollow ? " hollow" : ""}"></span>
+        <span class="name">${g.label}</span><span class="count num"></span><span class="med num"></span></button>`;
+      dim.legend.appendChild(li);
+    });
+    let clickTimer = null;
+    dim.legend.addEventListener("click", e => {
+      const b = e.target.closest("button"); if (!b) return;
+      const gi = +b.dataset.gi;
+      clearTimeout(clickTimer);
+      if (e.detail === 2) { solo(dim, gi); return; }
+      clickTimer = setTimeout(() => { dim.visible[gi] = !dim.visible[gi]; syncLegend(); }, 220);
+    });
+  }
+  function solo(dim, gi) {
+    const alreadySolo = dim.visible.every((v, j) => v === (j === gi));
+    dim.visible.forEach((_, j) => dim.visible[j] = alreadySolo || j === gi);
     syncLegend();
   }
-  document.getElementById("show-all").addEventListener("click", () => { visible.fill(true); syncLegend(); });
+  document.getElementById("show-all").addEventListener("click", () => {
+    for (const dim of Object.values(DIMS)) dim.visible.fill(true);
+    syncLegend();
+  });
+  document.querySelectorAll("[data-colour]").forEach(b => b.addEventListener("click", () => {
+    colourBy = b.dataset.colour;
+    document.querySelectorAll("[data-colour]").forEach(c => c.setAttribute("aria-pressed", String(c === b)));
+    syncLegend();
+  }));
   function syncLegend() {
-    legend.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(visible[+b.dataset.ci])));
-    if (selected && selected.kind === "planet" && !visible[pcat[selected.i]]) { selected = null; renderDetail(); }
+    for (const [key, dim] of Object.entries(DIMS)) {
+      // counts and medians of each group among planets the *other* list lets through
+      const other = key === "disc" ? DIMS.star : DIMS.disc;
+      const ds = dim.groups.map(() => []);
+      for (let i = 0; i < N; i++) if (other.visible[other.of[i]]) ds[dim.of[i]].push(prad[i]);
+      dim.legend.querySelectorAll("button").forEach(b => {
+        const gi = +b.dataset.gi, g = dim.groups[gi], col = key === colourBy ? g.color : "var(--ink-3)";
+        b.setAttribute("aria-pressed", String(dim.visible[gi]));
+        const sw = b.querySelector(".swatch");
+        sw.style.background = col; sw.style.borderColor = col;
+        b.querySelector(".count").textContent = nf.format(ds[gi].length);
+        b.querySelector(".med").textContent = ds[gi].length ? fmtShort(median(ds[gi])) : "—";
+      });
+    }
+    if (selected && selected.kind === "planet" && !shown(selected.i)) { selected = null; renderDetail(); }
     computePercentiles();
     updateLede();
     draw();
@@ -921,9 +1096,24 @@
   }
 
   // ---- layers ----
-  for (const [id, key] of [["t-arms", "arms"], ["t-rings", "rings"], ["t-stars", "stars"], ["t-figs", "figs"], ["t-pct", "pct"], ["t-lon", "lon"]]) {
+  for (const [id, key] of [["t-arms", "arms"], ["t-rings", "rings"], ["t-stars", "stars"], ["t-figs", "figs"], ["t-pct", "pct"], ["t-lon", "lon"], ["t-stalks", "stalks"]]) {
     document.getElementById(id).addEventListener("change", e => { layers[key] = e.target.checked; draw(); });
   }
+  document.getElementById("dot").addEventListener("input", e => { layers.dot = +e.target.value; draw(); });
+
+  // ---- viewing angle ----
+  const tiltIn = document.getElementById("tilt"), spinIn = document.getElementById("spin");
+  const SUBHEAD = document.getElementById("subhead").textContent;
+  function syncAngles() {
+    tiltIn.value = Math.round(view.tilt); spinIn.value = Math.round(view.spin);
+    document.getElementById("tilt-val").textContent = `${Math.round(view.tilt)}°`;
+    document.getElementById("spin-val").textContent = `${Math.round(view.spin)}°`;
+    document.getElementById("subhead").textContent = view.tilt < 0.5 && Math.abs(view.spin) < 0.5 ? SUBHEAD
+      : `Every confirmed exoplanet with a measured distance, seen ${Math.round(view.tilt)}° down from the north Galactic pole${Math.round(view.spin) ? `, spun ${Math.round(view.spin)}°` : ""}. Heights above and below the plane are to scale.`;
+  }
+  tiltIn.addEventListener("input", () => setAngles(+tiltIn.value, view.spin));
+  spinIn.addEventListener("input", () => setAngles(view.tilt, +spinIn.value));
+  document.getElementById("flat").addEventListener("click", () => setAngles(0, 0));
 
   // ---- presets & zoom buttons ----
   document.querySelectorAll("[data-preset]").forEach(b => b.addEventListener("click", () => {
@@ -952,7 +1142,7 @@
       for (const [k, v] of nameIndex) if (k.startsWith(q)) { i = v; break; }
     }
     if (i != null) {
-      if (!visible[pcat[i]]) { visible[pcat[i]] = true; syncLegend(); }
+      if (!shown(i)) { DIMS.disc.visible[pcat[i]] = true; DIMS.star.visible[pstar[i]] = true; syncLegend(); }
       msg.textContent = "";
       select({ kind: "planet", i }, true);
     } else if (missingNames.has(q)) {
@@ -977,7 +1167,10 @@
     canvas.setPointerCapture(e.pointerId);
     pointers.set(e.pointerId, { x: e.offsetX, y: e.offsetY });
     moved = false;
-    if (pointers.size === 1) drag = { x: e.offsetX, y: e.offsetY, cx: view.cx, cy: view.cy };
+    if (pointers.size === 1) {
+      drag = { x: e.offsetX, y: e.offsetY, cx: view.cx, cy: view.cy, cz: view.cz,
+               orbit: e.pointerType === "mouse" && (e.button === 2 || e.shiftKey), tilt: view.tilt, spin: view.spin };
+    }
     if (pointers.size === 2) {
       const [a, b] = [...pointers.values()];
       pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), s: view.s };
@@ -997,8 +1190,12 @@
     if (drag) {
       const dx = e.offsetX - drag.x, dy = e.offsetY - drag.y;
       if (Math.abs(dx) + Math.abs(dy) > 3) moved = true;
-      if (moved) {
-        view.cx = drag.cx - dx / view.s; view.cy = drag.cy - dy / view.s;
+      if (moved && drag.orbit) {
+        // drag up to tilt toward edge-on, sideways to spin
+        canvas.classList.add("dragging"); tip.hidden = true;
+        setAngles(drag.tilt - dy * 0.3, drag.spin + dx * 0.3);
+      } else if (moved) {
+        Object.assign(view, shiftCentre(drag, -dx, -dy, view.s));
         canvas.classList.add("dragging"); setPresetPressed(null);
         tip.hidden = true; draw();
       }
@@ -1016,11 +1213,12 @@
     pointers.delete(e.pointerId);
     if (pointers.size < 2) pinch = null;
     if (pointers.size === 0) {
-      if (drag && !moved) select(pick(e.offsetX, e.offsetY));
+      if (drag && !moved && !drag.orbit) select(pick(e.offsetX, e.offsetY));
       drag = null;
       canvas.classList.remove("dragging");
     }
   }
+  canvas.addEventListener("contextmenu", e => e.preventDefault());
   canvas.addEventListener("pointerup", endPointer);
   canvas.addEventListener("pointercancel", endPointer);
   canvas.addEventListener("pointerleave", () => { if (hover) { hover = null; draw(); } tip.hidden = true; });
@@ -1048,8 +1246,7 @@
   handle.addEventListener("click", () => setSheet(panel.classList.contains("collapsed")));
 
   // ---- boot ----
-  computePercentiles();
-  updateLede();
+  syncLegend();
   renderDetail();
   if (innerWidth <= 760) panel.classList.add("collapsed"), handle.setAttribute("aria-expanded", "false"), document.getElementById("handle-state").textContent = "Show";
   new ResizeObserver(resize).observe(canvas);

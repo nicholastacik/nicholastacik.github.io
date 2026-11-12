@@ -13,7 +13,9 @@ import io
 import json
 import math
 import re
+import statistics
 import urllib.parse
+from collections import Counter
 import urllib.request
 from pathlib import Path
 
@@ -23,7 +25,7 @@ ARCHIVE_TAP = "https://exoplanetarchive.ipac.caltech.edu/TAP/sync"
 ARCHIVE_COLS = (
     "pl_name,hostname,ra,dec,glon,glat,sy_dist,sy_disterr1,sy_disterr2,"
     "sy_dist_reflink,discoverymethod,disc_facility,disc_year,disc_refname,"
-    "pl_rade,pl_bmasse,pl_orbper"
+    "pl_rade,pl_bmasse,pl_orbper,st_spectype,st_teff,st_mass,st_logg"
 )
 # VizieR mirror at CfA; the Strasbourg TAP services were down when this was written.
 VIZIER_ASU = "https://vizier.cfa.harvard.edu/viz-bin/asu-tsv"
@@ -157,6 +159,57 @@ def category(method, facility):
     return {"Radial Velocity": "rv", "Microlensing": "micro", "Imaging": "imaging"}.get(method, "other")
 
 
+# Class boundaries: midpoints between adjacent subclasses in Mamajek's dwarf sequence
+# (Pecaut & Mamajek 2013, table version 2022.04.16), e.g. F/G = (F9.5V 5990 K + G0V 5930 K) / 2.
+# (class, Teff lower bound K, mass lower bound Msun), hottest first.
+CLASS_BOUNDS = [("hot", 7310, 1.68), ("F", 5960, 1.07), ("G", 5325, 0.89), ("K", 3890, 0.58),
+                ("M", 2310, 0.0775), ("bd", 0, 0)]
+SPT_CLASS = {"O": "hot", "B": "hot", "A": "hot", "F": "F", "G": "G", "K": "K", "M": "M",
+             "L": "bd", "T": "bd", "Y": "bd"}
+# How a host's class was decided; shown on each planet's card.
+CLASS_SOURCES = ["spectral type", "Teff", "mass (main sequence assumed)", "pulsar host", "white dwarf"]
+
+
+def host_class(name, spts, teffs, masses, loggs):
+    """-> (class id, source index, spectral type, Teff, mass, log g) from all of a host's rows.
+
+    The composite table picks stellar parameters per planet, so rows for one host can
+    disagree; take the most common spectral type and the median of each number.
+    """
+    spt = Counter(spts).most_common(1)[0][0] if spts else None
+    teff = statistics.median(teffs) if teffs else None
+    mass = statistics.median(masses) if masses else None
+    logg = statistics.median(loggs) if loggs else None
+    info = (spt, round(teff) if teff else None, round(mass, 3) if mass else None,
+            round(logg, 2) if logg is not None else None)
+    if name.startswith("PSR "):
+        return ("ns", 3, *info)
+    if (spt and re.match(r"D[ABCOQXZ]", spt)) or (logg is not None and logg >= 6.5) or name.startswith("WD "):
+        return ("wd", 4, *info)
+    m = re.match(r"(?:[a-z]+)?\s*([OBAFGKMLTY])", spt or "")
+    if m:
+        return (SPT_CLASS[m.group(1)], 0, *info)
+    if teff:
+        return (next(c for c, t, _ in CLASS_BOUNDS if teff >= t), 1, *info)
+    if mass:
+        return (next(c for c, _, ms in CLASS_BOUNDS if mass >= ms), 2, *info)
+    return ("unk", -1, *info)
+
+
+def build_hosts(rows):
+    """-> (host names, host table rows) with one class per host."""
+    acc = {}
+    for r in rows:
+        a = acc.setdefault(r["hostname"], ([], [], [], []))
+        if r["st_spectype"].strip():
+            a[0].append(r["st_spectype"].strip())
+        for k, col in ((1, "st_teff"), (2, "st_mass"), (3, "st_logg")):
+            if num(r[col]) is not None:
+                a[k].append(num(r[col]))
+    names = sorted(acc)
+    return names, [list(host_class(n, *acc[n])) for n in names]
+
+
 def build_planets():
     query = f"select {ARCHIVE_COLS} from pscomppars"
     rows = list(csv.DictReader(io.StringIO(fetch(ARCHIVE_TAP, {"query": query, "format": "csv"}))))
@@ -172,7 +225,10 @@ def build_planets():
             refs.append([label, url])
         return ref_index[url]
 
-    cols = {k: [] for k in ("name", "host", "x", "y", "d", "dep", "dem", "l", "b", "cat", "method",
+    host_names, host_rows = build_hosts(rows)
+    host_index = {n: i for i, n in enumerate(host_names)}
+
+    cols = {k: [] for k in ("name", "host", "hidx", "x", "y", "d", "dep", "dem", "l", "b", "cat", "method",
                             "facility", "year", "disc", "dref", "rade", "masse", "per")}
     facilities, fac_index = [], {}
     methods, method_index = [], {}
@@ -193,6 +249,7 @@ def build_planets():
             methods.append(meth)
         cols["name"].append(r["pl_name"])
         cols["host"].append(r["hostname"])
+        cols["hidx"].append(host_index[r["hostname"]])
         cols["x"].append(x)
         cols["y"].append(y)
         cols["d"].append(round(dist, 2))
@@ -209,7 +266,9 @@ def build_planets():
         cols["rade"].append(num(r["pl_rade"]))
         cols["masse"].append(num(r["pl_bmasse"]))
         cols["per"].append(num(r["pl_orbper"]))
+    # hosts: [class, source, spectral type, Teff, mass, log g]; planets point in with hidx
     return {"cols": cols, "refs": refs, "facilities": facilities, "methods": methods,
+            "hosts": host_rows, "class_sources": CLASS_SOURCES,
             "missing": missing, "total": len(rows)}
 
 
